@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.6.1</version>
+    <version>0.6.2</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -113,7 +113,6 @@
             <groupId>org.bitbucket.b_c</groupId>
             <version>0.7.2</version>
         </dependency>
-
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock-standalone</artifactId>
@@ -124,11 +123,6 @@
             <artifactId>jsonassert</artifactId>
             <version>1.5.0</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.bitbucket.b_c</groupId>
-            <artifactId>jose4j</artifactId>
-            <version>0.7.6</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
@@ -183,6 +177,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>clojars.org</id>
+            <url>http://clojars.org/repo</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
