@@ -1,0 +1,56 @@
+function toggleCollapsableIcon(target) {
+  const classList = target.children[0].children[1].classList;
+  if (classList.contains("fa-toggle-on")) {
+    classList.remove("fa-toggle-on");
+    classList.add("fa-toggle-off");
+  } else {
+    classList.add("fa-toggle-on");
+    classList.remove("fa-toggle-off");
+  }
+
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  let cardToggles = document.getElementsByClassName('card-toggle');
+  for (let i = 0; i < cardToggles.length; i++) {
+    cardToggles[i].addEventListener('click', e => {
+      e.currentTarget.parentElement.parentElement.childNodes[1].classList.toggle(
+          'is-hidden');
+      toggleCollapsableIcon(e.currentTarget);
+      e.preventDefault();
+      return false;
+    });
+  }
+
+  document.getElementById("collapse-all").addEventListener('click', e => {
+    for (let i = 0; i < cardToggles.length; i++) {
+      const classList = cardToggles[i].parentElement.parentElement.childNodes[1].classList;
+      if (!classList.contains('is-hidden')) {
+        classList.add('is-hidden');
+      }
+      const classList2 = cardToggles[i].children[0].children[1].classList;
+      if (classList2.contains("fa-toggle-on")) {
+        classList2.remove("fa-toggle-on");
+        classList2.add("fa-toggle-off");
+      }
+    }
+    e.preventDefault();
+    return false;
+  });
+
+  document.getElementById("expand-all").addEventListener('click', e => {
+    for (let i = 0; i < cardToggles.length; i++) {
+      const classList = cardToggles[i].parentElement.parentElement.childNodes[1].classList;
+      if (classList.contains('is-hidden')) {
+        classList.remove('is-hidden');
+      }
+      const classList2 = cardToggles[i].children[0].children[1].classList;
+      if (classList2.contains("fa-toggle-off")) {
+        classList2.remove("fa-toggle-off");
+        classList2.add("fa-toggle-on");
+      }
+    }
+    e.preventDefault();
+    return false;
+  });
+});
