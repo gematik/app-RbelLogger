@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.6.0</version>
+    <version>0.6.1</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -126,9 +126,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>de.gematik</groupId>
-            <artifactId>gem-jose4j</artifactId>
-            <version>0.7.4</version>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.7.6</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>

@@ -1,3 +1,6 @@
+# Release 0.6.1
+* change jose4j dependency
+
 # Release 0.6.0
 * Initial release
 
