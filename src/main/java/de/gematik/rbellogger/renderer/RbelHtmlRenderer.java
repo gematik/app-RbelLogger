@@ -17,7 +17,6 @@
 package de.gematik.rbellogger.renderer;
 
 import static j2html.TagCreator.*;
-
 import com.google.gson.*;
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.*;
@@ -39,11 +38,16 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class RbelHtmlRenderer {
+
+    public RbelHtmlRenderer() {
+        this(new RbelValueShader());
+    }
 
     private static final Gson GSON = new GsonBuilder()
         .setPrettyPrinting()
@@ -56,6 +60,19 @@ public class RbelHtmlRenderer {
     private final Map<Class<? extends RbelElement>, BiFunction<RbelElement, Optional<String>, ContainerTag>> htmlRenderer = new HashMap<>();
     private final RbelValueShader rbelValueShader;
     private String currentKey;
+
+    @Setter
+    private String title = "RBelLogger";
+
+    @Setter
+    private String subTitle = "<p>The [R]everse [B]ridle [E]vent [L]ogger pays tribute to the fact "
+        + "that many agile projects' specifications, alas somewhat complete, "
+        + "lack specificality. Using PoCs most of the time does not resolve this as the code is not "
+        + "well enough documented and communication between nodes is not observable or "
+        + "logged in a well enough readable manner.</p> "
+        + "<p>This is where the RBeL Logger comes into play.</p> "
+        + "<p>Attaching it to a network, RestAssured or Wiremock interface or instructing it to read from a recorded PCAP file, "
+        + "produces this shiny communication log supporting Plain HTTP, JSON, JWT and even JWE!</p>";
 
     {
         htmlRenderer.put(RbelHttpRequest.class, (el, key) -> collapsibleCard(
@@ -240,6 +257,10 @@ public class RbelHtmlRenderer {
             .performRendering(elements);
     }
 
+    public String doRender(final List<RbelElement> elements) {
+        return performRendering(elements);
+    }
+
     private static DomContent renderMenu(final List<RbelElement> elements) {
         return div().withClass(" column is-one-fifth menu is-size-4 sidebar").with(
             a(i().withClass("fas fa-angle-double-up")).withId("collapse-all").withHref("#")
@@ -280,7 +301,7 @@ public class RbelHtmlRenderer {
         }
     }
 
-    private JsonElement shadeJson(JsonElement input, Optional<String> key) {
+    private JsonElement shadeJson(final JsonElement input, final Optional<String> key) {
         if (input.isJsonPrimitive()) {
             if (key.isPresent() && rbelValueShader.shouldConvert(key.get())) {
                 return new JsonPrimitive(rbelValueShader.convert(key.get(), input.getAsJsonPrimitive().getAsString()));
@@ -288,14 +309,14 @@ public class RbelHtmlRenderer {
                 return input;
             }
         } else if (input.isJsonObject()) {
-            JsonObject output = new JsonObject();
-            for (Entry<String, JsonElement> element : input.getAsJsonObject().entrySet()) {
+            final JsonObject output = new JsonObject();
+            for (final Entry<String, JsonElement> element : input.getAsJsonObject().entrySet()) {
                 output.add(element.getKey(), shadeJson(element.getValue(), Optional.of(element.getKey())));
             }
             return output;
         } else if (input.isJsonArray()) {
-            JsonArray output = new JsonArray();
-            for (JsonElement element : input.getAsJsonArray()) {
+            final JsonArray output = new JsonArray();
+            for (final JsonElement element : input.getAsJsonArray()) {
                 output.add(shadeJson(element, Optional.empty()));
             }
             return output;
@@ -306,7 +327,7 @@ public class RbelHtmlRenderer {
         }
     }
 
-    private String performElementToTextConversion(final RbelElement el, Optional<String> key) {
+    private String performElementToTextConversion(final RbelElement el, final Optional<String> key) {
         return key
             .map(keyValue -> rbelValueShader.convert(keyValue, el.getContent()))
             .orElse(el.getContent())
@@ -381,17 +402,8 @@ public class RbelHtmlRenderer {
                                     img().withSrc("https://colinbeavan.com/wp-content/uploads/2018/05/backwards.jpg")
                                 ),
                                 div().withClass("is-inline-block").with(
-                                    h1("RBelLogger").withClass("is-size-1 mb-3"),
-                                    div(new UnescapedText(
-                                        "<p>The [R]everse [B]ridle [E]vent [L]ogger pays tribute to the fact "
-                                            + "that many agile projects' specifications, alas somewhat complete, "
-                                            + "lack specifically. Using PoCs most of the time does not resolve this as the code is not "
-                                            + "well enough documented and communication between nodes is not observable, "
-                                            + "logged in a well enough readable manner.</p> "
-                                            + "<p>This is where the RBeL Logger comes into play.</p> "
-                                            + "<p>Attaching it to a network interface or instructing it to read from a recorded PCAP file, "
-                                            + "produces this shiny communication log supporting Plain HTTP, JSON, JWT and even JWE!</p>")
-                                    ).withClass("is-size-6 is-italic is-clearfix")
+                                    h1(title).withClass("is-size-1 mb-3"),
+                                    div(new UnescapedText(subTitle)).withClass("is-size-6 is-italic is-clearfix")
                                 )
                             ),
                             section().withClass("columns is-fullheight").with(
@@ -418,7 +430,7 @@ public class RbelHtmlRenderer {
         );
     }
 
-    private ContainerTag convert(final RbelElement element, Optional<String> key) {
+    private ContainerTag convert(final RbelElement element, final Optional<String> key) {
         if (htmlRenderer.containsKey(element.getClass())) {
             return htmlRenderer.get(element.getClass()).apply(element, key);
         } else {

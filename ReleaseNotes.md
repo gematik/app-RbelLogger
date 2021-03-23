@@ -1,3 +1,6 @@
+# Release 0.6.3
+* add project name to pom
+
 # Release 0.6.2
 * removed dependency jose4j
 

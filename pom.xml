@@ -5,10 +5,11 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.6.2</version>
+    <version>0.6.3</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
+    <name>rbellogger</name>
 
     <scm>
         <url>https://github.com/gematik/app-RbelLogger</url>
