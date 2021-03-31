@@ -16,7 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
-import de.gematik.rbellogger.converter.RbelConverter;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
@@ -28,17 +28,11 @@ public abstract class RbelHttpMessage extends RbelElement {
     public final static String ELEMENT_SEPARATOR = StringUtils.repeat("=", 80) + "\n";
     public final static String HEADER_SEPARATOR = StringUtils.repeat("-", 60) + "\n";
 
-    private final RbelElement header;
+    private final RbelMapElement header;
     private final RbelElement body;
 
     @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        if (header != null) {
-            header.triggerPostConversionListener(context);
-        }
-        if (body != null) {
-            body.triggerPostConversionListener(context);
-        }
+    public List<RbelElement> getChildNodes() {
+        return List.of(header, body);
     }
 }

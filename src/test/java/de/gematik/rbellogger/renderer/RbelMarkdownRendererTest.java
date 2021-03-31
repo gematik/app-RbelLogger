@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.renderer;
 
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import java.io.File;
@@ -30,14 +31,14 @@ public class RbelMarkdownRendererTest {
         final String curlMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
 
-        final RbelElement convertedMessage = RbelConverter.build().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
     }
 
     @Test
     public void printJsonToMarkdown() {
-        final RbelElement convertedMessage = RbelConverter.build().convertMessage("{\"foo\":[\"bar\", 2, 4]}");
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage("{\"foo\":[\"bar\", 2, 4]}");
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
     }

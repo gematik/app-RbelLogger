@@ -16,7 +16,14 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.List;
+
 public class RbelNullElement extends RbelElement {
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of();
+    }
 
     @Override
     public String getContent() {

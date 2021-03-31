@@ -18,19 +18,14 @@ package de.gematik.rbellogger.converter;
 
 import static de.gematik.rbellogger.data.RbelBearerTokenElement.BEARER_TOKEN_PREFIX;
 
-import de.gematik.rbellogger.data.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import de.gematik.rbellogger.data.RbelBearerTokenElement;
+import de.gematik.rbellogger.data.RbelElement;
 
 public class RbelBearerTokenConverter implements RbelConverterPlugin {
 
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        final String content = rbel.getContent();
-        return content.startsWith(BEARER_TOKEN_PREFIX);
+        return rbel.getContent().startsWith(BEARER_TOKEN_PREFIX);
     }
 
     @Override

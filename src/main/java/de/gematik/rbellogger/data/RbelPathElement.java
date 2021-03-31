@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,11 @@ public class RbelPathElement extends RbelElement {
     @Override
     public boolean isNestedBoundary() {
         return false;
+    }
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of(basicPath, queryParameter);
     }
 
     @Override

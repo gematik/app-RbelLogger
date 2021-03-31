@@ -17,18 +17,17 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
-import de.gematik.rbellogger.data.*;
-import java.security.Key;
-import java.security.PublicKey;
-import java.security.cert.X509Certificate;
-import java.util.Map.Entry;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelJweElement;
+import de.gematik.rbellogger.data.RbelJweEncryptionInfo;
+import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.key.RbelKey;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwe.JsonWebEncryption;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.lang.JoseException;
 
 public class RbelJweConverter implements RbelConverterPlugin {
 
@@ -56,23 +55,17 @@ public class RbelJweConverter implements RbelConverterPlugin {
             new RbelJweEncryptionInfo(true, correctKeyAndPayload.get().getKey()));
     }
 
-    private Optional<Pair<String, String>> findCorrectKeyAndReturnPayload(RbelConverter context, JsonWebEncryption jwe) {
-        for (Entry<String, Key> keyEntry : context.getKeyIdToKeyDatabase().entrySet()) {
+    private Optional<Pair<String, String>> findCorrectKeyAndReturnPayload(RbelConverter context,
+        JsonWebEncryption jwe) {
+        for (RbelKey keyEntry : context.getRbelKeyManager().getAllKeys().collect(Collectors.toList())) {
             try {
-                jwe.setKey(keyEntry.getValue());
-                return Optional.of(Pair.of(keyEntry.getKey(),jwe.getPayload()));
+                jwe.setKey(keyEntry.getKey());
+                return Optional.of(Pair.of(keyEntry.getKeyName(), jwe.getPayload()));
             } catch (Exception e) {
                 continue;
             }
         }
         return Optional.empty();
-    }
-
-    @SneakyThrows
-    private Optional<PublicKey> tryToGetKeyFromX5cHeaderClaim(JsonWebSignature jsonWebSignature) {
-        return Optional.ofNullable(jsonWebSignature.getCertificateChainHeaderValue())
-            .map(list -> list.get(0))
-            .map(X509Certificate::getPublicKey);
     }
 
     @SneakyThrows
@@ -87,17 +80,6 @@ public class RbelJweConverter implements RbelConverterPlugin {
             receiverJwe.getHeaders();
             return Optional.ofNullable(receiverJwe);
         } catch (final Exception e) {
-            return Optional.empty();
-        }
-    }
-
-    private Optional<RbelJwtSignature> verifySig(final JsonWebSignature jsonWebSignature, final Key key,
-        final String keyId) {
-        try {
-            jsonWebSignature.setKey(key);
-            tryToGetKeyFromX5cHeaderClaim(jsonWebSignature);
-            return Optional.of(new RbelJwtSignature(jsonWebSignature.verifySignature(), keyId));
-        } catch (final JoseException e) {
             return Optional.empty();
         }
     }

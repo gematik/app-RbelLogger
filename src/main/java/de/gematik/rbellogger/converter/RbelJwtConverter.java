@@ -53,9 +53,8 @@ public class RbelJwtConverter implements RbelConverterPlugin {
         final RbelElement headerElement = context
             .convertMessage(jsonWebSignature.getHeaders().getFullHeaderAsJsonString());
         final RbelElement bodyElement = context.convertMessage(jsonWebSignature.getUnverifiedPayload());
-        final RbelJwtSignature signature = context.getKeyIdToKeyDatabase().entrySet()
-            .stream()
-            .map(entry -> verifySig(jsonWebSignature, entry.getValue(), entry.getKey()))
+        final RbelJwtSignature signature = context.getRbelKeyManager().getAllKeys()
+            .map(rbelKey -> verifySig(jsonWebSignature, rbelKey.getKey(), rbelKey.getKeyName()))
             .filter(Optional::isPresent)
             .map(Optional::get)
             .findAny()

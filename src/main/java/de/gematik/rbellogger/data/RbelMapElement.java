@@ -16,7 +16,8 @@
 
 package de.gematik.rbellogger.data;
 
-import de.gematik.rbellogger.converter.RbelConverter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -35,6 +36,11 @@ public class RbelMapElement extends RbelElement {
     }
 
     @Override
+    public List<RbelElement> getChildNodes() {
+        return new ArrayList<>(elementMap.values());
+    }
+
+    @Override
     public boolean isNestedBoundary() {
         return false;
     }
@@ -42,13 +48,5 @@ public class RbelMapElement extends RbelElement {
     @Override
     public Map<String, RbelElement> getChildElements() {
         return elementMap;
-    }
-
-    @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        for(RbelElement rbelElement : elementMap.values()) {
-            rbelElement.triggerPostConversionListener(context);
-        }
     }
 }

@@ -40,6 +40,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
     }
 
     private RbelElement jsonElementToRbelElement(final JsonElement jsonElement, final RbelConverter context) {
+        //TODO set parent/child connections correctly!
         if (jsonElement.isJsonObject()) {
             final RbelMapElement rbelMapElement = new RbelMapElement(
                 jsonElement.getAsJsonObject().entrySet().stream()

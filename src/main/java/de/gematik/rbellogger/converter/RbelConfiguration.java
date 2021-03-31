@@ -16,13 +16,16 @@
 
 package de.gematik.rbellogger.converter;
 
+import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.key.RbelKey;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -35,15 +38,27 @@ public class RbelConfiguration {
 
     private Map<Class<? extends RbelElement>, List<BiConsumer<RbelElement, RbelConverter>>> postConversionListener
         = new HashMap<>();
+    private Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
+        = new HashMap<>();
     private List<Consumer<RbelConverter>> initializers = new ArrayList<>();
-    private Map<String, Key> keys = new HashMap<>();
+    private Map<String, RbelKey> keys = new HashMap<>();
+    private RbelCapturer capturer;
 
-    public RbelConfiguration addPostConversionListener(Class<? extends RbelElement> clazz,
-        BiConsumer<RbelElement, RbelConverter> consumer) {
+    public <T extends RbelElement> RbelConfiguration addPostConversionListener(Class<T> clazz,
+        BiConsumer<T, RbelConverter> consumer) {
         if (!postConversionListener.containsKey(clazz)) {
             postConversionListener.put(clazz, new ArrayList<>());
         }
-        postConversionListener.get(clazz).add(consumer);
+        postConversionListener.get(clazz).add((rawKey, context) -> consumer.accept((T) rawKey, context));
+        return this;
+    }
+
+    public <T extends RbelElement> RbelConfiguration addPreConversionMapper(Class<T> clazz,
+        BiFunction<T, RbelConverter, RbelElement> mapper) {
+        if (!preConversionMappers.containsKey(clazz)) {
+            preConversionMappers.put(clazz, new ArrayList<>());
+        }
+        preConversionMappers.get(clazz).add((rawKey, context) -> mapper.apply((T) rawKey, context));
         return this;
     }
 
@@ -52,8 +67,17 @@ public class RbelConfiguration {
         return this;
     }
 
-    public RbelConfiguration addKey(String keyId, Key key) {
-        keys.put(keyId, key);
+    public RbelConfiguration addKey(final String keyId, final Key key, final int precedence) {
+        keys.put(keyId, RbelKey.builder()
+            .key(key)
+            .keyName(keyId)
+            .precedence(precedence)
+            .build());
+        return this;
+    }
+
+    public RbelConfiguration addCapturer(RbelCapturer capturer) {
+        this.capturer = capturer;
         return this;
     }
 }

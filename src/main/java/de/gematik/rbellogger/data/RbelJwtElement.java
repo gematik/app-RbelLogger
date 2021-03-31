@@ -16,7 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
-import de.gematik.rbellogger.converter.RbelConverter;
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -30,23 +30,13 @@ public class RbelJwtElement extends RbelElement {
     private final RbelElement body;
     private final RbelJwtSignature signature;
 
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of(header, body, signature);
+    }
 
     @Override
     public String getContent() {
         return "Header Claims:\n" + header.getContent() + "\n\nBody Claims:  \n" + body.getContent();
-    }
-
-    @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        if (header != null) {
-            header.triggerPostConversionListener(context);
-        }
-        if (body != null) {
-            body.triggerPostConversionListener(context);
-        }
-        if (signature != null) {
-            signature.triggerPostConversionListener(context);
-        }
     }
 }

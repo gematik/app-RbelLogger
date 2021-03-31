@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.6.3</version>
+    <version>0.7.0</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -113,6 +113,11 @@
             <artifactId>jose4j</artifactId>
             <groupId>org.bitbucket.b_c</groupId>
             <version>0.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-jexl3</artifactId>
+            <version>3.1</version>
         </dependency>
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
@@ -242,7 +247,7 @@
                             <archive>
                                 <manifest>
                                     <mainClass>
-                                        de.gematik.rbellogger.apps.PCapCapture
+                                        de.gematik.rbellogger.captures.PCapCapture
                                     </mainClass>
                                 </manifest>
                             </archive>
@@ -263,7 +268,7 @@
                         <argument>-device</argument>
                         <argument>\Device\NPF_Loopback</argument>
                     </arguments>
-                    <mainClass>de.gematik.rbellogger.apps.PCapCapture</mainClass>
+                    <mainClass>de.gematik.rbellogger.captures.PCapCapture</mainClass>
                 </configuration>
                 <executions>
                     <execution>

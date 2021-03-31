@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.apps;
+package de.gematik.rbellogger.captures;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.http.ContentTypeHeader;
-import com.github.tomakehurst.wiremock.http.HttpHeader;
-import com.github.tomakehurst.wiremock.http.Request;
-import com.github.tomakehurst.wiremock.http.Response;
+import com.github.tomakehurst.wiremock.http.*;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.*;
 import java.util.Map;
@@ -32,24 +29,24 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Builder;
-import lombok.Data;
-import lombok.SneakyThrows;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import wiremock.com.google.common.net.MediaType;
 
-@Builder
-@Data
 @Slf4j
-public class WiremockCapture {
+@Getter
+@EqualsAndHashCode
+public class WiremockCapture extends RbelCapturer {
 
-    private final RbelConverter rbel;
     private final String proxyFor;
     private WireMockServer wireMockServer;
     private boolean isInitialized;
 
-    @SneakyThrows
-    public void run() {
-        initialize();
+    @Builder
+    public WiremockCapture(RbelConverter rbelConverter, String proxyFor) {
+        super(rbelConverter);
+        this.proxyFor = proxyFor;
     }
 
     public WiremockCapture initialize() {
@@ -68,19 +65,21 @@ public class WiremockCapture {
             .willReturn(aResponse().proxiedFrom(proxyFor)));
 
         wireMockServer.addMockServiceRequestListener((request, response) -> {
-            rbel.convertMessage(requestToRbelMessage(request));
-            rbel.convertMessage(responseToRbelMessage(response));
+            getRbelConverter().convertMessage(requestToRbelMessage(request));
+            getRbelConverter().convertMessage(responseToRbelMessage(response));
         });
+
+        isInitialized = true;
 
         return this;
     }
-
     private RbelElement requestToRbelMessage(final Request request) {
         return RbelHttpRequest.builder()
             .method(request.getMethod().getName())
-            .path((RbelPathElement) rbel.convertMessage(request.getUrl()))
+            .path((RbelPathElement) getRbelConverter().convertMessage(request.getUrl()))
             .header(mapHeader(request.getHeaders()))
-            .body(convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader()))
+            .body(getRbelConverter().convertMessage(
+                convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader())))
             .build();
     }
 
@@ -88,7 +87,8 @@ public class WiremockCapture {
         return RbelHttpResponse.builder()
             .responseCode(response.getStatus())
             .header(mapHeader(response.getHeaders()))
-            .body(convertMessageBody(response.getBodyAsString(), response.getHeaders().getContentTypeHeader()))
+            .body(getRbelConverter().convertMessage(
+                convertMessageBody(response.getBodyAsString(), response.getHeaders().getContentTypeHeader())))
             .build();
     }
 
@@ -100,19 +100,21 @@ public class WiremockCapture {
             try {
                 return new RbelMapElement(Stream.of(bodyAsString.split("&"))
                     .map(str -> str.split("="))
-                    .collect(Collectors.toMap(array -> array[0], array -> rbel.convertMessage(array[1]))));
+                    .collect(
+                        Collectors.toMap(array -> array[0], array -> getRbelConverter().convertMessage(array[1]))));
             } catch (Exception e) {
                 log.warn("Unable to parse form-data '" + bodyAsString + "'. Using fallback");
-                return rbel.convertMessage(bodyAsString);
+                return getRbelConverter().convertMessage(bodyAsString);
             }
         } else {
-            return rbel.convertMessage(bodyAsString);
+            return getRbelConverter().convertMessage(bodyAsString);
         }
     }
 
-    private RbelElement mapHeader(com.github.tomakehurst.wiremock.http.HttpHeaders headers) {
+    private RbelMapElement mapHeader(HttpHeaders headers) {
         final Map<String, RbelElement> headersMap = headers.all().stream()
-            .collect(Collectors.toMap(HttpHeader::key, httpHeader -> rbel.convertMessage(httpHeader.firstValue())));
+            .collect(Collectors
+                .toMap(HttpHeader::key, httpHeader -> getRbelConverter().convertMessage(httpHeader.firstValue())));
         return new RbelMapElement(headersMap);
     }
 
@@ -122,5 +124,12 @@ public class WiremockCapture {
 
     public String getTlsProxyAdress() {
         return "https://localhost:" + wireMockServer.httpsPort();
+    }
+
+    @Override
+    public void close() {
+        if (wireMockServer.isRunning()) {
+            wireMockServer.stop();
+        }
     }
 }

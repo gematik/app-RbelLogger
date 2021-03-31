@@ -18,33 +18,32 @@ package de.gematik.rbellogger.apps;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.gson.Gson;
+import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
-import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.RbelHttpRequest;
+import de.gematik.rbellogger.data.RbelHttpResponse;
+import de.gematik.rbellogger.data.RbelJweElement;
+import de.gematik.rbellogger.key.RbelKey;
+import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
-import de.gematik.rbellogger.renderer.RbelMarkdownRenderer;
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.Charset;
-import java.security.Key;
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.Base64;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 public class PCapCaptureTest {
+
     private final static Map<String, String> MASKING_FUNCTIONS = new HashMap<>();
 
     {
@@ -58,11 +57,14 @@ public class PCapCaptureTest {
         MASKING_FUNCTIONS.put("code_challenge",
             "[code_challenge value, Base64URL(SHA256(code_verifier)). Beispiel: %s]");
 
-        MASKING_FUNCTIONS.put("nonce", "[String value used to associate a Client session with an ID Token, and to mitigate replay attacks. Beispiel: %s]");
+        MASKING_FUNCTIONS.put("nonce",
+            "[String value used to associate a Client session with an ID Token, and to mitigate replay attacks. Beispiel: %s]");
 
-        MASKING_FUNCTIONS.put("state","[OAuth 2.0 state value. Constant over complete flow. Value is a case-sensitive string. Beispiel: %s]");
+        MASKING_FUNCTIONS.put("state",
+            "[OAuth 2.0 state value. Constant over complete flow. Value is a case-sensitive string. Beispiel: %s]");
 
-        MASKING_FUNCTIONS.put("jti", "[A unique identifier for the token, which can be used to prevent reuse of the token. Value is a case-sensitive string. Beispiel: %s]");
+        MASKING_FUNCTIONS.put("jti",
+            "[A unique identifier for the token, which can be used to prevent reuse of the token. Value is a case-sensitive string. Beispiel: %s]");
 
         MASKING_FUNCTIONS.put("given_name",
             "[givenName aus dem subject-DN des authentication-Zertifikats. Beispiel: %s]");
@@ -74,7 +76,8 @@ public class PCapCaptureTest {
             "[professionOID des HBA aus dem authentication-Zertifikats. Null if not present. Beispiel: %s]");
         MASKING_FUNCTIONS.put("organizationName",
             "[professionOID des HBA  aus dem authentication-Zertifikats. Null if not present. Beispiel: %s]");
-        MASKING_FUNCTIONS.put("auth_time", "[timestamp of authentication. Technically this is the time of authentication-token signing. Beispiel: %s]");
+        MASKING_FUNCTIONS.put("auth_time",
+            "[timestamp of authentication. Technically this is the time of authentication-token signing. Beispiel: %s]");
         MASKING_FUNCTIONS.put("snc",
             "[server-nonce. Used to introduce noise. Beispiel: %s]");
 //        MASKING_FUNCTIONS.put("cnf",
@@ -83,10 +86,10 @@ public class PCapCaptureTest {
         MASKING_FUNCTIONS.put("sub",
             "[subject. Base64(sha256(audClaim + idNummerClaim + serverSubjectSalt)). Beispiel: %s]");
         MASKING_FUNCTIONS.put("at_hash",
-                "[Erste 16 Bytes des Hash des Authentication Tokens Base64(subarray(Sha256(authentication_token), 0, 16)). Beispiel: %s]");
- //       MASKING_FUNCTIONS.put("x5c",
- //           "[Enthält das verwendete Signer-Zertifikat. Beispiel: " + prettyPrintJsonString(v.toString(),
- //               " ".repeat(60)) + "]");
+            "[Erste 16 Bytes des Hash des Authentication Tokens Base64(subarray(Sha256(authentication_token), 0, 16)). Beispiel: %s]");
+        //       MASKING_FUNCTIONS.put("x5c",
+        //           "[Enthält das verwendete Signer-Zertifikat. Beispiel: " + prettyPrintJsonString(v.toString(),
+        //               " ".repeat(60)) + "]");
 
         MASKING_FUNCTIONS.put("authorization_endpoint", "[URL des Authorization Endpunkts.]");
         MASKING_FUNCTIONS.put("sso_endpoint", "[URL des Authorization Endpunkts.]");
@@ -99,67 +102,72 @@ public class PCapCaptureTest {
         MASKING_FUNCTIONS.put("Date", "[Zeitpunkt der Antwort. Beispiel %s]");
     }
 
-    private static final BiConsumer<RbelElement, RbelConverter> RBEL_IDP_TOKEN_KEY_LISTENER = (element, converter) ->
-        Optional.ofNullable(((RbelJweElement) element).getBody())
-            .filter(RbelJsonElement.class::isInstance)
-            .map(RbelJsonElement.class::cast)
-            .map(json -> json.getJsonElement())
-            .filter(RbelMapElement.class::isInstance)
-            .map(RbelMapElement.class::cast)
-            .map(map -> map.getChildElements())
-            .filter(map -> map.containsKey("token_key"))
-            .map(map -> map.get("token_key"))
-            .map(tokenB64 -> Base64.getUrlDecoder().decode(tokenB64.getContent()))
-            .map(tokenKeyBytes -> new SecretKeySpec(tokenKeyBytes, "AES"))
-            .ifPresent(aesKey -> converter.getKeyIdToKeyDatabase().put("token_key", aesKey));
+    ;
 
     @Test
-    @Disabled
     public void listAllDevices() {
-        PCapCapture.builder()
+        PCapCaptureApp.builder()
             .listDevices(true)
             .build()
             .run();
     }
 
     @Test
-    @Disabled
     public void pcapFileDump() {
-        PCapCapture.builder()
-            .pcapFile("src/test/resources/discDoc.pcap")
-            .printMessageToSystemOut(false)
-            .rbel(RbelConverter.build(new RbelConfiguration()
-                .addPostConversionListener(RbelHttpResponse.class,
-                    (el, context) -> System.out.println(el))))
-            .build()
-            .run();
+        RbelLogger.build(new RbelConfiguration()
+            .addCapturer(PCapCapture.builder()
+                .pcapFile("src/test/resources/discDoc.pcap")
+                .printMessageToSystemOut(false)
+                .build())
+            .addPostConversionListener(RbelHttpResponse.class,
+                (el, context) -> System.out.println(el)));
     }
 
+    @SneakyThrows
     @Test
-    @Disabled
-    public void forceCleanContent() throws IOException {
-        final RbelConverter rbelConverter = RbelConverter.build(new RbelConfiguration()
+    public void readPcapFile_shouldParseMessages() {
+        final PCapCapture pCapCapture = PCapCapture.builder()
+            .pcapFile("src/test/resources/deregisterPairing.pcap")
+            .build();
+        final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
             .addKey("IDP symmetricEncryptionKey",
-                new SecretKeySpec(DigestUtils.sha256("geheimerSchluesselDerNochGehashtWird"), "AES"))
+                new SecretKeySpec(DigestUtils.sha256("geheimerSchluesselDerNochGehashtWird"), "AES"),
+                RbelKey.PRECEDENCE_KEY_FOLDER)
             .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
-            .addPostConversionListener(RbelJweElement.class, RBEL_IDP_TOKEN_KEY_LISTENER));
-        PCapCapture.builder()
-            .pcapFile("src/test/resources/pairingList.pcap")
-            .printMessageToSystemOut(false)
-            .rbel(rbelConverter)
-            .build()
-            .run();
-        rbelConverter.getMessageHistory().stream()
-            .forEach(el -> System.out.println(RbelMarkdownRenderer.render(el)));
+            .addPostConversionListener(RbelJweElement.class, RbelKeyManager.RBEL_IDP_TOKEN_KEY_LISTENER)
+            .addCapturer(pCapCapture)
+        );
 
-        FileUtils.writeStringToFile(new File("target/PairingDelete.html"),
-            RbelHtmlRenderer
-                .render(rbelConverter.getMessageHistory(), new RbelValueShader(MASKING_FUNCTIONS)), Charset.defaultCharset());
+        MASKING_FUNCTIONS.forEach((k, v) -> rbelLogger.getValueShader().addSimpleShadingCriterion(k, v));
+        rbelLogger.getValueShader().addJexlNoteCriterion(
+            "message.url == '/auth/realms/idp/.well-known/openid-configuration' &&"
+                + "message.method == 'GET' && message.request == true", "Discovery Document anfragen");
+        rbelLogger.getValueShader().addJexlNoteCriterion(
+            "request.url == '/auth/realms/idp/.well-known/openid-configuration' &&"
+                + "request.method == 'GET' && message.response", "Discovery Document Response");
+        rbelLogger.getValueShader().addJexlNoteCriterion("message.url =^ '/sign_response?' "
+            + "&& message.method=='GET' && key == 'scope'", "scope Note!!");
+        rbelLogger.getValueShader().addJexlNoteCriterion("path == 'body.key_verifier.body'",
+            "key verifier body note");
+        rbelLogger.getValueShader().addJexlNoteCriterion("key == 'code_verifier'",
+            "the long forgotten code verifier");
 
-        assertThat(rbelConverter.getMessageHistory().get(0))
+        pCapCapture.close();
+
+        log.info("start rendering " + LocalDateTime.now());
+        FileUtils.writeStringToFile(new File("target/pairingList.html"),
+            new RbelHtmlRenderer()
+                .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
+        log.info("completed rendering " + LocalDateTime.now());
+
+        assertThat(rbelLogger.getMessageHistory().get(0))
             .isInstanceOf(RbelHttpRequest.class);
-        assertThat(rbelConverter.getMessageHistory().get(1))
+        assertThat(rbelLogger.getMessageHistory().get(1))
             .isInstanceOf(RbelHttpResponse.class);
+        assertThat(rbelLogger.getMessageHistory().get(0).getNote())
+            .isEqualTo("Discovery Document anfragen");
+        assertThat(rbelLogger.getMessageHistory().get(1).getNote())
+            .isEqualTo("Discovery Document Response");
     }
     /* How to print from cmdline
 

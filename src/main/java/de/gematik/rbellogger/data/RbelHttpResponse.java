@@ -29,7 +29,7 @@ public class RbelHttpResponse extends RbelHttpMessage {
     private int responseCode;
 
     @Builder
-    public RbelHttpResponse(RbelElement header, RbelElement body, int responseCode) {
+    public RbelHttpResponse(RbelMapElement header, RbelElement body, int responseCode) {
         super(header, body);
         this.responseCode = responseCode;
     }

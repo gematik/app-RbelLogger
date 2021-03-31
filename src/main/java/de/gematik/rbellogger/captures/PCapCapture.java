@@ -14,89 +14,43 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.apps;
+package de.gematik.rbellogger.captures;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
 import com.sun.jna.Platform;
-import de.gematik.rbellogger.converter.RbelConfiguration;
+import de.gematik.rbellogger.apps.PCapException;
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.converter.RbelValueShader;
-import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelJsonElement;
-import de.gematik.rbellogger.data.RbelJweElement;
-import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.*;
+import lombok.Builder;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
 import org.pcap4j.core.*;
 import org.pcap4j.core.PcapHandle.TimestampPrecision;
 import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
 import org.pcap4j.packet.Packet;
-import wiremock.org.apache.commons.codec.digest.DigestUtils;
 
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Slf4j
-public class PCapCapture {
+public class PCapCapture extends RbelCapturer {
 
-    @Parameter(names = {"-device"})
     private String deviceName;
-
-    @Parameter(names = {"-list-devices"})
-    private boolean listDevices;
-
-    @Parameter(names = {"-pcap"})
     private String pcapFile;
-
-    @Parameter(names = {"-filter"})
     private String filter;
-
-    @Parameter(names = {"-dump"})
     private boolean printMessageToSystemOut;
+    private Thread captureThread;
+    private PcapHandle handle;
+    private PcapDumper dumper;
 
-    @Parameter(names = {"-html"})
-    private boolean bHtml;
-
-    @Parameter(names = {"-shade-values"})
-    private String shadeValues = null;
-
-    private RbelConverter rbel;
-
-    private static final BiConsumer<RbelElement, RbelConverter> RBEL_IDP_TOKEN_KEY_LISTENER = (element, converter) ->
-        Optional.ofNullable(((RbelJweElement) element).getBody())
-            .filter(RbelJsonElement.class::isInstance)
-            .map(RbelJsonElement.class::cast)
-            .map(RbelJsonElement::getJsonElement)
-            .filter(RbelMapElement.class::isInstance)
-            .map(RbelMapElement.class::cast)
-            .map(RbelMapElement::getChildElements)
-            .filter(map -> map.containsKey("token_key"))
-            .map(map -> map.get("token_key"))
-            .map(tokenB64 -> Base64.getUrlDecoder().decode(tokenB64.getContent()))
-            .map(tokenKeyBytes -> new SecretKeySpec(tokenKeyBytes, "AES"))
-            .ifPresent(aesKey -> converter.getKeyIdToKeyDatabase().put("token_key", aesKey));
-
-    public static void main(final String[] args) {
-        setWindowsNpcapPath();
-        final PCapCapture main = new PCapCapture();
-        JCommander.newBuilder()
-            .addObject(main)
-            .build()
-            .parse(args);
-        main.run();
+    @Builder
+    public PCapCapture(RbelConverter rbelConverter, String deviceName, String pcapFile, String filter,
+        boolean printMessageToSystemOut) {
+        super(rbelConverter);
+        this.deviceName = deviceName;
+        this.pcapFile = pcapFile;
+        this.filter = filter;
+        this.printMessageToSystemOut = printMessageToSystemOut;
     }
 
     private static void setWindowsNpcapPath() {
@@ -111,115 +65,111 @@ public class PCapCapture {
         }
     }
 
-    @SneakyThrows
-    public void run() {
-        final PcapHandle handle;
-        PcapDumper dumper = null;
-        if (printMessageToSystemOut) {
-            log.info("Activated system out channel");
-        }
-        if (listDevices) {
-            printAllPcapDevicesToSystemOut();
-            return;
+    @Override
+    public RbelCapturer initialize() {
+        setWindowsNpcapPath();
+
+        if (pcapFile != null) {
+            getOfflinePcapHandle();
         } else if (deviceName != null) {
-            handle = getLivePcapHandle();
-            dumper = handle.dumpOpen("out.pcap");
-        } else if (pcapFile != null) {
-            handle = getOfflinePcapHandle();
+            getOnlineHandle();
         } else {
             throw new IllegalArgumentException("Either device or pcap file must be specified");
         }
 
-        if (rbel == null) {
-            rbel = RbelConverter.build(new RbelConfiguration()
-                .addKey("IDP symmetricEncryptionKey",
-                    new SecretKeySpec(DigestUtils.sha256("geheimerSchluesselDerNochGehashtWird"), "AES"))
-                .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
-                .addPostConversionListener(RbelJweElement.class, RBEL_IDP_TOKEN_KEY_LISTENER));
-
-        }
         if (!handle.isOpen()) {
-            throw new IllegalAccessException("Source not open for reading!");
+            throw new RuntimeException("Source not open for reading!");
         }
 
         if (filter == null) {
             filter = "host 127.0.0.1 and tcp port 8080";
         }
         log.info("Applying filter '" + filter + "'");
-        try {
-            handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
-            final int maxPackets = -1;
-            handle.loop(maxPackets, new RBelPacketListener(handle, dumper));
-        } catch (final InterruptedException e) {
-            log.info("Packet capturing interrupted...");
-        } finally {
-            printStatsAndCloseConnections(handle, dumper);
-        }
-        if (dumper != null) {
-            log.info("Saved traffic to " + new File("out.pcap").getAbsolutePath());
-        }
 
-        if (bHtml) {
-            exportToHtml();
+        captureThread = new Thread(() -> {
+            try {
+                handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
+                final int maxPackets = -1;
+                handle.loop(maxPackets, new RBelPacketListener(handle, dumper));
+            } catch (final InterruptedException e) {
+                log.info("Packet capturing interrupted...");
+            } catch (PcapNativeException | NotOpenException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        captureThread.start();
+
+        return this;
+    }
+
+    private void getOnlineHandle() {
+        try {
+            getLivePcapHandle();
+            dumper = handle.dumpOpen("out.pcap");
+        } catch (PcapNativeException | NotOpenException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private void printStatsAndCloseConnections(final PcapHandle handle, final PcapDumper dumper)
-        throws PcapNativeException, NotOpenException {
-        if (deviceName != null && printMessageToSystemOut) {
-            final PcapStat stats = handle.getStats();
-            log.info("Packets received: " + stats.getNumPacketsReceived());
-            log.info("Packets dropped: " + stats.getNumPacketsDropped());
-            log.info("Packets dropped by interface: " + stats.getNumPacketsDroppedByIf());
-            // Supported by WinPcap only
-            if (Platform.isWindows()) {
-                log.info("Packets captured: " + stats.getNumPacketsCaptured());
-            }
+    @Override
+    public void close() {
+        try {
+            captureThread.join();
+        } catch (InterruptedException e) {
+            // swallow
         }
+
+        try {
+            handle.breakLoop();
+        } catch (NotOpenException e) {
+            // swallow
+        }
+
+        tryToPrintStats();
+
+        handle.close();
         if (dumper != null) {
             dumper.close();
         }
-        handle.close();
     }
 
-    private void exportToHtml() throws IOException {
-        final String html;
-        if (shadeValues != null) {
-            final RbelValueShader shader = new RbelValueShader();
-            shader.loadFromResource(shadeValues);
-            html = RbelHtmlRenderer.render(rbel.getMessageHistory(), shader);
-            shadeValues = null; // needed to avoid save action to make it final which breaks jcommander
-        } else {
-            html = RbelHtmlRenderer.render(rbel.getMessageHistory());
+    private void tryToPrintStats() {
+        if (deviceName != null && printMessageToSystemOut) {
+            try {
+                final PcapStat stats = handle.getStats();
+                log.info("Packets received: " + stats.getNumPacketsReceived());
+                log.info("Packets dropped: " + stats.getNumPacketsDropped());
+                log.info("Packets dropped by interface: " + stats.getNumPacketsDroppedByIf());
+                // Supported by WinPcap only
+                if (Platform.isWindows()) {
+                    log.info("Packets captured: " + stats.getNumPacketsCaptured());
+                }
+            } catch (Exception e) {
+                // swallow
+            }
         }
-        FileUtils.writeStringToFile(new File("out.html"), html, StandardCharsets.UTF_8);
-        log.info("Saved HTML report to " + new File("out.html").getAbsolutePath());
     }
 
-    private void printAllPcapDevicesToSystemOut() throws PcapNativeException {
-        Pcaps.findAllDevs()
-            .forEach(dev -> log.info((dev.isUp() ? "UP " : "DOWN ") + dev.getName() + " - " + dev.getDescription()));
-    }
-
-    private PcapHandle getLivePcapHandle() throws PcapNativeException {
-        final PcapHandle handle;
+    @SneakyThrows
+    private void getLivePcapHandle() {
         log.info("Capturing traffic live from device " + deviceName);
         final PcapNetworkInterface device = Pcaps.getDevByName(deviceName);
         final int snapshotLength = 65536; // in bytes
         final int readTimeout = 50; // in milliseconds
         handle = device.openLive(snapshotLength, PromiscuousMode.PROMISCUOUS, readTimeout);
-        return handle;
     }
 
-    private PcapHandle getOfflinePcapHandle() throws PcapNativeException {
-        PcapHandle handle;
+    private void getOfflinePcapHandle() {
         log.info("Reading traffic from pcap file " + new File(pcapFile).getAbsolutePath());
         try {
             handle = Pcaps.openOffline(pcapFile, TimestampPrecision.NANO);
         } catch (final PcapNativeException e) {
-            handle = Pcaps.openOffline(pcapFile);
+            try {
+                handle = Pcaps.openOffline(pcapFile);
+            } catch (final PcapNativeException e1) {
+                throw new RuntimeException(e1);
+            }
         }
-        return handle;
     }
 
     @RequiredArgsConstructor
@@ -264,7 +214,7 @@ public class PCapCapture {
                 final int eol = content.indexOf("\r\n"); // skip first line with length of chunked block
                 chunkedMessage += eol == -1 ? content : content.substring(eol + 4);
             } else {
-                final RbelElement convertedMultiPartMsg = rbel.convertMessage(chunkedMessage);
+                final RbelElement convertedMultiPartMsg = getRbelConverter().convertMessage(chunkedMessage);
                 if (printMessageToSystemOut) {
                     log.info("Multi:" + convertedMultiPartMsg.getContent());
                 }
@@ -281,15 +231,15 @@ public class PCapCapture {
             }
             final RbelElement convertMessage;
             if (isHttpResponse(content)) {
-                convertMessage = rbel.convertMessage(content);
+                convertMessage = getRbelConverter().convertMessage(content);
             } else if (isGetOrDeleteRequest(content)) {
-                convertMessage = rbel.convertMessage(content);
+                convertMessage = getRbelConverter().convertMessage(content);
             } else if (content.startsWith("POST ") || content.startsWith("PUT")) {
                 chunkedMessage = content;
                 chunkedTransfer = true;
                 convertMessage = null;
             } else {
-                convertMessage = rbel.convertMessage(content);
+                convertMessage = getRbelConverter().convertMessage(content);
             }
             if (printMessageToSystemOut && convertMessage != null && !content.isEmpty()) {
                 log.info("RBEL: " + convertMessage.getContent());

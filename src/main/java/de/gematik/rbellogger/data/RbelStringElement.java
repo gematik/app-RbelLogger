@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.List;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -28,5 +29,10 @@ public class RbelStringElement extends RbelElement {
     @Override
     public String getContent() {
         return content;
+    }
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of();
     }
 }

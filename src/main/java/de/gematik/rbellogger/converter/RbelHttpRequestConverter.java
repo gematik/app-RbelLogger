@@ -49,7 +49,7 @@ public class RbelHttpRequestConverter extends RbelCurlHttpMessageConverter {
             .filter(line -> !line.isEmpty() && !line.startsWith(method))
             .map(line -> parseStringToKeyValuePair(line, context))
             .collect(Collectors.toMap(SimpleImmutableEntry::getKey, SimpleImmutableEntry::getValue));
-        final RbelElement headers = new RbelMapElement(headerMap);
+        final RbelMapElement headers = new RbelMapElement(headerMap);
 
         final String bodyStr = bodySeparator == -1 ? "" : lines[lines.length - 1];
         final RbelElement pathElement = context.convertMessage(path);
@@ -57,8 +57,10 @@ public class RbelHttpRequestConverter extends RbelCurlHttpMessageConverter {
             throw new RuntimeException("Encountered ill-formatted path: " + path);
         }
 
-        return new RbelHttpRequest(headers,
-            context.convertMessage(convertBodyToRbelElement(bodyStr, headerMap, context)), method, (RbelPathElement)pathElement);
+        final RbelHttpRequest rbelHttpRequest = new RbelHttpRequest(headers,
+            context.convertMessage(convertBodyToRbelElement(bodyStr, headerMap, context)), method,
+            (RbelPathElement) pathElement);
+        return rbelHttpRequest;
     }
 
     private RbelElement convertBodyToRbelElement(final String bodyStr, final Map<String, RbelElement> headerMap,

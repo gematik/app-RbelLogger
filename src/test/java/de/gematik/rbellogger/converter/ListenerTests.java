@@ -17,6 +17,8 @@
 package de.gematik.rbellogger.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelHttpResponse;
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +35,7 @@ public class ListenerTests {
 
         final AtomicInteger callCounter = new AtomicInteger(0);
 
-        final RbelConverter rbelConverter = RbelConverter.build();
+        final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
         rbelConverter.registerListener(RbelHttpResponse.class, (m, c) -> callCounter.incrementAndGet());
         rbelConverter.convertMessage(curlMessage);
 

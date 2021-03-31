@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.List;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +26,11 @@ public class RbelJweEncryptionInfo extends RbelElement {
 
     private final boolean wasDecryptable;
     private final String decryptedUsingKeyWithId;
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of();
+    }
 
     @Override
     public String getContent() {

@@ -1,3 +1,7 @@
+# Release 0.7.0
+* jexl shading added
+* raw content dialog added
+
 # Release 0.6.3
 * add project name to pom
 

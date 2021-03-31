@@ -16,6 +16,8 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.*;
 
 @Getter
@@ -26,8 +28,16 @@ public class RbelHttpRequest extends RbelHttpMessage {
     private final String method;
     private final RbelPathElement path;
 
+    @Override
+    public List<RbelElement> getChildNodes() {
+        final ArrayList<RbelElement> childNodes = new ArrayList<>();
+        childNodes.add(path);
+        childNodes.addAll(super.getChildNodes());
+        return childNodes;
+    }
+
     @Builder
-    public RbelHttpRequest(RbelElement header, RbelElement body, String method, RbelPathElement path) {
+    public RbelHttpRequest(RbelMapElement header, RbelElement body, String method, RbelPathElement path) {
         super(header, body);
         this.method = method;
         this.path = path;

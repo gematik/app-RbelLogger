@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.data;
 
+import java.util.List;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +28,11 @@ public class RbelBearerTokenElement extends RbelElement {
 
     private final RbelElement bearerToken;
     private final String originalContent;
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of(bearerToken);
+    }
 
     @Override
     public String getContent() {

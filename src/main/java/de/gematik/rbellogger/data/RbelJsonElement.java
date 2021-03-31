@@ -32,6 +32,11 @@ public class RbelJsonElement extends RbelElement {
     private final String completeJsonString;
 
     @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of(jsonElement);
+    }
+
+    @Override
     public Map<String, RbelElement> getChildElements() {
         if (jsonElement == null) {
             return Map.of();
@@ -43,13 +48,5 @@ public class RbelJsonElement extends RbelElement {
     @Override
     public String getContent() {
         return jsonElement.getContent();
-    }
-
-    @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        if (jsonElement != null) {
-            jsonElement.triggerPostConversionListener(context);
-        }
     }
 }

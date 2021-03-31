@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.converter.initializers;
 
 import de.gematik.rbellogger.converter.RbelConverter;
+import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.RbelPkiIdentity;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -52,7 +53,8 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
                 .filter(file -> file.getName().endsWith(".p12"))
                 .map(this::readFileToKeyList)
                 .flatMap(List::stream)
-                .forEach(pair -> rbelConverter.getKeyIdToKeyDatabase().put(pair.getKey(), pair.getValue()));
+                .forEach(pair -> rbelConverter.getRbelKeyManager()
+                    .addKey(pair.getKey(), pair.getValue(), RbelKey.PRECEDENCE_KEY_FOLDER));
         } catch (IOException e) {
             throw new RuntimeException("Error while initializing keys", e);
         }

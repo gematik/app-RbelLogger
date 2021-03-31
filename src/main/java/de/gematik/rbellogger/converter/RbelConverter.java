@@ -16,23 +16,37 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.converter.listener.RbelX5cKeyReader;
-import de.gematik.rbellogger.data.*;
-import java.security.Key;
-import java.util.*;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelHttpMessage;
+import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.key.RbelKeyManager;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ClassUtils;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PUBLIC)
 @Getter
+@Slf4j
 public class RbelConverter {
 
     private final List<RbelElement> messageHistory = new ArrayList<>();
-    private final Map<String, Key> keyIdToKeyDatabase = new HashMap<>();
+    private final RbelKeyManager rbelKeyManager;
+    private final RbelValueShader rbelValueShader;
     private final Map<Class<? extends RbelElement>, List<BiConsumer<RbelElement, RbelConverter>>> postConversionListener
+        = new HashMap<>();
+    private final Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
         = new HashMap<>();
     private final List<RbelConverterPlugin> converterPlugins = new ArrayList<>(List.of(
         new RbelCurlHttpMessageConverter(),
@@ -43,54 +57,70 @@ public class RbelConverter {
         new RbelPathConverter(),
         new RbelBearerTokenConverter()));
 
-    public static RbelConverter build() {
-        return build(new RbelConfiguration());
-    }
-
-    public static RbelConverter build(final RbelConfiguration configuration) {
-        final RbelConverter rbelConverter = new RbelConverter();
-        rbelConverter.registerListener(RbelMapElement.class, new RbelX5cKeyReader());
-        if (configuration.getPostConversionListener() != null) {
-            configuration.getPostConversionListener().entrySet().stream()
-                .forEach(entry -> entry.getValue().stream()
-                    .forEach(listener -> rbelConverter.registerListener(entry.getKey(), listener)));
-            rbelConverter.postConversionListener.putAll(configuration.getPostConversionListener());
-        }
-
-        for (Consumer<RbelConverter> initializer : configuration.getInitializers()) {
-            initializer.accept(rbelConverter);
-        }
-        rbelConverter.getKeyIdToKeyDatabase().putAll(configuration.getKeys());
-
-        return rbelConverter;
-    }
-
     public RbelElement convertMessage(final String input) {
         return convertMessage(new RbelStringElement(input));
     }
 
-    public RbelElement convertMessage(final RbelElement input) {
+    public RbelElement convertMessage(final RbelElement rawInput) {
+        final RbelElement convertedInput = filterInputThroughPreConversionMappers(rawInput);
         final RbelElement result = converterPlugins.stream()
-            .filter(plugin -> plugin.canConvertElement(input, this))
-            .map(plugin -> plugin.convertElement(input, this))
+            .filter(plugin -> {
+                try {
+                    return plugin.canConvertElement(convertedInput, this);
+                } catch (Exception e) {
+                    return false;
+                }
+            })
+            .map(plugin -> plugin.convertElement(convertedInput, this))
             .findFirst()
-            .orElse(input);
+            .orElse(convertedInput);
+        result.setRawMessage(convertedInput.getContent());
         if (result instanceof RbelHttpMessage) {
             messageHistory.add(result);
+            result.triggerPostConversionListener(this);
         }
-        result.triggerPostConversionListener(this);
         return result;
+    }
+
+    private RbelElement filterInputThroughPreConversionMappers(final RbelElement input) {
+        RbelElement value = input;
+        for (BiFunction<RbelElement, RbelConverter, RbelElement> mapper : preConversionMappers.entrySet().stream()
+            .filter(entry -> input.getClass().isAssignableFrom(entry.getKey()))
+            .map(Entry::getValue)
+            .flatMap(List::stream)
+            .collect(Collectors.toList())) {
+            RbelElement newValue = mapper.apply(value, this);
+            if (newValue != value) {
+                value = filterInputThroughPreConversionMappers(newValue);
+            } else {
+                value = newValue;
+            }
+        }
+        return value;
     }
 
     public void registerListener(final Class<? extends RbelElement> clazz,
         final BiConsumer<RbelElement, RbelConverter> listener) {
-        postConversionListener.computeIfAbsent(clazz, key -> new ArrayList<>()).add(listener);
+        postConversionListener
+            .computeIfAbsent(clazz, key -> new ArrayList<>())
+            .add(listener);
     }
 
     public void triggerPostConversionListenerFor(RbelElement element) {
-        if (postConversionListener.containsKey(element.getClass())) {
-            postConversionListener.get(element.getClass())
-                .forEach(consumer -> consumer.accept(element, this));
-        }
+        final List<Class<?>> superclasses = new ArrayList<>(ClassUtils.getAllSuperclasses(element.getClass()));
+        superclasses.add(element.getClass());
+        superclasses
+            .stream()
+            .filter(postConversionListener::containsKey)
+            .map(postConversionListener::get)
+            .flatMap(List::stream)
+            .forEach(consumer -> consumer.accept(element, this));
+    }
+
+    public void registerMapper(Class<? extends RbelElement> clazz,
+        BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
+        preConversionMappers
+            .computeIfAbsent(clazz, key -> new ArrayList<>())
+            .add(mapper);
     }
 }

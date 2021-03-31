@@ -18,6 +18,7 @@ package de.gematik.rbellogger.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.*;
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +34,7 @@ public class JwtConverterTest {
         final String curlMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
 
-        final RbelElement convertedMessage = RbelConverter.build().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 
         assertThat(((RbelHttpResponse) convertedMessage).getBody())
             .isInstanceOf(RbelJwtElement.class);
@@ -42,7 +43,7 @@ public class JwtConverterTest {
     @Test
     public void convertMessage_shouldGiveJsonBody() {
         final RbelElement convertedMessage = new RbelJwtConverter()
-            .convertElement(new RbelStringElement(JWT), RbelConverter.build());
+            .convertElement(new RbelStringElement(JWT), RbelLogger.build().getRbelConverter());
 
         assertThat(convertedMessage)
             .isInstanceOf(RbelJwtElement.class);
@@ -51,7 +52,7 @@ public class JwtConverterTest {
     @Test
     public void convertMessage_shouldContainValidSignature() {
         final RbelElement convertedMessage = new RbelJwtConverter()
-            .convertElement(new RbelStringElement(JWT), RbelConverter.build());
+            .convertElement(new RbelStringElement(JWT), RbelLogger.build().getRbelConverter());
 
         assertThat(((RbelJwtElement) convertedMessage).getSignature()).isNotNull();
         assertThat(((RbelJwtElement) convertedMessage).getSignature().isValid()).isTrue();
@@ -60,7 +61,7 @@ public class JwtConverterTest {
     @Test
     public void convertMessage_shouldContainInvalidSignature() {
         final RbelElement convertedMessage = new RbelJwtConverter()
-            .convertElement(new RbelStringElement(JWT + "sigInvalid"), RbelConverter.build());
+            .convertElement(new RbelStringElement(JWT + "sigInvalid"), RbelLogger.build().getRbelConverter());
 
         assertThat(((RbelJwtElement) convertedMessage).getSignature()).isNotNull();
         assertThat(((RbelJwtElement) convertedMessage).getSignature().isValid()).isFalse();
@@ -72,7 +73,7 @@ public class JwtConverterTest {
             .readFileToString(new File("src/test/resources/sampleMessages/idpSigMessage.curl"));
         final String challengeMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"));
-        final RbelConverter rbelConverter = RbelConverter.build();
+        final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
 
         rbelConverter.convertMessage(keyMessage);
         final RbelElement convertedMessage = rbelConverter.convertMessage(challengeMessage);

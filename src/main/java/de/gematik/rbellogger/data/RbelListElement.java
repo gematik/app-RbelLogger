@@ -30,6 +30,11 @@ public class RbelListElement extends RbelElement {
     private final List<RbelElement> elementList;
 
     @Override
+    public List<RbelElement> getChildNodes() {
+        return elementList;
+    }
+
+    @Override
     public String getContent() {
         return elementList.toString();
     }
@@ -47,13 +52,5 @@ public class RbelListElement extends RbelElement {
             result.put(String.valueOf(index++), element);
         }
         return result;
-    }
-
-    @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        for (RbelElement rbelElement : elementList) {
-            rbelElement.triggerPostConversionListener(context);
-        }
     }
 }

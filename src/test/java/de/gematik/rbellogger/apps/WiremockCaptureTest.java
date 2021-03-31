@@ -24,14 +24,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import de.gematik.rbellogger.converter.RbelConverter;
+import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.captures.WiremockCapture;
+import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelHttpRequest;
 import de.gematik.rbellogger.data.RbelHttpResponse;
 import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.data.RbelNullElement;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,12 +67,13 @@ public class WiremockCaptureTest {
 
     @Test
     public void simpleExchange_shouldLog() throws UnirestException {
-        final RbelConverter rbel = RbelConverter.build();
         final WiremockCapture wiremockCapture = WiremockCapture.builder()
-            .rbel(rbel)
             .proxyFor(MOCK_SERVER_ADDRESS)
             .build()
             .initialize();
+
+        final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
+            .addCapturer(wiremockCapture));
 
         wireMockServer.stubFor(post(urlEqualTo("/foobar"))
             .willReturn(aResponse()
@@ -83,7 +84,7 @@ public class WiremockCaptureTest {
             .field("foo", "bar")
             .asString();
 
-        final RbelHttpRequest request = (RbelHttpRequest) rbel.getMessageHistory().get(0);
+        final RbelHttpRequest request = (RbelHttpRequest) rbelLogger.getMessageHistory().get(0);
         assertThat(request)
             .hasFieldOrPropertyWithValue("method", "POST");
         assertThat(request.getPath().getOriginalUrl())
@@ -91,7 +92,7 @@ public class WiremockCaptureTest {
         assertThat(request.getBody())
             .isInstanceOf(RbelMapElement.class);
 
-        final RbelHttpResponse response = (RbelHttpResponse) rbel.getMessageHistory().get(1);
+        final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1);
         assertThat(response)
             .hasFieldOrPropertyWithValue("responseCode", 666);
         assertThat(response.getBody().getContent())

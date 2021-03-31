@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.converter.RbelConverter;
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -31,18 +32,12 @@ public class RbelJweElement extends RbelElement {
     private final RbelJweEncryptionInfo encryptionInfo;
 
     @Override
-    public String getContent() {
-        return "Header Claims:\n" + header.getContent() + "\n\nBody Claims:  \n" + body.getContent();
+    public List<RbelElement> getChildNodes() {
+        return List.of(header, body, encryptionInfo);
     }
 
     @Override
-    public void triggerPostConversionListener(RbelConverter context) {
-        super.triggerPostConversionListener(context);
-        if (header != null) {
-            header.triggerPostConversionListener(context);
-        }
-        if (body != null) {
-            body.triggerPostConversionListener(context);
-        }
+    public String getContent() {
+        return "Header Claims:\n" + header.getContent() + "\n\nBody Claims:  \n" + body.getContent();
     }
 }

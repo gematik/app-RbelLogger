@@ -16,29 +16,35 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.data.RbelPathElement;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 
 public class RbelPathConverter implements RbelConverterPlugin {
 
-    public RbelMapElement extractParameterMap(final URI uri, final RbelConverter context) {
+    public RbelMapElement extractParameterMap(final URI uri, final RbelConverter context, String originalContent) {
         if (uri.getQuery() == null) {
             return new RbelMapElement(Map.of());
         }
+
+        final Map<String, String> rawStringMap = Stream.of(originalContent.split("\\?")[1].split("\\&"))
+            .filter(StringUtils::isNotEmpty)
+            .collect(Collectors.toMap(param -> param.split("\\=")[0], Function.identity()));
+
         return new RbelMapElement(
             Stream.of(uri.getQuery().split("&"))
                 .filter(param -> param.contains("="))
                 .map(param -> param.split("="))
                 .collect(Collectors.toMap(
                     array -> array[0],
-                    array -> context.convertMessage(array[1]))));
+                    array -> context.convertMessage(array[1])
+                        .setRawMessage(rawStringMap.get(array[0]))
+                )));
     }
 
     @Override
@@ -59,7 +65,7 @@ public class RbelPathConverter implements RbelConverterPlugin {
 
         return new RbelPathElement(new RbelStringElement(rbel.getContent()
             .split("\\?")[0]),
-            extractParameterMap(uri, context),
+            extractParameterMap(uri, context, rbel.getContent()),
             rbel.getContent());
     }
 

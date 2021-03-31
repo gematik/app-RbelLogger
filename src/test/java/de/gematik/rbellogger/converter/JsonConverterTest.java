@@ -18,6 +18,7 @@ package de.gematik.rbellogger.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHttpResponse;
 import de.gematik.rbellogger.data.RbelJsonElement;
@@ -35,7 +36,8 @@ public class JsonConverterTest {
         final String curlMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"));
 
-        final RbelElement convertedMessage = RbelConverter.build().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertMessage(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
 
@@ -48,7 +50,8 @@ public class JsonConverterTest {
         final String curlMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"));
 
-        final RbelElement convertedMessage = RbelConverter.build().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertMessage(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
         final RbelJsonElement body = (RbelJsonElement) ((RbelHttpResponse) convertedMessage).getBody();

@@ -17,16 +17,54 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.platform.commons.util.ReflectionUtils;
+import wiremock.com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class RbelElement {
+
+    private final String uuid = UUID.randomUUID().toString();
+    private String rawMessage;
+    @JsonIgnore
+    private transient RbelElement parentNode;
+    private String note;
+
+    public String getNote() {
+        return note;
+    }
+
+    public RbelElement setNote(String note) {
+        this.note = note;
+        return this;
+    }
+
+    public String getRawMessage() {
+        return rawMessage;
+    }
+
+    public RbelElement setRawMessage(String rawMessage) {
+        this.rawMessage = rawMessage;
+        return this;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public RbelElement getParentNode() {
+        return parentNode;
+    }
+
+    public void setParentNode(RbelElement parentNode) {
+        this.parentNode = parentNode;
+    }
+
+    public abstract List<RbelElement> getChildNodes();
 
     public abstract String getContent();
 
@@ -42,20 +80,47 @@ public abstract class RbelElement {
         return true;
     }
 
+    private List<Class> getAllRbelSuperclasses(Class startClass) {
+        List<Class> classes = new ArrayList<>();
+        Class currentClass = startClass;
+        while (currentClass != null) {
+            classes.add(currentClass);
+            currentClass = currentClass.getSuperclass();
+            if (!RbelElement.class.isAssignableFrom(currentClass)) {
+                break;
+            }
+        }
+        return classes;
+    }
+
     public Map<String, RbelElement> getChildElements() {
-        final Map<String, RbelElement> collect = Stream.of(getClass().getDeclaredFields())
+        return getAllRbelSuperclasses(getClass()).stream()
+            .flatMap(clazz -> Stream.of(clazz.getDeclaredFields()))
+            .filter(field -> ReflectionUtils.isNotStatic(field))
+            .filter(field -> !field.getName().equals("parentNode"))
             .filter(f -> RbelElement.class.isAssignableFrom(f.getType()))
-            .collect(Collectors.toMap(Field::getName, field -> {
+            .map(f -> {
                 try {
-                    return (RbelElement) ReflectionUtils.tryToReadFieldValue(field, this).get();
+                    final Object o = ReflectionUtils.tryToReadFieldValue(f, this).get();
+                    if (o == null) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(Pair.of(f.getName(), (RbelElement) o));
                 } catch (final Exception e) {
-                    throw new RuntimeException(e);
+                    return Optional.empty();
                 }
-            }));
-        return collect;
+            })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .map(Pair.class::cast)
+            .collect(Collectors.toMap(p -> (String) p.getKey(), p -> (RbelElement) p.getValue()));
     }
 
     public void triggerPostConversionListener(final RbelConverter context) {
+        for (RbelElement element : getChildNodes()) {
+            element.setParentNode(this);
+            element.triggerPostConversionListener(context);
+        }
         context.triggerPostConversionListenerFor(this);
     }
 
@@ -63,7 +128,7 @@ public abstract class RbelElement {
         return traverseAndReturnNestedMembers(getClass());
     }
 
-    public Map<String, RbelElement> traverseAndReturnNestedMembers(
+    private Map<String, RbelElement> traverseAndReturnNestedMembers(
         final Class<? extends RbelElement> identityClass) {
         final Map<String, RbelElement> result = new HashMap<>();
         for (final Entry<String, RbelElement> child : getChildElements().entrySet()) {
@@ -79,7 +144,7 @@ public abstract class RbelElement {
         return result;
     }
 
-    public Map<String, RbelElement> traverseAndReturnNestedMembersWithStopAtNextBoundary(
+    private Map<String, RbelElement> traverseAndReturnNestedMembersWithStopAtNextBoundary(
         final Class<? extends RbelElement> identityClass) {
         if (isNestedBoundary() && !getClass().isAssignableFrom(identityClass)) {
             return Map.of("", this);
@@ -88,9 +153,18 @@ public abstract class RbelElement {
         }
     }
 
-    private final String uuid = UUID.randomUUID().toString();
-
-    public String getUUID() {
-        return uuid;
+    public String findNodePath() {
+        LinkedList<Optional<String>> keyList = new LinkedList<>();
+        final AtomicReference<RbelElement> ptr = new AtomicReference(this);
+        while (!(ptr.get() instanceof RbelHttpMessage)) {
+            keyList.addFirst(ptr.get().getParentNode().getChildElements().entrySet().stream()
+                .filter(entry -> entry.getValue() == ptr.get())
+                .map(Entry::getKey).findFirst());
+            ptr.set(ptr.get().getParentNode());
+        }
+        return keyList.stream()
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.joining("."));
     }
 }

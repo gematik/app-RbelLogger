@@ -18,7 +18,8 @@ package de.gematik.rbellogger.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.gematik.rbellogger.apps.PCapCapture;
+import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.*;
 import org.junit.jupiter.api.Disabled;
@@ -29,14 +30,12 @@ public class JweConverterTest {
     @Test
     @Disabled
     public void shouldConvertJwe() {
-        final RbelConverter rbelConverter = RbelConverter.build(new RbelConfiguration()
-            .addInitializer(new RbelKeyFolderInitializer("src/test/resources")));
-        PCapCapture.builder()
-            .pcapFile("src/test/resources/ssoTokenFlow.pcap")
-            .printMessageToSystemOut(false)
-            .rbel(rbelConverter)
-            .build()
-            .run();
+        final RbelLogger rbelConverter = RbelLogger.build(new RbelConfiguration()
+            .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
+            .addCapturer(PCapCapture.builder()
+                .pcapFile("src/test/resources/ssoTokenFlow.pcap")
+                .printMessageToSystemOut(false)
+                .build()));
 
         final RbelHttpRequest postChallengeResponse = rbelConverter.getMessageHistory().stream()
             .filter(RbelHttpRequest.class::isInstance)

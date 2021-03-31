@@ -18,6 +18,7 @@ package de.gematik.rbellogger.converter.listener;
 
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoLoader;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
@@ -39,8 +40,8 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
             if (keyId.isPresent() && x509Certificate.isPresent()) {
                 final X509Certificate certificate = CryptoLoader
                     .getCertificateFromPem(Base64.getDecoder().decode(x509Certificate.get()));
-                converter.getKeyIdToKeyDatabase()
-                    .put(keyId.get(), certificate.getPublicKey());
+                converter.getRbelKeyManager()
+                    .addKey(keyId.get(), certificate.getPublicKey(), RbelKey.PRECEDENCE_X5C_HEADER_VALUE);
             }
         }
     }
