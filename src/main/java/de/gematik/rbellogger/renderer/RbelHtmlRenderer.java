@@ -359,7 +359,7 @@ public class RbelHtmlRenderer {
         if (StringUtils.isNotBlank(el.getNote())) {
             final String className = extraClasses.length == 0 ? "" : " " + extraClasses[0];
             return div(i().withText(el.getNote()))
-                .withClass("is-family-primary has-text-weight-light mb-3 " + className)
+                .withClass("is-family-primary has-text-weight-light m-3 " + className)
                 .withStyle("word-break: normal;");
         } else {
             return text("");

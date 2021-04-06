@@ -1,3 +1,7 @@
+# Release 0.7.1
+* Better key management
+* Pretty printing Wiremock Requests
+
 # Release 0.7.0
 * jexl shading added
 * raw content dialog added

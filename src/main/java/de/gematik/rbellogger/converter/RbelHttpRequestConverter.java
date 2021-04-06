@@ -29,9 +29,17 @@ public class RbelHttpRequestConverter extends RbelCurlHttpMessageConverter {
 
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        return (rbel instanceof RbelStringElement)
-            && (rbel.getContent().startsWith("GET") || rbel.getContent().startsWith("POST")
-            || rbel.getContent().startsWith("PUT") || rbel.getContent().startsWith("DELETE"));
+        return
+            (rbel instanceof RbelStringElement)
+                && (rbel.getContent().startsWith("GET ")
+                || rbel.getContent().startsWith("POST ")
+                || rbel.getContent().startsWith("PUT ")
+                || rbel.getContent().startsWith("DELETE ")
+            )
+                && (rbel.getContent().endsWith("HTTP/1.0")
+                || rbel.getContent().endsWith("HTTP/1.1")
+                || rbel.getContent().endsWith("HTTP/2.0")
+            );
     }
 
     @Override

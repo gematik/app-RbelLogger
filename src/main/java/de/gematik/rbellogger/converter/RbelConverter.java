@@ -74,7 +74,11 @@ public class RbelConverter {
             .map(plugin -> plugin.convertElement(convertedInput, this))
             .findFirst()
             .orElse(convertedInput);
-        result.setRawMessage(convertedInput.getContent());
+        if (convertedInput.getRawMessage() == null) {
+            result.setRawMessage(convertedInput.getContent());
+        } else {
+            result.setRawMessage(convertedInput.getRawMessage());
+        }
         if (result instanceof RbelHttpMessage) {
             messageHistory.add(result);
             result.triggerPostConversionListener(this);

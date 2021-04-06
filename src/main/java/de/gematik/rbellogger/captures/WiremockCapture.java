@@ -73,6 +73,7 @@ public class WiremockCapture extends RbelCapturer {
 
         return this;
     }
+
     private RbelElement requestToRbelMessage(final Request request) {
         return RbelHttpRequest.builder()
             .method(request.getMethod().getName())
@@ -80,7 +81,11 @@ public class WiremockCapture extends RbelCapturer {
             .header(mapHeader(request.getHeaders()))
             .body(getRbelConverter().convertMessage(
                 convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader())))
-            .build();
+            .build()
+            .setRawMessage(request.getMethod().toString() + " " + request.getUrl() + " HTTP/1.1\n"
+                + request.getHeaders().all().stream().map(HttpHeader::toString)
+                .collect(Collectors.joining("\n")) + "\n\n"
+                + request.getBodyAsString());
     }
 
     private RbelElement responseToRbelMessage(final Response response) {
@@ -89,7 +94,12 @@ public class WiremockCapture extends RbelCapturer {
             .header(mapHeader(response.getHeaders()))
             .body(getRbelConverter().convertMessage(
                 convertMessageBody(response.getBodyAsString(), response.getHeaders().getContentTypeHeader())))
-            .build();
+            .build()
+            .setRawMessage("HTTP/1.1 " + response.getStatus() + " "
+                + (response.getStatusMessage() != null ? response.getStatusMessage() : "") + "\n"
+                + response.getHeaders().all().stream().map(HttpHeader::toString)
+                .collect(Collectors.joining("\n"))
+                + "\n\n" + response.getBodyAsString());
     }
 
     private RbelElement convertMessageBody(String bodyAsString, ContentTypeHeader contentTypeHeader) {

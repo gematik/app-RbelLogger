@@ -27,15 +27,15 @@ public class RbelKeyManager {
             .map(tokenKeyBytes -> new SecretKeySpec(tokenKeyBytes, "AES"))
             .ifPresent(aesKey -> converter.getRbelKeyManager().addKey("token_key", aesKey, RbelKey.PRECEDENCE_KEY_FOLDER));
 
-    private final Map<String, RbelKey> keyIdToKeyDatabase = new HashMap<>();
+    private final List<RbelKey> keyList = new ArrayList<>();
 
     public RbelKeyManager addAll(Map<String, RbelKey> keys) {
-        keyIdToKeyDatabase.putAll(keys);
+        keyList.addAll(keys.values());
         return this;
     }
 
     public void addKey(String keyId, Key key, int precedence) {
-        keyIdToKeyDatabase.put(keyId, RbelKey.builder()
+        keyList.add(RbelKey.builder()
             .keyName(keyId)
             .key(key)
             .precedence(precedence)
@@ -43,7 +43,7 @@ public class RbelKeyManager {
     }
 
     public Stream<RbelKey> getAllKeys() {
-        return keyIdToKeyDatabase.values()
+        return keyList
             .stream()
             .sorted(Comparator.comparing(RbelKey::getPrecedence));
     }

@@ -32,6 +32,11 @@ import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelHttpRequest;
 import de.gematik.rbellogger.data.RbelHttpResponse;
 import de.gematik.rbellogger.data.RbelMapElement;
+import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +71,7 @@ public class WiremockCaptureTest {
     }
 
     @Test
-    public void simpleExchange_shouldLog() throws UnirestException {
+    public void simpleExchange_shouldLog() throws UnirestException, IOException {
         final WiremockCapture wiremockCapture = WiremockCapture.builder()
             .proxyFor(MOCK_SERVER_ADDRESS)
             .build()
@@ -97,5 +102,9 @@ public class WiremockCaptureTest {
             .hasFieldOrPropertyWithValue("responseCode", 666);
         assertThat(response.getBody().getContent())
             .isEqualTo(BODY);
+
+        FileUtils.writeStringToFile(new File("target/wiremock.html"),
+            new RbelHtmlRenderer()
+                .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
     }
 }
