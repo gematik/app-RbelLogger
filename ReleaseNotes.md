@@ -1,3 +1,6 @@
+# Release 0.7.2
+* Bugfix
+
 # Release 0.7.1
 * Better key management
 * Pretty printing Wiremock Requests

@@ -22,23 +22,27 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-
 
 public class RbelHttpRequestConverter extends RbelCurlHttpMessageConverter {
 
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
+        if (StringUtils.isEmpty(rbel.getContent())) {
+            return false;
+        }
+        String firstLine = rbel.getContent().split("\n")[0].trim();
         return
             (rbel instanceof RbelStringElement)
-                && (rbel.getContent().startsWith("GET ")
-                || rbel.getContent().startsWith("POST ")
-                || rbel.getContent().startsWith("PUT ")
-                || rbel.getContent().startsWith("DELETE ")
+                && (firstLine.startsWith("GET ")
+                || firstLine.startsWith("POST ")
+                || firstLine.startsWith("PUT ")
+                || firstLine.startsWith("DELETE ")
             )
-                && (rbel.getContent().endsWith("HTTP/1.0")
-                || rbel.getContent().endsWith("HTTP/1.1")
-                || rbel.getContent().endsWith("HTTP/2.0")
+                && (firstLine.endsWith("HTTP/1.0")
+                || firstLine.endsWith("HTTP/1.1")
+                || firstLine.endsWith("HTTP/2.0")
             );
     }
 
