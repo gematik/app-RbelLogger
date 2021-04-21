@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -17,11 +17,8 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.*;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import lombok.Builder;
@@ -32,6 +29,7 @@ import org.apache.commons.jexl3.JexlExpression;
 import org.apache.commons.jexl3.MapContext;
 
 @Slf4j
+@Data
 public class RbelValueShader {
 
     private final Map<String, String> jexlShadingMap = new HashMap<>();
@@ -51,7 +49,7 @@ public class RbelValueShader {
         this.rbelConverter = converter;
 
         jexlNoteMap.entrySet().stream()
-            .filter(entry -> matchesAsJexlExpression(element, entry.getKey(), Optional.empty()))
+            .filter(entry -> matchesAsJexlExpression(element, entry.getKey(), element.findKeyInParentElement()))
             .map(entry -> String.format(entry.getValue(), toStringValue(element)))
             .findFirst()
             .ifPresent(element::setNote);
@@ -104,6 +102,12 @@ public class RbelValueShader {
             .map(RbelElement.class::cast)
             .map(RbelElement::findNodePath)
             .orElse(null));
+        mapContext.set("type", element.getClass().getSimpleName());
+        if (element instanceof RbelElement) {
+            mapContext.set("content", ((RbelElement) element).getContent());
+        } else {
+            mapContext.set("content", element.toString());
+        }
 
         return mapContext;
     }
@@ -129,9 +133,8 @@ public class RbelValueShader {
             .url((element instanceof RbelHttpRequest) ? ((RbelHttpRequest) element).getPath().getOriginalUrl() : null)
             .bodyAsString(element.getBody().getContent())
             .body(element.getBody())
-            .headers(element.getHeader().getElementMap()
-                .entrySet().stream()
-                .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getContent())))
+            .headers(element.getHeader().entrySet().stream()
+                .collect(Collectors.toMap(e -> e.getKey(), entry -> entry.getValue().getContent())))
             .build();
     }
 
@@ -162,12 +165,9 @@ public class RbelValueShader {
 
     private Optional<String> tryToFindKeyFromParentMap(Object element, Optional<RbelElement> parent) {
         return parent
-            .filter(RbelMapElement.class::isInstance)
-            .map(RbelMapElement.class::cast)
-            .map(RbelMapElement::getElementMap)
             .stream()
-            .map(Map::entrySet)
-            .flatMap(Collection::stream)
+            .map(RbelElement::getChildElements)
+            .flatMap(Set::stream)
             .filter(entry -> entry.getValue() == element)
             .map(Map.Entry::getKey)
             .findFirst();
@@ -197,9 +197,7 @@ public class RbelValueShader {
     }
 
     public BiConsumer<RbelElement, RbelConverter> getPostConversionListener() {
-        return (element, converter) -> {
-            addNote(element, converter);
-        };
+        return (element, converter) -> addNote(element, converter);
     }
 
     @Builder

@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -16,14 +16,13 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.*;
 import de.gematik.rbellogger.util.RbelException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public class RbelCurlHttpMessageConverter implements RbelConverterPlugin {
@@ -42,20 +41,21 @@ public class RbelCurlHttpMessageConverter implements RbelConverterPlugin {
             separator = rbel.getContent().indexOf(eol + eol) + 2 * eol.length();
         }
 
-        final Map<String, RbelElement> headerMap = Arrays.stream(rbel.getContent().substring(0, separator).split(eol))
+        final Map<String, List<RbelElement>> headerMap = Arrays.stream(rbel.getContent().substring(0, separator).split(eol))
             .filter(line -> !line.isEmpty() && !line.startsWith("HTTP"))
             .map(line -> parseStringToKeyValuePair(line, context))
-            .collect(Collectors.toMap(SimpleImmutableEntry::getKey, SimpleImmutableEntry::getValue));
+            .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
 
-        if (headerMap.containsKey("Transfer-Encoding") && headerMap.get("Transfer-Encoding").getContent()
-            .equals("chunked")) {
+        if (headerMap.containsKey("Transfer-Encoding") && headerMap.get("Transfer-Encoding") != null
+            && !headerMap.get("Transfer-Encoding").isEmpty()
+            && headerMap.get("Transfer-Encoding").get(0).getContent().equals("chunked")) {
             separator = rbel.getContent().indexOf(eol, separator) + eol.length();
         }
         // TODO content contains a leading eol (\r\n) - not critical for text based messages,
         //  might cause issue when looking at binary data
         final String bodyStr = rbel.getContent().substring(separator);
         return new RbelHttpResponse(
-            new RbelMapElement(headerMap),
+            new RbelMultiValuedMapElement(headerMap),
             context.convertMessage(new RbelStringElement(bodyStr)),
             Integer.parseInt(rbel.getContent().split("\\s")[1]));
     }

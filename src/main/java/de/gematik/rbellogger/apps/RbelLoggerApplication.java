@@ -4,6 +4,8 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
+import de.gematik.rbellogger.captures.RbelCapturer;
+import de.gematik.rbellogger.captures.WiremockCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelJweElement;
@@ -29,33 +31,50 @@ import wiremock.org.apache.commons.codec.digest.DigestUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 @Slf4j
-public class PCapCaptureApp {
+public class RbelLoggerApplication {
 
-    @Parameter(names = {"-device"})
-    @Builder.Default
-    private String deviceName = "lo0";
-    @Parameter(names = {"-keyFolder"})
-    @Builder.Default
-    private String keyFolder = "src/test/resources";
-    @Parameter(names = {"-list-devices"})
+    @Parameter(names = {"-device", "-d"},
+        description = "Listen on PCAP-Device. (Starts the application in PCAP-mode)")
+    private String deviceName;
+    @Parameter(names = {"-keyFolder"},
+        description = "A folder to be scanned for key-material. Default is '.'. "
+            + "P12-Files in this folder are collected and will be used to decipher object or check signatures.")
+    private String keyFolder = ".";
+    @Parameter(names = {"-list-devices"},
+        description = "List all available PCAP-devices.")
     private boolean listDevices;
-    @Parameter(names = {"-pcap"})
+    @Parameter(names = {"-pcap"},
+        description = "Read the data from the following pcap-file. (Starts the application in offline-PCAP-mode)")
     private String pcapFile;
-    @Parameter(names = {"-filter"})
+    @Parameter(names = {"-filter"},
+        description = "Define a filter for a PCAP-capture")
     private String filter;
-    @Parameter(names = {"-dump"})
+    @Parameter(names = {"--proxyFor", "-p"},
+        description = "Start a proxy server for the given url. (Starts the application in Wiremock-Mode)")
+    private String proxyFor;
+    @Parameter(names = {"-dump"},
+        description = "Should the captured messages be print to standard-out immediately?")
     private boolean printMessageToSystemOut;
-    @Parameter(names = {"-html"})
+    @Parameter(names = {"-html"},
+        description = "Write the captured traffic to the following file. Default is 'out.html'.")
     @Builder.Default
     private String htmlFile = "out.html";
+    @Parameter(names = {"-h", "--help", "-?"},
+        description = "Show help")
+    @Builder.Default
+    private boolean help = false;
 
-    public static void main(final String[] args) {
+    public static void main(String[] args) {
         setWindowsNpcapPath();
-        final PCapCaptureApp main = new PCapCaptureApp();
-        JCommander.newBuilder()
+        final RbelLoggerApplication main = new RbelLoggerApplication();
+        final JCommander jCommander = JCommander.newBuilder()
             .addObject(main)
-            .build()
-            .parse(args);
+            .build();
+        jCommander.parse(args);
+        if (main.help) {
+            jCommander.usage();
+            return;
+        }
         main.run();
     }
 
@@ -86,12 +105,7 @@ public class PCapCaptureApp {
                     RbelKey.PRECEDENCE_KEY_FOLDER)
                 .addInitializer(new RbelKeyFolderInitializer(keyFolder))
                 .addPostConversionListener(RbelJweElement.class, RbelKeyManager.RBEL_IDP_TOKEN_KEY_LISTENER)
-                .addCapturer(
-                    PCapCapture.builder()
-                        .printMessageToSystemOut(true)
-                        .deviceName(deviceName)
-                        .filter(filter)
-                        .build())
+                .addCapturer(getCapturer())
             );
 
             if (StringUtils.isNotBlank(htmlFile)) {
@@ -113,6 +127,22 @@ public class PCapCaptureApp {
                 } catch (InterruptedException e) {
                 }
             }
+        }
+    }
+
+    private RbelCapturer getCapturer() {
+        if (StringUtils.isNotBlank(deviceName)) {
+            return PCapCapture.builder()
+                .printMessageToSystemOut(true)
+                .deviceName(deviceName)
+                .filter(filter)
+                .build();
+        } else if (StringUtils.isNotBlank(proxyFor)) {
+            return WiremockCapture.builder()
+                .proxyFor(proxyFor)
+                .build();
+        } else {
+            throw new IllegalStateException("Either deviceName or proxyFor has to be set!");
         }
     }
 

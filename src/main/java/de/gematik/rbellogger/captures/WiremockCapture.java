@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -20,10 +20,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.ProxySettings;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.*;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.*;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,24 +42,31 @@ import wiremock.com.google.common.net.MediaType;
 public class WiremockCapture extends RbelCapturer {
 
     private final String proxyFor;
+    private final ProxySettings proxySettings;
     private WireMockServer wireMockServer;
     private boolean isInitialized;
 
     @Builder
-    public WiremockCapture(RbelConverter rbelConverter, String proxyFor) {
+    public WiremockCapture(final RbelConverter rbelConverter,
+        final String proxyFor, final ProxySettings proxySettings) {
         super(rbelConverter);
         this.proxyFor = proxyFor;
+        this.proxySettings = proxySettings;
     }
 
     public WiremockCapture initialize() {
         if (isInitialized) {
             return this;
         }
+
+        log.info("Starting Wiremock-Capture. This will boot a proxy-server for the target url '{}'", proxyFor);
         final WireMockConfiguration wireMockConfiguration = WireMockConfiguration.options()
             .dynamicPort()
-            .dynamicHttpsPort()
             .trustAllProxyTargets(true)
             .enableBrowserProxying(false);
+        if (proxySettings != null) {
+            wireMockConfiguration.proxyVia(proxySettings);
+        }
         wireMockServer = new WireMockServer(wireMockConfiguration);
         wireMockServer.start();
 
@@ -69,6 +78,8 @@ public class WiremockCapture extends RbelCapturer {
             getRbelConverter().convertMessage(responseToRbelMessage(response));
         });
 
+        log.info("Started Wiremock-Server at '{}'.", wireMockServer.baseUrl());
+
         isInitialized = true;
 
         return this;
@@ -77,7 +88,7 @@ public class WiremockCapture extends RbelCapturer {
     private RbelElement requestToRbelMessage(final Request request) {
         return RbelHttpRequest.builder()
             .method(request.getMethod().getName())
-            .path((RbelPathElement) getRbelConverter().convertMessage(request.getUrl()))
+            .path((RbelPathElement) getRbelConverter().convertMessage(proxyFor + request.getUrl()))
             .header(mapHeader(request.getHeaders()))
             .body(getRbelConverter().convertMessage(
                 convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader())))
@@ -121,19 +132,16 @@ public class WiremockCapture extends RbelCapturer {
         }
     }
 
-    private RbelMapElement mapHeader(HttpHeaders headers) {
-        final Map<String, RbelElement> headersMap = headers.all().stream()
-            .collect(Collectors
-                .toMap(HttpHeader::key, httpHeader -> getRbelConverter().convertMessage(httpHeader.firstValue())));
-        return new RbelMapElement(headersMap);
+    private RbelMultiValuedMapElement mapHeader(HttpHeaders headers) {
+        final Map<String, List<RbelElement>> headersMap = headers.all().stream()
+            .collect(Collectors.toMap(e -> e.key(), e -> e.values().stream()
+                .map(v -> getRbelConverter().convertMessage(v))
+                .collect(Collectors.toList())));
+        return new RbelMultiValuedMapElement(headersMap);
     }
 
     public String getProxyAdress() {
         return "http://localhost:" + wireMockServer.port();
-    }
-
-    public String getTlsProxyAdress() {
-        return "https://localhost:" + wireMockServer.httpsPort();
     }
 
     @Override

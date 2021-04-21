@@ -20,6 +20,15 @@ class RbelHttpRequestConverterTest {
     }
 
     @Test
+    public void doubleHeaderValue() {
+        assertThat(new RbelHttpRequestConverter()
+            .convertElement(new RbelStringElement("GET /auth/realms/idp/.well-known/openid-configuration HTTP/1.1\n"
+                + "User-Agent: Value1\n"
+                + "User-Agent: Value2"), RbelConverter.builder().build())
+        ).isNotNull();
+    }
+
+    @Test
     public void shouldNotConvertAcceptList() {
         assertThat(new RbelHttpRequestConverter()
             .canConvertElement(new RbelStringElement("GET,PUT,POST"), null)

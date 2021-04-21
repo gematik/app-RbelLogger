@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -46,17 +46,32 @@ public class RbelJsonConverter implements RbelConverterPlugin {
                 jsonElement.getAsJsonObject().entrySet().stream()
                     .collect(Collectors.toMap(Entry::getKey,
                         v -> jsonElementToRbelElement(v.getValue(), context))));
+            rbelMapElement.getChildNodes()
+                .forEach(child -> child.setParentNode(rbelMapElement));
+            rbelMapElement.getChildNodes()
+                .forEach(context::triggerPostConversionListenerFor);
             return new RbelJsonElement(rbelMapElement, jsonElement.toString());
         }
         if (jsonElement.isJsonArray()) {
-            return new RbelJsonElement(new RbelListElement(
+            final RbelJsonElement rbelJsonElement = new RbelJsonElement(new RbelListElement(
                 StreamSupport.stream(jsonElement.getAsJsonArray()
                     .spliterator(), false)
                     .map(el -> jsonElementToRbelElement(el, context))
                     .collect(Collectors.toList())), jsonElement.toString());
+            rbelJsonElement.getJsonElement().getChildNodes()
+                .forEach(child -> child.setParentNode(rbelJsonElement.getJsonElement()));
+            rbelJsonElement.getJsonElement().getChildNodes()
+                .forEach(context::triggerPostConversionListenerFor);
+            return rbelJsonElement;
         }
         if (jsonElement.isJsonPrimitive()) {
-            return context.convertMessage(jsonElement.getAsString());
+            final RbelElement element = context.convertMessage(jsonElement.getAsString());
+            if (jsonElement.getAsJsonPrimitive().isString()) {
+                element.setRawMessage("\"" + jsonElement.getAsString() + "\"");
+            } else {
+                element.setRawMessage(jsonElement.getAsString());
+            }
+            return element;
         }
         return new RbelNullElement();
     }

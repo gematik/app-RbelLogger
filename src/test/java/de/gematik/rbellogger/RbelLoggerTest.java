@@ -26,11 +26,12 @@ public class RbelLoggerTest {
             .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
 
         final RbelLogger rbelLogger = RbelLogger.build();
+        rbelLogger.getValueShader().setActivateJexlDebugging(true);
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'Version'", "Extra note");
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
             .convertMessage(curlMessage);
 
-        assertThat(convertedMessage.getHeader().getChildElements().get("Version").getNote())
+        assertThat(convertedMessage.getHeader().getFirst("Version").get().getNote())
             .isEqualTo("Extra note");
     }
 
@@ -60,7 +61,7 @@ public class RbelLoggerTest {
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
             .convertMessage(curlMessage);
 
-        assertThat(convertedMessage.getHeader().getChildElements().get("Host").getContent())
+        assertThat(convertedMessage.getHeader().getFirst("Host").get().getContent())
             .isEqualTo("meinedomain.de");
     }
 
@@ -105,10 +106,10 @@ public class RbelLoggerTest {
                 .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
 
         final RbelJweEncryptionInfo jweEncryptionInfo = (RbelJweEncryptionInfo) rbelLogger.getMessageHistory().get(9)
-            .getChildElements().get("header")
-            .getChildElements().get("Location")
-            .getChildElements().get("code")
-            .getChildElements().get("encryptionInfo");
+            .getFirst("header").get()
+            .getFirst("Location").get()
+            .getFirst("code").get()
+            .getFirst("encryptionInfo").get();
         assertThat(jweEncryptionInfo.getDecryptedUsingKeyWithId())
             .isEqualTo("IDP symmetricEncryptionKey");
     }

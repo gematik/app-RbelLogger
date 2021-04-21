@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -93,7 +93,7 @@ public abstract class RbelElement {
         return classes;
     }
 
-    public Map<String, RbelElement> getChildElements() {
+    public Set<Entry<String, RbelElement>> getChildElements() {
         return getAllRbelSuperclasses(getClass()).stream()
             .flatMap(clazz -> Stream.of(clazz.getDeclaredFields()))
             .filter(field -> ReflectionUtils.isNotStatic(field))
@@ -112,8 +112,8 @@ public abstract class RbelElement {
             })
             .filter(Optional::isPresent)
             .map(Optional::get)
-            .map(Pair.class::cast)
-            .collect(Collectors.toMap(p -> (String) p.getKey(), p -> (RbelElement) p.getValue()));
+            .map(e -> (Entry<String, RbelElement>) e)
+            .collect(Collectors.toSet());
     }
 
     public void triggerPostConversionListener(final RbelConverter context) {
@@ -131,7 +131,7 @@ public abstract class RbelElement {
     private Map<String, RbelElement> traverseAndReturnNestedMembers(
         final Class<? extends RbelElement> identityClass) {
         final Map<String, RbelElement> result = new HashMap<>();
-        for (final Entry<String, RbelElement> child : getChildElements().entrySet()) {
+        for (final Entry<String, RbelElement> child : getChildElements()) {
             for (final Entry<String, RbelElement> grandchild
                 : child.getValue().traverseAndReturnNestedMembersWithStopAtNextBoundary(identityClass).entrySet()) {
                 if (grandchild.getKey().isEmpty()) {
@@ -157,7 +157,7 @@ public abstract class RbelElement {
         LinkedList<Optional<String>> keyList = new LinkedList<>();
         final AtomicReference<RbelElement> ptr = new AtomicReference(this);
         while (!(ptr.get() instanceof RbelHttpMessage)) {
-            keyList.addFirst(ptr.get().getParentNode().getChildElements().entrySet().stream()
+            keyList.addFirst(ptr.get().getParentNode().getChildElements().stream()
                 .filter(entry -> entry.getValue() == ptr.get())
                 .map(Entry::getKey).findFirst());
             ptr.set(ptr.get().getParentNode());
@@ -166,5 +166,36 @@ public abstract class RbelElement {
             .filter(Optional::isPresent)
             .map(Optional::get)
             .collect(Collectors.joining("."));
+    }
+
+    public Optional<RbelElement> getFirst(String key) {
+        return getChildElements().stream()
+            .filter(entry -> entry.getKey().equals(key))
+            .map(Entry::getValue)
+            .findFirst();
+    }
+
+    public List<RbelElement> getAll(String key) {
+        return getChildElements().stream()
+            .filter(entry -> entry.getKey().equals(key))
+            .map(Entry::getValue)
+            .collect(Collectors.toList());
+    }
+
+    public List<String> getChildKeys() {
+        return getChildElements().stream()
+            .map(Entry::getKey)
+            .collect(Collectors.toList());
+    }
+
+    public Optional<String> findKeyInParentElement() {
+        return Optional.of(this)
+            .map(RbelElement::getParentNode)
+            .filter(Objects::nonNull)
+            .stream()
+            .flatMap(parent -> parent.getChildElements().stream())
+            .filter(e -> e.getValue() == this)
+            .map(Entry::getKey)
+            .findFirst();
     }
 }

@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -22,21 +22,17 @@ import com.google.gson.*;
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.*;
 import j2html.TagCreator;
-import j2html.tags.ContainerTag;
-import j2html.tags.DomContent;
-import j2html.tags.EmptyTag;
-import j2html.tags.UnescapedText;
+import j2html.tags.*;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
@@ -56,6 +52,7 @@ public class RbelHtmlRenderer {
     private static final Map<String, String> elementIndices = new HashMap<>();
     private final Map<Class<? extends RbelElement>, BiFunction<RbelElement, Optional<String>, ContainerTag>> htmlRenderer = new HashMap<>();
     private final RbelValueShader rbelValueShader;
+    private final Map<UUID, JsonNoteEntry> noteTags = new HashMap<>();
     @Setter
     private String title = "RBelLogger";
     @Setter
@@ -125,38 +122,56 @@ public class RbelHtmlRenderer {
                 )
             )));
 
-        htmlRenderer.put(RbelMapElement.class, (el, key) -> table().withClass("table").with(
-            thead(
-                tr(th("name"), th("value"))
-            ),
-            tbody().with(
-                ((RbelMapElement) el).getElementMap().entrySet().stream()
-                    .map(entry ->
-                        tr(
-                            td(pre(entry.getKey())),
-                            td(pre()
-                                .with(convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
-                                .withClass("value"))
-                                .with(addNote(entry.getValue()))
+        final BiFunction<RbelElement, Optional<String>, ContainerTag> mapRenderer = (el, key) -> table()
+            .withClass("table").with(
+                thead(
+                    tr(th("name"), th("value"))
+                ),
+                tbody().with(
+                    el.getChildElements().stream()
+                        .map(entry ->
+                            tr(
+                                td(pre(entry.getKey())),
+                                td(pre()
+                                    .with(convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
+                                    .withClass("value"))
+                                    .with(addNote(entry.getValue()))
+                            )
                         )
-                    )
-                    .collect(Collectors.toList())
-            )
-        ));
+                        .collect(Collectors.toList())
+                )
+            );
+        htmlRenderer.put(RbelMapElement.class, mapRenderer);
+        htmlRenderer.put(RbelMultiValuedMapElement.class, mapRenderer);
 
-        htmlRenderer.put(RbelJsonElement.class, (el, key) ->
-            ancestorTitle()
+        htmlRenderer.put(RbelJsonElement.class, (el, key) -> {
+            String formatedJson = GSON.toJson(
+                shadeJson(
+                    JsonParser.parseString(((RbelJsonElement) el).getCompleteJsonString()),
+                    Optional.empty(),
+                    el
+                ));
+            for (Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
+                if (formatedJson.contains(entry.getValue().stringToMatch + ",")) {
+                    formatedJson = formatedJson.replace(
+                        entry.getValue().stringToMatch + ",",
+                        entry.getValue().tagForKeyReplacement.render() + "," + entry.getValue().tagForValueReplacement
+                            .render());
+                } else if (formatedJson.contains(entry.getValue().stringToMatch)) {
+                    formatedJson = formatedJson.replace(
+                        entry.getValue().stringToMatch,
+                        entry.getValue().tagForKeyReplacement.render() + entry.getValue().tagForValueReplacement
+                            .render());
+                }
+            }
+            return ancestorTitle()
                 .with(
                     vertParentTitle().with(
                         div().withClass("tile is-child pr-3").with(
-                            pre(
-                                GSON.toJson(
-                                    shadeJson(
-                                        JsonParser.parseString(((RbelJsonElement) el).getCompleteJsonString()),
-                                        Optional.empty()
-                                    )))
+                            pre(new UnescapedText(formatedJson))
                                 .withClass("json")
-                        ).with(convertNested(el)))));
+                        ).with(convertNested(el))));
+        });
         htmlRenderer.put(RbelJwtElement.class, (el, key) -> div(
             t1ms("JWT")
                 .with(showContentButtonAndDialog(el)),
@@ -370,23 +385,64 @@ public class RbelHtmlRenderer {
         return performRendering(elements);
     }
 
-    private JsonElement shadeJson(final JsonElement input, final Optional<String> key) {
+    private JsonElement shadeJson(final JsonElement input, final Optional<String> key,
+        final RbelElement originalElement) {
         if (input.isJsonPrimitive()) {
-            return rbelValueShader.shadeValue(input, key)
+            final JsonElement jsonElement = rbelValueShader.shadeValue(input, key)
                 .map(shadedValue -> (JsonElement) new JsonPrimitive(shadedValue))
                 .orElse(input);
+
+            if (StringUtils.isNotBlank(originalElement.getNote())) {
+                final UUID uuid = UUID.randomUUID();
+                noteTags.put(uuid, JsonNoteEntry.builder()
+                    .stringToMatch("\"" + uuid.toString() + "\"")
+                    .tagForKeyReplacement(span(jsonElement.toString()))
+                    .tagForValueReplacement(div(i(originalElement.getNote()))
+                        .withClass("json-note"))
+                    .build());
+                return new JsonPrimitive(uuid.toString());
+            } else {
+                return jsonElement;
+            }
         } else if (input.isJsonObject()) {
             final JsonObject output = new JsonObject();
+            if (StringUtils.isNotBlank(originalElement.getNote())) {
+                final UUID uuid = UUID.randomUUID();
+
+                noteTags.put(uuid, JsonNoteEntry.builder()
+                    .stringToMatch("\"note\": \"" + uuid.toString() + "\""
+                            + (input.getAsJsonObject().size() == 0 ? "" : ","))
+                    .tagForKeyReplacement(span())
+                    .tagForValueReplacement(div(i(originalElement.getNote()))
+                        .withClass("json-note"))
+                    .build());
+                output.addProperty("note", uuid.toString());
+            }
             for (final Entry<String, JsonElement> element : input.getAsJsonObject().entrySet()) {
-                output.add(element.getKey(), shadeJson(element.getValue(), Optional.of(element.getKey())));
+                output.add(element.getKey(), shadeJson(element.getValue(), Optional.of(element.getKey()),
+                    originalElement.getFirst(element.getKey())
+                        .orElseThrow(
+                            () -> new RuntimeException("Unable to find matching Element for key " + element.getKey()))
+                ));
             }
             return output;
         } else if (input.isJsonArray()) {
             final JsonArray output = new JsonArray();
+            if (StringUtils.isNotBlank(originalElement.getNote())) {
+                final UUID uuid = UUID.randomUUID();
+                noteTags.put(uuid, JsonNoteEntry.builder()
+                    .stringToMatch("\"" + uuid.toString() + "\"")
+                    .tagForKeyReplacement(span())
+                    .tagForValueReplacement(div(i(originalElement.getNote()))
+                        .withClass("json-note"))
+                    .build());
+                output.add(uuid.toString());
+            }
             for (int i = 0; i < input.getAsJsonArray().size(); i++) {
                 final int finalI = i;
+                final List<RbelElement> rbelListElements = originalElement.getChildNodes().get(0).getChildNodes();
                 output.add(shadeJson(input.getAsJsonArray().get(i), key
-                    .map(v -> v + "." + finalI)));
+                    .map(v -> v + "." + finalI), rbelListElements.get(i)));
             }
             return output;
         } else if (input.isJsonNull()) {
@@ -428,8 +484,7 @@ public class RbelHtmlRenderer {
         } else {
             final ContainerTag div = div(path.getBasicPath().getContent() + "?").with(br());
             boolean firstElement = true;
-            for (Entry<String, RbelElement> queryElementEntry : path.getQueryParameter().getChildElements()
-                .entrySet()) {
+            for (Entry<String, RbelElement> queryElementEntry : path.getQueryParameter().getChildElements()) {
                 final String shadedStringContent = rbelValueShader
                     .shadeValue(queryElementEntry.getValue(), Optional.of(queryElementEntry.getKey()))
                     .map(content -> queryElementEntry.getKey() + "=" + content)
@@ -525,5 +580,14 @@ public class RbelHtmlRenderer {
         } else {
             return p().withText(element.getClass().getSimpleName() + "<br/> " + element.getContent());
         }
+    }
+
+    @Builder
+    @AllArgsConstructor
+    private static class JsonNoteEntry {
+
+        private String stringToMatch;
+        private Tag tagForKeyReplacement;
+        private Tag tagForValueReplacement;
     }
 }

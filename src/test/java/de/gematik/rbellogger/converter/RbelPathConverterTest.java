@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -48,9 +48,9 @@ public class RbelPathConverterTest {
             .isInstanceOf(RbelPathElement.class);
         assertThat(((RbelPathElement) rbelElement).getBasicPath().getContent())
             .isEqualTo("http://redirect.gematik.de/erezept/token");
-        assertThat(((RbelPathElement) rbelElement).getQueryParameter().getChildElements())
-            .containsOnlyKeys("code", "ssotoken", "state");
-        final RbelElement code = ((RbelPathElement) rbelElement).getQueryParameter().getChildElements().get("code");
+        assertThat(((RbelPathElement) rbelElement).getQueryParameter().getChildKeys())
+            .containsOnly("code", "ssotoken", "state");
+        final RbelElement code = ((RbelPathElement) rbelElement).getQueryParameter().getFirst("code").get();
         assertThat(code)
             .isInstanceOf(RbelJweElement.class);
         assertThat(rbelElement.traverseAndReturnNestedMembers())
@@ -62,8 +62,7 @@ public class RbelPathConverterTest {
         final RbelElement rbelElement = RbelLogger.build().getRbelConverter().convertMessage(
             "/sign_response?scope=pairing%20openid&response_type=code&code_challenge_method=S256&redirect_uri=http%3A%2F%2Fredirect.gematik.de%2Ferezept&state=Hl6TLS1LjhFs3AUy&nonce=np3RhlBn1Epw5fhRc9v6&client_id=eRezeptApp&code_challenge=aQswmTcEbHi6TDrSSq9MgfpqyixHcbe581MbaFlYkpU");
 
-        final RbelElement scope = ((RbelPathElement) rbelElement).getQueryParameter()
-            .getChildElements().get("scope");
+        final RbelElement scope = ((RbelPathElement) rbelElement).getQueryParameter().getFirst("scope").get();
         assertThat(scope.getRawMessage())
             .isEqualTo("scope=pairing%20openid");
         assertThat(scope.getContent())

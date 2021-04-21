@@ -1,3 +1,9 @@
+# Release 0.7.4
+- Multi-Value Support
+- Rework Value Structure in RbelElement
+- Note-Support for JSON Elements
+- Proxy-Settings for Wiremock enabled
+
 # Release 0.7.2
 * Bugfix
 

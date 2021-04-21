@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -38,7 +38,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
@@ -106,7 +105,7 @@ public class PCapCaptureTest {
 
     @Test
     public void listAllDevices() {
-        PCapCaptureApp.builder()
+        RbelLoggerApplication.builder()
             .listDevices(true)
             .build()
             .run();
@@ -141,23 +140,32 @@ public class PCapCaptureTest {
         MASKING_FUNCTIONS.forEach((k, v) -> rbelLogger.getValueShader().addSimpleShadingCriterion(k, v));
         rbelLogger.getValueShader().addJexlNoteCriterion(
             "message.url == '/auth/realms/idp/.well-known/openid-configuration' &&"
-                + "message.method == 'GET' && message.request == true", "Discovery Document anfragen");
+                + "message.method == 'GET' && message.request == true && type == 'RbelHttpRequest'",
+            "Discovery Document anfragen");
         rbelLogger.getValueShader().addJexlNoteCriterion(
             "request.url == '/auth/realms/idp/.well-known/openid-configuration' &&"
-                + "request.method == 'GET' && message.response", "Discovery Document Response");
+                + "request.method == 'GET' && message.response && type == 'RbelHttpResponse'",
+            "Discovery Document Response");
         rbelLogger.getValueShader().addJexlNoteCriterion("message.url =^ '/sign_response?' "
             + "&& message.method=='GET' && key == 'scope'", "scope Note!!");
         rbelLogger.getValueShader().addJexlNoteCriterion("path == 'body.key_verifier.body'",
             "key verifier body note");
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'code_verifier'",
             "the long forgotten code verifier");
+        rbelLogger.getValueShader().addJexlNoteCriterion("path =$ 'x5c.0'",
+            "some note about x5c");
+        rbelLogger.getValueShader().addJexlNoteCriterion("key == 'pairing_endpoint'",
+            "Hier gibts die pairings");
+        rbelLogger.getValueShader().addJexlNoteCriterion("key == 'user_consent'",
+            "Note an einem Object");
 
         pCapCapture.close();
 
         log.info("start rendering " + LocalDateTime.now());
+        final String render = new RbelHtmlRenderer()
+            .doRender(rbelLogger.getMessageHistory());
         FileUtils.writeStringToFile(new File("target/pairingList.html"),
-            new RbelHtmlRenderer()
-                .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
+            render, Charset.defaultCharset());
         log.info("completed rendering " + LocalDateTime.now());
 
         assertThat(rbelLogger.getMessageHistory().get(0))
@@ -168,6 +176,9 @@ public class PCapCaptureTest {
             .isEqualTo("Discovery Document anfragen");
         assertThat(rbelLogger.getMessageHistory().get(1).getNote())
             .isEqualTo("Discovery Document Response");
+        assertThat(render).contains("Hier gibts die pairings");
+        assertThat(render).contains("some note about x5c");
+        assertThat(render).contains("Note an einem Object");
     }
     /* How to print from cmdline
 
