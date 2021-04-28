@@ -135,7 +135,7 @@ public class WiremockCaptureTest {
 
         final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1);
         assertThat(response.getHeader().getChildElements())
-            .contains((Entry) Pair.of("foo", new RbelStringElement("bar1")),
-                (Entry) Pair.of("foo", new RbelStringElement("bar2")));
+            .contains(Pair.of("foo", new RbelStringElement("bar1")),
+                Pair.of("foo", new RbelStringElement("bar2")));
     }
 }

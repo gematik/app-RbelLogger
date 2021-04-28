@@ -1,3 +1,6 @@
+# Release 0.8.0
+- Configuration customizable
+
 # Release 0.7.4
 - Multi-Value Support
 - Rework Value Structure in RbelElement

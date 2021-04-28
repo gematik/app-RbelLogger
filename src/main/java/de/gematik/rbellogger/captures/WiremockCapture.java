@@ -43,15 +43,17 @@ public class WiremockCapture extends RbelCapturer {
 
     private final String proxyFor;
     private final ProxySettings proxySettings;
+    private final WireMockConfiguration wireMockConfiguration;
     private WireMockServer wireMockServer;
     private boolean isInitialized;
 
     @Builder
     public WiremockCapture(final RbelConverter rbelConverter,
-        final String proxyFor, final ProxySettings proxySettings) {
+        final String proxyFor, final ProxySettings proxySettings, final WireMockConfiguration wireMockConfiguration) {
         super(rbelConverter);
         this.proxyFor = proxyFor;
         this.proxySettings = proxySettings;
+        this.wireMockConfiguration = wireMockConfiguration;
     }
 
     public WiremockCapture initialize() {
@@ -60,13 +62,7 @@ public class WiremockCapture extends RbelCapturer {
         }
 
         log.info("Starting Wiremock-Capture. This will boot a proxy-server for the target url '{}'", proxyFor);
-        final WireMockConfiguration wireMockConfiguration = WireMockConfiguration.options()
-            .dynamicPort()
-            .trustAllProxyTargets(true)
-            .enableBrowserProxying(false);
-        if (proxySettings != null) {
-            wireMockConfiguration.proxyVia(proxySettings);
-        }
+        final WireMockConfiguration wireMockConfiguration = getWireMockConfiguration();
         wireMockServer = new WireMockServer(wireMockConfiguration);
         wireMockServer.start();
 
@@ -85,10 +81,24 @@ public class WiremockCapture extends RbelCapturer {
         return this;
     }
 
+    private WireMockConfiguration getWireMockConfiguration() {
+        if (this.wireMockConfiguration != null) {
+            return this.wireMockConfiguration;
+        }
+        final WireMockConfiguration wireMockConfiguration = WireMockConfiguration.options()
+            .dynamicPort()
+            .trustAllProxyTargets(true)
+            .enableBrowserProxying(false);
+        if (proxySettings != null) {
+            wireMockConfiguration.proxyVia(proxySettings);
+        }
+        return wireMockConfiguration;
+    }
+
     private RbelElement requestToRbelMessage(final Request request) {
         return RbelHttpRequest.builder()
             .method(request.getMethod().getName())
-            .path((RbelPathElement) getRbelConverter().convertMessage(proxyFor + request.getUrl()))
+            .path(getRequestUrl(request))
             .header(mapHeader(request.getHeaders()))
             .body(getRbelConverter().convertMessage(
                 convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader())))
@@ -97,6 +107,17 @@ public class WiremockCapture extends RbelCapturer {
                 + request.getHeaders().all().stream().map(HttpHeader::toString)
                 .collect(Collectors.joining("\n")) + "\n\n"
                 + request.getBodyAsString());
+    }
+
+    private RbelPathElement getRequestUrl(Request request) {
+        final RbelElement pathElement = getRbelConverter()
+            .convertMessage((proxyFor == null ? "" : proxyFor)
+                + request.getUrl());
+        if (pathElement instanceof RbelPathElement) {
+            return (RbelPathElement) pathElement;
+        } else {
+            throw new RuntimeException("Non-matching URL-component: " + pathElement.getContent());
+        }
     }
 
     private RbelElement responseToRbelMessage(final Response response) {
