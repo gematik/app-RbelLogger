@@ -54,10 +54,11 @@ public class RbelCurlHttpMessageConverter implements RbelConverterPlugin {
         // TODO content contains a leading eol (\r\n) - not critical for text based messages,
         //  might cause issue when looking at binary data
         final String bodyStr = rbel.getContent().substring(separator);
-        return new RbelHttpResponse(
-            new RbelMultiValuedMapElement(headerMap),
-            context.convertMessage(new RbelStringElement(bodyStr)),
-            Integer.parseInt(rbel.getContent().split("\\s")[1]));
+        return RbelHttpResponse.builder()
+            .header(new RbelMultiValuedMapElement(headerMap))
+            .body(context.convertMessage(new RbelStringElement(bodyStr)))
+            .responseCode(Integer.parseInt(rbel.getContent().split("\\s")[1]))
+            .build();
     }
 
     public static String findLineSeparator(final String content) {

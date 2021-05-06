@@ -1,6 +1,8 @@
 package de.gematik.rbellogger.data;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +14,10 @@ import org.apache.commons.lang3.tuple.Pair;
 public class RbelMultiValuedMapElement extends RbelElement implements Map<String, RbelElement> {
 
     private final Map<String, List<RbelElement>> values;
+
+    public RbelMultiValuedMapElement() {
+        this.values = new HashMap<>();
+    }
 
     public RbelMultiValuedMapElement(Map<String, List<RbelElement>> values) {
         this.values = values;
@@ -40,7 +46,7 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
     @Override
     public RbelElement get(Object key) {
         final List<RbelElement> list = values.get(key);
-        if (list.isEmpty()) {
+        if (list == null || list.isEmpty()) {
             return null;
         }
         return list.get(0);
@@ -49,15 +55,16 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
     @Override
     public RbelElement put(String key, RbelElement value) {
         if (!values.containsKey(key)) {
-            values.get(key).add(value);
+            values.put(key, new ArrayList<>());
         }
+        values.get(key).add(value);
         return value;
     }
 
     @Override
     public RbelElement remove(Object key) {
         final List<RbelElement> list = values.remove(key);
-        if (list.isEmpty()) {
+        if (list == null || list.isEmpty()) {
             return null;
         }
         return list.get(0);

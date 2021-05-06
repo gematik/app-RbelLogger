@@ -1,3 +1,7 @@
+# Release 0.8.1
+- NPEs in MultiValueMap fixed
+- RbelPath added (search for nested nodes with greater comfort)
+
 # Release 0.8.0
 - Configuration customizable
 

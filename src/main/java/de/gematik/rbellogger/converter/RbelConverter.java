@@ -16,9 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpMessage;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.*;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,9 +79,21 @@ public class RbelConverter {
         }
         if (result instanceof RbelHttpMessage) {
             messageHistory.add(result);
+            if (result instanceof RbelHttpResponse) {
+                ((RbelHttpResponse) result).setRequest(findLastRequest());
+            }
             result.triggerPostConversionListener(this);
         }
         return result;
+    }
+
+    private RbelHttpRequest findLastRequest() {
+        for (int i = messageHistory.size() - 1; i >= 0; i--) {
+            if (messageHistory.get(i) instanceof RbelHttpRequest) {
+                return (RbelHttpRequest) messageHistory.get(i);
+            }
+        }
+        return null;
     }
 
     private RbelElement filterInputThroughPreConversionMappers(final RbelElement input) {

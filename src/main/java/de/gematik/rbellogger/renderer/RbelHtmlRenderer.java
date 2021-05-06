@@ -395,7 +395,7 @@ public class RbelHtmlRenderer {
             if (StringUtils.isNotBlank(originalElement.getNote())) {
                 final UUID uuid = UUID.randomUUID();
                 noteTags.put(uuid, JsonNoteEntry.builder()
-                    .stringToMatch("\"" + uuid.toString() + "\"")
+                    .stringToMatch("\"" + uuid + "\"")
                     .tagForKeyReplacement(span(jsonElement.toString()))
                     .tagForValueReplacement(div(i(originalElement.getNote()))
                         .withClass("json-note"))
@@ -411,7 +411,7 @@ public class RbelHtmlRenderer {
 
                 noteTags.put(uuid, JsonNoteEntry.builder()
                     .stringToMatch("\"note\": \"" + uuid.toString() + "\""
-                            + (input.getAsJsonObject().size() == 0 ? "" : ","))
+                        + (input.getAsJsonObject().size() == 0 ? "" : ","))
                     .tagForKeyReplacement(span())
                     .tagForValueReplacement(div(i(originalElement.getNote()))
                         .withClass("json-note"))
@@ -455,8 +455,12 @@ public class RbelHtmlRenderer {
     private String performElementToTextConversion(final RbelElement el, final Optional<String> key) {
         return key
             .flatMap(keyValue -> rbelValueShader.shadeValue(el, key))
-            .orElse(el.getContent())
-            .replace("\n", "<br/>");
+            .or(() -> Optional.ofNullable(el)
+                .filter(Objects::nonNull)
+                .map(RbelElement::getContent)
+                .filter(Objects::nonNull)
+                .map(str -> str.replace("\n", "<br/>")))
+            .orElse("");
     }
 
     private ContainerTag collapsibleCard(final ContainerTag title, final ContainerTag body) {

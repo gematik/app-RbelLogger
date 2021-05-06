@@ -17,6 +17,8 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.converter.RbelConverter;
+import de.gematik.rbellogger.converter.RbelJexlExecutor;
+import de.gematik.rbellogger.exceptions.RbelPathException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
@@ -197,5 +199,69 @@ public abstract class RbelElement {
             .filter(e -> e.getValue() == this)
             .map(Entry::getKey)
             .findFirst();
+    }
+
+    public List<RbelElement> findRbelPathMembers(String rbelPath) {
+        if (!rbelPath.startsWith("$")) {
+            throw new RbelPathException("RbelPath expressions always start with $.");
+        }
+        final List<String> keys = List.of(rbelPath.substring(2).split("\\.(?![^\\(]*\\))"));
+        List<RbelElement> candidates = List.of(this);
+        for (String key : keys) {
+            candidates = candidates.stream()
+                .map(element -> element.resolveRbelPathElement(key.trim()))
+                .flatMap(List::stream)
+                .distinct()
+                .collect(Collectors.toList());
+        }
+        return candidates;
+    }
+
+    private List<RbelElement> resolveRbelPathElement(String key) {
+        if (key.startsWith("[") && key.endsWith("]")) {
+            String functionExpression = key.substring(1, key.length() - 1).trim();
+            if (functionExpression.startsWith("'") && functionExpression.endsWith("'")) {
+                return getAll(functionExpression.substring(1, functionExpression.length() - 1));
+            } else if (functionExpression.equals("*")) {
+                return getChildNodes();
+            } else if (functionExpression.startsWith("?")) {
+                if (functionExpression.startsWith("?(") && functionExpression.endsWith(")")) {
+                    return findChildNodesByJexlExpression(
+                        functionExpression.substring(2, functionExpression.length() - 1));
+                } else {
+                    throw new RbelPathException(
+                        "Invalid JEXL-Expression encountered (Does not start with '?(' and end with ')'): "
+                            + functionExpression);
+                }
+            } else {
+                throw new RbelPathException("Unknown function expression encountered: " + key);
+            }
+        } else if (key.isEmpty()) {
+            return findAllChildsRecursive();
+        } else if (key.equals("*")) {
+            return getChildNodes();
+        } else {
+            return getAll(key);
+        }
+    }
+
+    protected List<RbelElement> findChildNodesByJexlExpression(String jexl) {
+        RbelJexlExecutor executor = new RbelJexlExecutor();
+        return getChildElements().stream()
+            .filter(candidate ->
+                executor.matchesAsJexlExpression(candidate.getValue(), jexl, Optional.of(candidate.getKey())))
+            .map(Entry::getValue)
+            .collect(Collectors.toList());
+    }
+
+    private List<RbelElement> findAllChildsRecursive() {
+        final List<RbelElement> childNodes = getChildNodes();
+        List<RbelElement> result = new ArrayList<>(childNodes);
+        childNodes.stream()
+            .map(RbelElement::findAllChildsRecursive)
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .forEach(result::add);
+        return result;
     }
 }

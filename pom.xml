@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.8.0</version>
+    <version>0.8.1</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -155,14 +155,9 @@
             <version>1.78</version>
         </dependency>
         <dependency>
-            <artifactId>bcprov-jdk16</artifactId>
-            <groupId>org.bouncycastle</groupId>
-            <version>1.46</version>
-        </dependency>
-        <dependency>
             <artifactId>bcpkix-jdk15on</artifactId>
             <groupId>org.bouncycastle</groupId>
-            <version>1.66</version>
+            <version>1.68</version>
         </dependency>
         <dependency>
             <artifactId>commons-io</artifactId>

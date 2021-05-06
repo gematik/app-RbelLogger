@@ -16,17 +16,16 @@
 
 package de.gematik.rbellogger.data;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @EqualsAndHashCode
 @ToString
+@Setter
 public class RbelHttpResponse extends RbelHttpMessage {
 
-    private int responseCode;
+    private final int responseCode;
+    private RbelHttpRequest request;
 
     @Builder
     public RbelHttpResponse(RbelMultiValuedMapElement header, RbelElement body, int responseCode) {

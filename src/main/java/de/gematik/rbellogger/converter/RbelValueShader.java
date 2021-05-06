@@ -18,7 +18,6 @@ package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.*;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import lombok.Builder;
@@ -34,143 +33,21 @@ public class RbelValueShader {
 
     private final Map<String, String> jexlShadingMap = new HashMap<>();
     private final Map<String, String> jexlNoteMap = new HashMap<>();
-    private final Map<Integer, JexlExpression> jexlExpressionCache = new HashMap<>();
-    private RbelConverter rbelConverter;
-    private boolean activateJexlDebugging = false;
+    private final RbelJexlExecutor rbelJexlExecutor = new RbelJexlExecutor();
 
     public Optional<String> shadeValue(final Object element, final Optional<String> key) {
         return jexlShadingMap.entrySet().stream()
-            .filter(entry -> matchesAsJexlExpression(element, entry.getKey(), key))
+            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getKey(), key))
             .map(entry -> String.format(entry.getValue(), toStringValue(element)))
             .findFirst();
     }
 
     public void addNote(final RbelElement element, final RbelConverter converter) {
-        this.rbelConverter = converter;
-
         jexlNoteMap.entrySet().stream()
-            .filter(entry -> matchesAsJexlExpression(element, entry.getKey(), element.findKeyInParentElement()))
+            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getKey(), element.findKeyInParentElement()))
             .map(entry -> String.format(entry.getValue(), toStringValue(element)))
             .findFirst()
             .ifPresent(element::setNote);
-    }
-
-    private boolean matchesAsJexlExpression(Object element, String jexlExpression, Optional<String> key) {
-        try {
-            final JexlExpression expression = buildExpression(jexlExpression);
-            final MapContext mapContext = buildJexlMapContext(element, key);
-
-            return Optional.of(expression.evaluate(mapContext))
-                .filter(Boolean.class::isInstance)
-                .map(Boolean.class::cast)
-                .orElse(false);
-        } catch (Exception e) {
-            if (activateJexlDebugging) {
-                log.info("Error during Jexl-Evaluation.", e);
-            }
-            return false;
-        }
-    }
-
-    private JexlExpression buildExpression(String jexlExpression) {
-        final int hashCode = jexlExpression.hashCode();
-        if (jexlExpressionCache.containsKey(hashCode)) {
-            return jexlExpressionCache.get(hashCode);
-        }
-        final JexlExpression expression = new JexlBuilder().create().createExpression(jexlExpression);
-        jexlExpressionCache.put(hashCode, expression);
-        return expression;
-    }
-
-    private MapContext buildJexlMapContext(Object element, Optional<String> key) {
-        final MapContext mapContext = new MapContext();
-        final Optional<RbelElement> parentElement = getParentElement(element);
-
-        mapContext.set("element", element);
-        mapContext.set("parent", parentElement.orElse(null));
-        mapContext.set("message", findMessage(element)
-            .map(this::convertToJexlMessage)
-            .orElse(null));
-        mapContext.set("request", tryToFindRequestMessage(element)
-            .map(this::convertToJexlMessage)
-            .orElse(null));
-        mapContext.set("key", key
-            .or(() -> tryToFindKeyFromParentMap(element, parentElement))
-            .orElse(null));
-        mapContext.set("path", Optional.ofNullable(element)
-            .filter(RbelElement.class::isInstance)
-            .map(RbelElement.class::cast)
-            .map(RbelElement::findNodePath)
-            .orElse(null));
-        mapContext.set("type", element.getClass().getSimpleName());
-        if (element instanceof RbelElement) {
-            mapContext.set("content", ((RbelElement) element).getContent());
-        } else {
-            mapContext.set("content", element.toString());
-        }
-
-        return mapContext;
-    }
-
-    private Optional<RbelHttpRequest> tryToFindRequestMessage(Object element) {
-        if (rbelConverter == null || rbelConverter.getMessageHistory().size() < 2) {
-            return Optional.empty();
-        }
-        final RbelElement rbelElement = rbelConverter.getMessageHistory()
-            .get(rbelConverter.getMessageHistory().size() - 2);
-        if (rbelElement instanceof RbelHttpRequest) {
-            return Optional.of((RbelHttpRequest) rbelElement);
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private JexlMessage convertToJexlMessage(RbelHttpMessage element) {
-        return JexlMessage.builder()
-            .isRequest(element instanceof RbelHttpRequest)
-            .isResponse(element instanceof RbelHttpResponse)
-            .method((element instanceof RbelHttpRequest) ? ((RbelHttpRequest) element).getMethod() : null)
-            .url((element instanceof RbelHttpRequest) ? ((RbelHttpRequest) element).getPath().getOriginalUrl() : null)
-            .bodyAsString(element.getBody().getContent())
-            .body(element.getBody())
-            .headers(element.getHeader().entrySet().stream()
-                .collect(Collectors.toMap(e -> e.getKey(), entry -> entry.getValue().getContent())))
-            .build();
-    }
-
-    private Optional<RbelHttpMessage> findMessage(Object element) {
-        if (!(element instanceof RbelElement)) {
-            return Optional.empty();
-        }
-        RbelElement ptr = (RbelElement) element;
-        while ((ptr != null) && !(ptr instanceof RbelHttpMessage)) {
-            if (ptr.getParentNode() == ptr) {
-                break;
-            }
-            ptr = ptr.getParentNode();
-        }
-        if (ptr instanceof RbelHttpMessage) {
-            return Optional.of((RbelHttpMessage) ptr);
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private Optional<RbelElement> getParentElement(Object element) {
-        return Optional.ofNullable(element)
-            .filter(RbelElement.class::isInstance)
-            .map(RbelElement.class::cast)
-            .map(RbelElement::getParentNode);
-    }
-
-    private Optional<String> tryToFindKeyFromParentMap(Object element, Optional<RbelElement> parent) {
-        return parent
-            .stream()
-            .map(RbelElement::getChildElements)
-            .flatMap(Set::stream)
-            .filter(entry -> entry.getValue() == element)
-            .map(Map.Entry::getKey)
-            .findFirst();
     }
 
     private String toStringValue(final Object value) {

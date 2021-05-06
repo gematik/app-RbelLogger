@@ -184,6 +184,5 @@ public class PCapCaptureTest {
 
     t.eitzenberger@GNDEV038 MINGW64 ~/IdeaProjects/rbel-logger/target (master)
     $ /c/Program\ Files/Google/Chrome/Application/chrome.exe --headless -disable-gpu C:/Users/t.eitzenberger/IdeaProjects/rbel-logger/target/pairingList.html  --print-to-pdf=C:/temp/output.pdf
-
      */
 }

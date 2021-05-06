@@ -3,22 +3,90 @@ package de.gematik.rbellogger.data;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.captures.PCapCapture;
+import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import java.io.File;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RbelElementTest {
-    @Test
-    public void assertThatPathValueFollowsConvention() throws IOException {
+
+    private RbelHttpResponse convertedMessage;
+
+    @BeforeEach
+    public void setUp() throws IOException {
+        RbelJexlExecutor.ACTIVATE_JEXL_DEBUGGING = true;
         final String curlMessage = FileUtils
             .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
 
-        final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
+            .convertMessage(curlMessage);
+    }
 
+    @Test
+    public void assertThatPathValueFollowsConvention() {
         assertThat(convertedMessage.findNodePath()).isEqualTo("");
         assertThat(convertedMessage.getHeader().findNodePath()).isEqualTo("header");
         assertThat(convertedMessage.getHeader().getChildNodes().get(0).findNodePath()).startsWith("header.");
+    }
+
+    @Test
+    public void simpleRbelPath_shouldFindTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$.header"))
+            .containsExactly(convertedMessage.getHeader());
+
+        assertThat(convertedMessage.findRbelPathMembers("$.body.body.nbf"))
+            .containsExactly(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
+    }
+
+    @Test
+    public void squareBracketRbelPath_shouldFindTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$.['body'].['body'].['nbf']"))
+            .containsExactly(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
+    }
+
+    @Test
+    public void wildcardDescent_shouldFindSpecificTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$.body.[*].nbf"))
+            .containsExactly(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
+    }
+
+    @Test
+    public void recursiveDescent_shouldFindSpecificTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$..nbf"))
+            .hasSize(2)
+            .contains(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
+    }
+
+    @Test
+    public void jexlExpression_shouldFindSpecificTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$..[?(key=='nbf')]"))
+            .hasSize(2)
+            .contains(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
+    }
+
+    @Test
+    public void complexJexlExpression_shouldFindSpecificTarget() {
+        assertThat(convertedMessage.findRbelPathMembers("$..[?(path=~'.*scopes_supported\\.\\d')]"))
+            .hasSize(2);
+        assertThat(convertedMessage.findRbelPathMembers("$..[?(path=~'.*scopes_supported\\.0')]"))
+            .hasSize(1);
+    }
+
+    @Test
+    public void findAllMembers() {
+        assertThat(convertedMessage.findRbelPathMembers("$..*"))
+            .hasSize(66);
     }
 }

@@ -26,7 +26,6 @@ public class RbelLoggerTest {
             .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
 
         final RbelLogger rbelLogger = RbelLogger.build();
-        rbelLogger.getValueShader().setActivateJexlDebugging(true);
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'Version'", "Extra note");
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
             .convertMessage(curlMessage);
