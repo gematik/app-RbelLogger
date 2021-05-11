@@ -109,12 +109,12 @@ public class WiremockCapture extends RbelCapturer {
                 + request.getBodyAsString());
     }
 
-    private RbelPathElement getRequestUrl(Request request) {
+    private RbelUriElement getRequestUrl(Request request) {
         final RbelElement pathElement = getRbelConverter()
             .convertMessage((proxyFor == null ? "" : proxyFor)
                 + request.getUrl());
-        if (pathElement instanceof RbelPathElement) {
-            return (RbelPathElement) pathElement;
+        if (pathElement instanceof RbelUriElement) {
+            return (RbelUriElement) pathElement;
         } else {
             throw new RuntimeException("Non-matching URL-component: " + pathElement.getContent());
         }

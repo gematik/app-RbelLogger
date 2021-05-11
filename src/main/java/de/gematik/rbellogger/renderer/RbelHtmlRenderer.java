@@ -230,8 +230,8 @@ public class RbelHtmlRenderer {
             ));
         htmlRenderer.put(RbelNullElement.class, (el, key) -> div("- empty -"));
 
-        htmlRenderer.put(RbelPathElement.class, (el, key) -> {
-            final ContainerTag urlContent = renderUrlContent((RbelPathElement) el);
+        htmlRenderer.put(RbelUriElement.class, (el, key) -> {
+            final ContainerTag urlContent = renderUrlContent((RbelUriElement) el);
             DomContent note = (el.getParentNode() instanceof RbelHttpRequest) ? text("") : addNote(el);
             if (el.getChildElements().isEmpty()) {
                 return div().with(urlContent).with(note);
@@ -440,7 +440,7 @@ public class RbelHtmlRenderer {
             }
             for (int i = 0; i < input.getAsJsonArray().size(); i++) {
                 final int finalI = i;
-                final List<RbelElement> rbelListElements = originalElement.getChildNodes().get(0).getChildNodes();
+                final List<? extends RbelElement> rbelListElements = originalElement.getChildNodes().get(0).getChildNodes();
                 output.add(shadeJson(input.getAsJsonArray().get(i), key
                     .map(v -> v + "." + finalI), rbelListElements.get(i)));
             }
@@ -481,7 +481,7 @@ public class RbelHtmlRenderer {
             );
     }
 
-    private ContainerTag renderUrlContent(final RbelPathElement path) {
+    private ContainerTag renderUrlContent(final RbelUriElement path) {
         final String originalUrl = path.getOriginalUrl();
         if (!originalUrl.contains("?")) {
             return div(new UnescapedText(originalUrl));

@@ -46,19 +46,25 @@ public class RbelCurlHttpMessageConverter implements RbelConverterPlugin {
             .map(line -> parseStringToKeyValuePair(line, context))
             .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
 
-        if (headerMap.containsKey("Transfer-Encoding") && headerMap.get("Transfer-Encoding") != null
-            && !headerMap.get("Transfer-Encoding").isEmpty()
-            && headerMap.get("Transfer-Encoding").get(0).getContent().equals("chunked")) {
-            separator = rbel.getContent().indexOf(eol, separator) + eol.length();
-        }
-        // TODO content contains a leading eol (\r\n) - not critical for text based messages,
-        //  might cause issue when looking at binary data
-        final String bodyStr = rbel.getContent().substring(separator);
+        final String bodyStr = extractBodyString(rbel, eol, separator, headerMap);
         return RbelHttpResponse.builder()
             .header(new RbelMultiValuedMapElement(headerMap))
             .body(context.convertMessage(new RbelStringElement(bodyStr)))
             .responseCode(Integer.parseInt(rbel.getContent().split("\\s")[1]))
             .build();
+    }
+
+    private String extractBodyString(RbelElement rbel, String eol, int separator, Map<String, List<RbelElement>> headerMap) {
+        if (headerMap.containsKey("Transfer-Encoding") && headerMap.get("Transfer-Encoding") != null
+            && !headerMap.get("Transfer-Encoding").isEmpty()
+            && headerMap.get("Transfer-Encoding").get(0).getContent().equals("chunked")) {
+            separator = rbel.getContent().indexOf(eol, separator) + eol.length();
+            return rbel.getContent().substring(separator, rbel.getContent().lastIndexOf("0" + eol));
+        } else {
+            // TODO content contains a leading eol (\r\n) - not critical for text based messages,
+            //  might cause issue when looking at binary data
+            return rbel.getContent().substring(separator);
+        }
     }
 
     public static String findLineSeparator(final String content) {

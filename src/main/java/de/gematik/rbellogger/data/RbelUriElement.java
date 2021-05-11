@@ -27,7 +27,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 @RequiredArgsConstructor
 @Data
-public class RbelPathElement extends RbelElement {
+public class RbelUriElement extends RbelElement {
 
     private final RbelElement basicPath;
     private final RbelMapElement queryParameter;
@@ -49,7 +49,7 @@ public class RbelPathElement extends RbelElement {
     }
 
     @Override
-    public Set<Entry<String, RbelElement>> getChildElements() {
+    public List<Entry<String, RbelElement>> getChildElements() {
         return queryParameter.getChildElements();
     }
 }

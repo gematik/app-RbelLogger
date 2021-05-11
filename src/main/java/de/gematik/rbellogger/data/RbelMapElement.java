@@ -48,7 +48,7 @@ public class RbelMapElement extends RbelElement {
     }
 
     @Override
-    public Set<Entry<String, RbelElement>> getChildElements() {
-        return elementMap.entrySet();
+    public List<Entry<String, RbelElement>> getChildElements() {
+        return new ArrayList<>(elementMap.entrySet());
     }
 }

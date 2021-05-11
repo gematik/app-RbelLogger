@@ -159,7 +159,7 @@ public class PCapCaptureTest {
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'user_consent'",
             "Note an einem Object");
 
-        pCapCapture.close();
+        pCapCapture.initialize();
 
         log.info("start rendering " + LocalDateTime.now());
         final String render = new RbelHtmlRenderer()

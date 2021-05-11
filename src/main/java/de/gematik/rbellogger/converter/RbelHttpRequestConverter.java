@@ -66,13 +66,13 @@ public class RbelHttpRequestConverter extends RbelCurlHttpMessageConverter {
 
         final String bodyStr = bodySeparator == -1 ? "" : lines[lines.length - 1];
         final RbelElement pathElement = context.convertMessage(path);
-        if (!(pathElement instanceof RbelPathElement)) {
+        if (!(pathElement instanceof RbelUriElement)) {
             throw new RuntimeException("Encountered ill-formatted path: " + path);
         }
 
         final RbelHttpRequest rbelHttpRequest = new RbelHttpRequest(headers,
             context.convertMessage(convertBodyToRbelElement(bodyStr, headers, context)), method,
-            (RbelPathElement) pathElement);
+            (RbelUriElement) pathElement);
         return rbelHttpRequest;
     }
 

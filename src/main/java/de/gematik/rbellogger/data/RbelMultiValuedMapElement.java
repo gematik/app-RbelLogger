@@ -1,11 +1,6 @@
 package de.gematik.rbellogger.data;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -16,7 +11,7 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
     private final Map<String, List<RbelElement>> values;
 
     public RbelMultiValuedMapElement() {
-        this.values = new HashMap<>();
+        this.values = new LinkedHashMap<>();
     }
 
     public RbelMultiValuedMapElement(Map<String, List<RbelElement>> values) {
@@ -88,7 +83,7 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
     }
 
     @Override
-    public Collection<RbelElement> values() {
+    public List<RbelElement> values() {
         return values.values().stream()
             .flatMap(List::stream)
             .collect(Collectors.toList());
@@ -115,7 +110,7 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
     }
 
     @Override
-    public Set<Entry<String, RbelElement>> getChildElements() {
+    public List<Entry<String, RbelElement>> getChildElements() {
         return values.entrySet().stream()
             .flatMap(entry -> {
                 if (entry.getValue().isEmpty()) {
@@ -125,6 +120,6 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
                         .map(value -> Pair.of(entry.getKey(), value));
                 }
             })
-            .collect(Collectors.toSet());
+            .collect(Collectors.toList());
     }
 }

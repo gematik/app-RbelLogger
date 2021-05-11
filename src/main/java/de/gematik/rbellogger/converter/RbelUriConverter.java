@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 
-public class RbelPathConverter implements RbelConverterPlugin {
+public class RbelUriConverter implements RbelConverterPlugin {
 
     public RbelMapElement extractParameterMap(final URI uri, final RbelConverter context, String originalContent) {
         if (uri.getQuery() == null) {
@@ -63,7 +63,7 @@ public class RbelPathConverter implements RbelConverterPlugin {
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
         final URI uri = convertToUri(rbel);
 
-        return new RbelPathElement(new RbelStringElement(rbel.getContent()
+        return new RbelUriElement(new RbelStringElement(rbel.getContent()
             .split("\\?")[0]),
             extractParameterMap(uri, context, rbel.getContent()),
             rbel.getContent());

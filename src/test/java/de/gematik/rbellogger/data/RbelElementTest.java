@@ -80,8 +80,9 @@ public class RbelElementTest {
     public void complexJexlExpression_shouldFindSpecificTarget() {
         assertThat(convertedMessage.findRbelPathMembers("$..[?(path=~'.*scopes_supported\\.\\d')]"))
             .hasSize(2);
-        assertThat(convertedMessage.findRbelPathMembers("$..[?(path=~'.*scopes_supported\\.0')]"))
-            .hasSize(1);
+
+        assertThat(convertedMessage.findRbelPathMembers("$.body.body..[?(path=~'.*scopes_supported\\.\\d')]"))
+            .hasSize(2);
     }
 
     @Test

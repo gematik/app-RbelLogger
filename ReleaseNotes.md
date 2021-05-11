@@ -1,3 +1,8 @@
+# Release 0.8.2
+- Support for TCP Segmentation
+- Reworked Read-In of PCAP-Files
+- Support for XML-Files
+
 # Release 0.8.1
 - NPEs in MultiValueMap fixed
 - RbelPath added (search for nested nodes with greater comfort)

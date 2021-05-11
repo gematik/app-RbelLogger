@@ -45,8 +45,8 @@ public class RbelMarkdownRenderer {
         if (element instanceof RbelStringElement) {
             return element.getContent();
         }
-        if (element instanceof RbelPathElement) {
-            return render((RbelPathElement) element, depth + 1);
+        if (element instanceof RbelUriElement) {
+            return render((RbelUriElement) element, depth + 1);
         }
         if (element instanceof RbelJsonElement) {
             return render((RbelJsonElement) element, depth + 1);
@@ -86,7 +86,7 @@ public class RbelMarkdownRenderer {
         return "```\n" + GSON.toJson(JsonParser.parseString(json.getCompleteJsonString())) + "\n```";
     }
 
-    public static String render(final RbelPathElement pathElement, int depth) {
+    public static String render(final RbelUriElement pathElement, int depth) {
         return pathElement.getOriginalUrl()
             .replace("?", "\n?")
             .replace("&", "\n&");

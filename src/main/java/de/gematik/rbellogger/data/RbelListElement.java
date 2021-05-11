@@ -17,13 +17,11 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @RequiredArgsConstructor
@@ -47,12 +45,12 @@ public class RbelListElement extends RbelElement {
     }
 
     @Override
-    public Set<Entry<String, RbelElement>> getChildElements() {
-        Map<String, RbelElement> result = new HashMap<>();
+    public List<Entry<String, RbelElement>> getChildElements() {
+        ArrayList<Entry<String, RbelElement>> result = new ArrayList<>();
         int index = 0;
         for (RbelElement element : elementList) {
-            result.put(String.valueOf(index++), element);
+            result.add(Pair.of(String.valueOf(index++), element));
         }
-        return result.entrySet();
+        return result;
     }
 }

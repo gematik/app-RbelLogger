@@ -59,7 +59,6 @@ public class RbelLogger {
         rbelConverter.getRbelKeyManager().addAll(configuration.getKeys());
         if (configuration.getCapturer() != null) {
             configuration.getCapturer().setRbelConverter(rbelConverter);
-            configuration.getCapturer().initialize();
         }
 
         return RbelLogger.builder()

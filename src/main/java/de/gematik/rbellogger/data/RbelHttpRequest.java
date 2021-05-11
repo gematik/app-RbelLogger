@@ -26,7 +26,7 @@ import lombok.*;
 public class RbelHttpRequest extends RbelHttpMessage {
 
     private final String method;
-    private final RbelPathElement path;
+    private final RbelUriElement path;
 
     @Override
     public List<RbelElement> getChildNodes() {
@@ -37,7 +37,7 @@ public class RbelHttpRequest extends RbelHttpMessage {
     }
 
     @Builder
-    public RbelHttpRequest(RbelMultiValuedMapElement header, RbelElement body, String method, RbelPathElement path) {
+    public RbelHttpRequest(RbelMultiValuedMapElement header, RbelElement body, String method, RbelUriElement path) {
         super(header, body);
         this.method = method;
         this.path = path;

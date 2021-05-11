@@ -40,9 +40,9 @@ public class RbelJsonElement extends RbelElement {
     }
 
     @Override
-    public Set<Entry<String, RbelElement>> getChildElements() {
+    public List<Entry<String, RbelElement>> getChildElements() {
         if (jsonElement == null) {
-            return Collections.emptySet();
+            return Collections.emptyList();
         } else {
             return jsonElement.getChildElements();
         }

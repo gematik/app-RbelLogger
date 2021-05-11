@@ -21,7 +21,14 @@ public class RbelKeyManager {
             .map(map -> map.getFirst("token_key"))
             .filter(Optional::isPresent)
             .map(Optional::get)
-            .map(tokenB64 -> Base64.getUrlDecoder().decode(tokenB64.getContent()))
+            .map(tokenB64 -> {
+                try {
+                    return Base64.getUrlDecoder().decode(tokenB64.getContent());
+                } catch (Exception e) {
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
             .map(tokenKeyBytes -> new SecretKeySpec(tokenKeyBytes, "AES"))
             .ifPresent(aesKey -> converter.getRbelKeyManager().addKey("token_key", aesKey, RbelKey.PRECEDENCE_KEY_FOLDER));
 

@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -45,8 +46,9 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
 
     @Override
     public void accept(RbelConverter rbelConverter) {
-        try {
-            Files.walk(Path.of(keyFolderPath))
+        try (final Stream<Path> fileStream
+            = Files.walk(Path.of(keyFolderPath))) {
+            fileStream
                 .map(Path::toFile)
                 .filter(File::isFile)
                 .filter(File::canRead)
@@ -69,7 +71,7 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
         }
     }
 
-    public static List<Pair<String, Key>> getIdentityFromP12(final byte[] p12FileContent, final String fileName) {
+    private static List<Pair<String, Key>> getIdentityFromP12(final byte[] p12FileContent, final String fileName) {
         try {
             final KeyStore p12 = KeyStore.getInstance("pkcs12", BOUNCY_CASTLE_PROVIDER);
             p12.load(new ByteArrayInputStream(p12FileContent), "00".toCharArray());

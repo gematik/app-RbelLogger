@@ -20,10 +20,7 @@ import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHttpMessage;
 import de.gematik.rbellogger.data.RbelHttpRequest;
 import de.gematik.rbellogger.data.RbelHttpResponse;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
@@ -51,10 +48,10 @@ public class RbelJexlExecutor {
 
             if (result && ACTIVATE_JEXL_DEBUGGING) {
                 if (element instanceof RbelElement) {
-                    log.info("Found match: '{}' with path {} matches '{}'", element,
+                    log.debug("Found match: '{}' with path {} matches '{}'", element,
                         ((RbelElement) element).findNodePath(), jexlExpression);
                 } else {
-                    log.info("Found match: '{}' matches '{}'", element, jexlExpression);
+                    log.debug("Found match: '{}' matches '{}'", element, jexlExpression);
                 }
             }
 
@@ -167,7 +164,7 @@ public class RbelJexlExecutor {
         return parent
             .stream()
             .map(RbelElement::getChildElements)
-            .flatMap(Set::stream)
+            .flatMap(List::stream)
             .filter(entry -> entry.getValue() == element)
             .map(Map.Entry::getKey)
             .findFirst();

@@ -51,15 +51,19 @@ public class RbelConverter {
         new RbelHttpRequestConverter(),
         new RbelJwtConverter(),
         new RbelJsonConverter(),
+        new RbelXmlConverter(),
         new RbelJweConverter(),
-        new RbelPathConverter(),
-        new RbelBearerTokenConverter()));
+        new RbelUriConverter(),
+        new RbelBearerTokenConverter(),
+        new RbelBase64JsonConverter()
+    ));
 
     public RbelElement convertMessage(final String input) {
         return convertMessage(new RbelStringElement(input));
     }
 
     public RbelElement convertMessage(final RbelElement rawInput) {
+        log.trace("Converting {}...", rawInput);
         final RbelElement convertedInput = filterInputThroughPreConversionMappers(rawInput);
         final RbelElement result = converterPlugins.stream()
             .filter(plugin -> {

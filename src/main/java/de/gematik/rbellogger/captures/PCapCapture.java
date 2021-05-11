@@ -17,20 +17,27 @@
 package de.gematik.rbellogger.captures;
 
 import com.sun.jna.Platform;
-import de.gematik.rbellogger.apps.PCapException;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
-import java.util.Arrays;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
 import org.pcap4j.core.*;
 import org.pcap4j.core.PcapHandle.TimestampPrecision;
 import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
 import org.pcap4j.packet.Packet;
+import org.pcap4j.packet.TcpPacket;
 
 @Slf4j
 public class PCapCapture extends RbelCapturer {
@@ -42,6 +49,9 @@ public class PCapCapture extends RbelCapturer {
     private Thread captureThread;
     private PcapHandle handle;
     private PcapDumper dumper;
+    private List<TcpPacket> unhandledTcpRequests = new ArrayList<>();
+    private List<TcpPacket> unhandledTcpResponses = new ArrayList<>();
+    private int tcpServerPort = -1;
 
     @Builder
     public PCapCapture(RbelConverter rbelConverter, String deviceName, String pcapFile, String filter,
@@ -86,18 +96,38 @@ public class PCapCapture extends RbelCapturer {
         }
         log.info("Applying filter '" + filter + "'");
 
-        captureThread = new Thread(() -> {
-            try {
-                handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
-                final int maxPackets = -1;
-                handle.loop(maxPackets, new RBelPacketListener(handle, dumper));
-            } catch (final InterruptedException e) {
-                log.info("Packet capturing interrupted...");
-            } catch (PcapNativeException | NotOpenException e) {
-                throw new RuntimeException(e);
+        final RBelPacketListener packetListener = new RBelPacketListener(handle, dumper);
+
+        if (pcapFile != null) {
+            while (true) {
+                try {
+                    packetListener.gotPacket(handle.getNextPacketEx());
+                    log.trace(
+                        "Read-In loop. Currently there are {} request and {} response TCP-Packets in their respective buffers.",
+                        unhandledTcpRequests.size(), unhandledTcpResponses.size());
+                } catch (EOFException e) {
+                    log.info("Reached EOF");
+                    break;
+                } catch (TimeoutException | PcapNativeException | NotOpenException e) {
+                    throw new RuntimeException(e);
+                }
             }
-        });
-        captureThread.start();
+            log.info("After loop");
+        } else {
+            captureThread = new Thread(() -> {
+                try {
+                    handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
+
+                    final int maxPackets = -1;
+                    handle.loop(maxPackets, packetListener);
+                } catch (final InterruptedException e) {
+                    log.info("Packet capturing interrupted...");
+                } catch (PcapNativeException | NotOpenException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            captureThread.start();
+        }
 
         return this;
     }
@@ -113,6 +143,10 @@ public class PCapCapture extends RbelCapturer {
 
     @Override
     public void close() {
+        if (pcapFile != null) {
+            initialize();
+            return;
+        }
         try {
             captureThread.join();
         } catch (InterruptedException e) {
@@ -172,20 +206,50 @@ public class PCapCapture extends RbelCapturer {
         }
     }
 
+    private byte[] getCurrentBuffer(List<TcpPacket> requestList) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        requestList.stream()
+            .sorted(Comparator.comparing(tcpPacket -> tcpPacket.getHeader().getSequenceNumber()))
+            .map(Packet::getPayload)
+            .map(Packet::getRawData)
+            .forEach(data -> {
+                try {
+                    outputStream.write(data);
+                } catch (IOException e) {
+                }
+            });
+
+        return outputStream.toByteArray();
+    }
+
+
     @RequiredArgsConstructor
     class RBelPacketListener implements PacketListener {
 
+        private static final String CONTENT_LENGTH_HEADER_START = "Content-Length: ";
         private final PcapHandle handle;
         private final PcapDumper dumper;
-        // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
-        private boolean chunkedTransfer = false;
-        private String chunkedMessage;
 
         @SneakyThrows
         @Override
         public void gotPacket(final Packet packet) {
-            final String content = getPayloadAsString(packet);
-            processMessage(content);
+            Optional<TcpPacket> tcpPacket = extractTcpPacket(packet);
+            if (tcpServerPort == -1
+                && tcpPacket.get().getHeader().getSyn()
+                && !tcpPacket.get().getHeader().getAck()) {
+                tcpServerPort = tcpPacket.get().getHeader().getDstPort().valueAsInt();
+            }
+
+            if (tcpPacket.isEmpty() ||
+                tcpPacket.get().getPayload() == null) {
+                return;
+            }
+
+            if (tcpPacket.get().getHeader().getDstPort().valueAsInt() == tcpServerPort) {
+                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpRequests);
+            } else {
+                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpResponses);
+            }
 
             try {
                 if (dumper != null) {
@@ -196,30 +260,70 @@ public class PCapCapture extends RbelCapturer {
             }
         }
 
-        private void processMessage(final String content) {
-            try {
-                if (chunkedTransfer) {
-                    processChunkedMessage(content);
-                }
-                if (!chunkedTransfer) {
-                    processSimpleHttpPackets(content);
-                }
-            } catch (final Exception e) {
-                throw new PCapException("Failed parsing content '" + content + "'", e);
+        private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer) {
+            buffer.add(tcpPacket.get());
+            Optional<String> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
+            if (nextMessage.isPresent()) {
+                processSimpleHttpPackets(nextMessage.get());
+                buffer.clear();
             }
         }
 
-        private void processChunkedMessage(final String content) {
-            if (!isHttp(content)) {
-                final int eol = content.indexOf("\r\n"); // skip first line with length of chunked block
-                chunkedMessage += eol == -1 ? content : content.substring(eol + 4);
-            } else {
-                final RbelElement convertedMultiPartMsg = getRbelConverter().convertMessage(chunkedMessage);
-                if (printMessageToSystemOut) {
-                    log.info("Multi:" + convertedMultiPartMsg.getContent());
+        private Optional<String> extractCompleteHttpMessage(byte[] currentBuffer) {
+            String dumpString = new String(currentBuffer, StandardCharsets.US_ASCII);
+            if (!isHttp(dumpString)) {
+                log.trace("No HTTP-message recognized, skipping");
+                return Optional.empty();
+            }
+            String[] messageParts = dumpString.split("\r\n\r\n");
+            String[] headerFields = messageParts[0].split("\r\n");
+            Optional<Integer> messageLength = Stream.of(headerFields)
+                .filter(field -> field.startsWith(CONTENT_LENGTH_HEADER_START))
+                .map(field -> field.substring(CONTENT_LENGTH_HEADER_START.length()))
+                .filter(NumberUtils::isParsable)
+                .map(Integer::parseInt)
+                .findAny();
+            if (messageLength.isPresent()) {
+                if (messageParts.length < 2) {
+                    if (messageLength.isEmpty() || messageLength.get() == 0) {
+                        return Optional.of(dumpString);
+                    } else {
+                        log.trace("Header found, body segmented away. \n'{}'", dumpString);
+                        return Optional.empty();
+                    }
+                } else if (messageParts[1].length() == messageLength.get()) {
+                    return Optional.of(dumpString);
+                } else if (messageParts[1].length() > messageLength.get()) {
+                    throw new RuntimeException("Overshot while parsing message (collected more bytes then the message has)");
+                } else {
+                    log.trace("Message not yet complete. Wanted {} bytes, but found only {}", messageLength.get(),
+                        messageParts[1].length());
+                    return Optional.empty();
                 }
-                chunkedMessage = null;
-                chunkedTransfer = false;
+            } else {
+                boolean chunked = Arrays.asList(headerFields).contains("Transfer-Encoding: chunked");
+                if (!chunked) {
+                    log.trace("Returning (hopefully) body-less message");
+                    return Optional.of(dumpString);
+                }
+                if (!dumpString.endsWith("0\r\n\r\n")) {
+                    log.trace("Chunked message, incomplete");
+                    return Optional.empty();
+                }
+                log.trace("Returning chunked message");
+                return Optional.ofNullable(dumpString);
+            }
+        }
+
+        private Optional<TcpPacket> extractTcpPacket(Packet packet) {
+            Packet ptr = packet;
+            while ((ptr != null) && !(ptr instanceof TcpPacket)) {
+                ptr = ptr.getPayload();
+            }
+            if (ptr instanceof TcpPacket) {
+                return Optional.ofNullable((TcpPacket) ptr);
+            } else {
+                return Optional.empty();
             }
         }
 
@@ -229,39 +333,14 @@ public class PCapCapture extends RbelCapturer {
                 handle.breakLoop();
                 return;
             }
-            final RbelElement convertMessage;
-            if (isHttpResponse(content)) {
-                convertMessage = getRbelConverter().convertMessage(content);
-            } else if (isGetOrDeleteRequest(content)) {
-                convertMessage = getRbelConverter().convertMessage(content);
-            } else if (content.startsWith("POST ") || content.startsWith("PUT")) {
-                chunkedMessage = content;
-                chunkedTransfer = true;
-                convertMessage = null;
-            } else {
-                convertMessage = getRbelConverter().convertMessage(content);
-            }
+            final RbelElement convertMessage = getRbelConverter().convertMessage(content);
             if (printMessageToSystemOut && convertMessage != null && !content.isEmpty()) {
-                log.info("RBEL: " + convertMessage.getContent());
-            }
-        }
-
-        private String getPayloadAsString(final Packet packet) {
-            Packet pp = packet.getPayload();
-            if (pp == null) {
-                throw new PCapException("Payload of packet is NULL!");
-            }
-            int offset = 0;
-            while (pp != null) {
-                if (pp.getHeader() != null) {
-                    offset += pp.getHeader().length();
+                if (convertMessage.getContent() != null) {
+                    log.info("RBEL: " + convertMessage.getContent());
+                } else {
+                    log.info("RBEL: <null> message encountered!");
                 }
-                pp = pp.getPayload();
             }
-            byte[] by = packet.getPayload().getRawData();
-            by = Arrays.copyOfRange(by, offset, by.length);
-
-            return new String(by);
         }
 
         private boolean isHttp(final String content) {

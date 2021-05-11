@@ -70,9 +70,13 @@ public class JwtConverterTest {
     @Test
     public void keyMessageAndJwtReply_shouldValidateSignature() throws IOException {
         final String keyMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/idpSigMessage.curl"));
+            .readFileToString(new File("src/test/resources/sampleMessages/idpSigMessage.curl"))
+            .replace("\n", "\r\n")
+            + "0\r\n";
         final String challengeMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"));
+            .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"))
+            .replace("\n", "\r\n")
+            + "0\r\n";
         final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
 
         rbelConverter.convertMessage(keyMessage);
