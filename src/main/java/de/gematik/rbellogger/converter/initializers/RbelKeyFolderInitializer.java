@@ -46,8 +46,7 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
 
     @Override
     public void accept(RbelConverter rbelConverter) {
-        try (final Stream<Path> fileStream
-            = Files.walk(Path.of(keyFolderPath))) {
+        try (final Stream<Path> fileStream = Files.walk(Path.of(keyFolderPath))) {
             fileStream
                 .map(Path::toFile)
                 .filter(File::isFile)
@@ -55,14 +54,13 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
                 .filter(file -> file.getName().endsWith(".p12"))
                 .map(this::readFileToKeyList)
                 .flatMap(List::stream)
-                .forEach(pair -> rbelConverter.getRbelKeyManager()
-                    .addKey(pair.getKey(), pair.getValue(), RbelKey.PRECEDENCE_KEY_FOLDER));
+                .forEach(rbelConverter.getRbelKeyManager()::addKey);
         } catch (IOException e) {
             throw new RuntimeException("Error while initializing keys", e);
         }
     }
 
-    private List<Pair<String, Key>> readFileToKeyList(File file) {
+    private List<RbelKey> readFileToKeyList(File file) {
         try {
             return getIdentityFromP12(FileUtils.readFileToByteArray(file),
                 file.getName().replace(".p12", ""));
@@ -71,7 +69,7 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
         }
     }
 
-    private static List<Pair<String, Key>> getIdentityFromP12(final byte[] p12FileContent, final String fileName) {
+    private static List<RbelKey> getIdentityFromP12(final byte[] p12FileContent, final String fileName) {
         try {
             final KeyStore p12 = KeyStore.getInstance("pkcs12", BOUNCY_CASTLE_PROVIDER);
             p12.load(new ByteArrayInputStream(p12FileContent), "00".toCharArray());
@@ -81,8 +79,10 @@ public class RbelKeyFolderInitializer implements Consumer<RbelConverter> {
                 final String alias = e.nextElement();
                 final X509Certificate certificate = (X509Certificate) p12.getCertificate(alias);
                 final PrivateKey privateKey = (PrivateKey) p12.getKey(alias, "00".toCharArray());
-                return List.of(Pair.of("puk_" + fileName, certificate.getPublicKey()),
-                    Pair.of("prk_" + fileName, privateKey));
+                final RbelKey rbelPublicKey = new RbelKey(certificate.getPublicKey(), "puk_" + fileName,
+                    RbelKey.PRECEDENCE_KEY_FOLDER);
+                return List.of(rbelPublicKey,
+                    new RbelKey(privateKey, "prk_" + fileName, RbelKey.PRECEDENCE_KEY_FOLDER, rbelPublicKey));
             }
             return List.of();
         } catch (final IOException | KeyStoreException | NoSuchAlgorithmException

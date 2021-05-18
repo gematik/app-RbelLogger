@@ -1,6 +1,10 @@
 package de.gematik.rbellogger.key;
 
 import java.security.Key;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,8 +14,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class RbelKey {
 
-    public static int PRECEDENCE_X5C_HEADER_VALUE = 100;
-    public static int PRECEDENCE_KEY_FOLDER = 110;
+    public static final int PRECEDENCE_X5C_HEADER_VALUE = 100;
+    public static final int PRECEDENCE_KEY_FOLDER = 110;
 
     private final Key key;
     private final String keyName;
@@ -20,4 +24,31 @@ public class RbelKey {
      * with lower precedence.
      */
     private final int precedence;
+    private final Optional<RbelKey> matchingPublicKey;
+
+    public RbelKey(Key key, String keyName, int precedence, RbelKey matchingPublicKey) {
+        this.key = key;
+        this.keyName = keyName;
+        this.precedence = precedence;
+        this.matchingPublicKey = Optional.ofNullable(matchingPublicKey);
+    }
+
+    public RbelKey(Key key, String keyName, int precedence) {
+        this.key = key;
+        this.keyName = keyName;
+        this.precedence = precedence;
+        this.matchingPublicKey = Optional.empty();
+    }
+
+    public Optional<KeyPair> retrieveCorrespondingKeyPair() {
+        if (key instanceof PrivateKey) {
+            return matchingPublicKey
+                .map(RbelKey::getKey)
+                .filter(PublicKey.class::isInstance)
+                .map(PublicKey.class::cast)
+                .map(pubKey -> new KeyPair(pubKey, (PrivateKey) key));
+        } else {
+            return Optional.empty();
+        }
+    }
 }

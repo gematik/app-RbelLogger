@@ -34,7 +34,15 @@ import org.apache.commons.jexl3.MapContext;
 public class RbelJexlExecutor {
 
     private static final Map<Integer, JexlExpression> JEXL_EXPRESSION_CACHE = new HashMap<>();
-    public static boolean ACTIVATE_JEXL_DEBUGGING = false;
+    private static boolean ACTIVATE_JEXL_DEBUGGING = false;
+
+    public static void activateJexlDebugging() {
+        ACTIVATE_JEXL_DEBUGGING = true;
+    }
+
+    public static void deactivateJexlDebugging() {
+        ACTIVATE_JEXL_DEBUGGING = false;
+    }
 
     public boolean matchesAsJexlExpression(Object element, String jexlExpression, Optional<String> key) {
         try {

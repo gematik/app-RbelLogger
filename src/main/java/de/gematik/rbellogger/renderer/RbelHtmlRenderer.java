@@ -23,6 +23,8 @@ import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.*;
 import j2html.TagCreator;
 import j2html.tags.*;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,6 +40,10 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
 
 public class RbelHtmlRenderer {
 
@@ -65,13 +71,21 @@ public class RbelHtmlRenderer {
         + "<p>Attaching it to a network, RestAssured or Wiremock interface or instructing it to read from a recorded PCAP file, "
         + "produces this shiny communication log supporting Plain HTTP, JSON, JWT and even JWE!</p>";
 
+    private DomContent constructMessageId(RbelElement message) {
+        if (elementIndices.containsKey(message.getUuid())) {
+            return span(elementIndices.get(message.getUuid())).withClass("tag is-info is-light mr-3 is-size-3");
+        } else {
+            return span();
+        }
+    }
+
     {
         htmlRenderer.put(RbelHttpRequest.class, (el, key) -> collapsibleCard(
             div().with(
                 a().withName(el.getUuid()),
                 i().withClass("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3 has-text-link"),
                 showContentButtonAndDialog(el),
-                h1(span(elementIndices.get(el.getUuid())).withClass("tag is-info is-light mr-3 is-size-3"),
+                h1(constructMessageId(el),
                     i().withClass("fas fa-share"), text(" " + ((RbelHttpRequest) el).getMethod() + " Request"))
                     .withClass("title has-text-link"),
                 addNote(el),
@@ -99,7 +113,7 @@ public class RbelHtmlRenderer {
             div().with(
                 a().withName(el.getUuid()),
                 i().withClass("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3 has-text-success"),
-                h1(span(elementIndices.get(el.getUuid())).withClass("tag is-info is-light mr-3 is-size-3"),
+                h1(constructMessageId(el),
                     i().withClass("fas fa-reply"), text(" Response")).withClass("title has-text-success"),
                 showContentButtonAndDialog(el),
                 addNote(el))
@@ -172,6 +186,31 @@ public class RbelHtmlRenderer {
                                 .withClass("json")
                         ).with(convertNested(el))));
         });
+
+        htmlRenderer.put(RbelXmlElement.class, (el, key) -> {
+            String formattedXml = prettyPrintXml(el.getRawMessage());
+            for (Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
+                if (formattedXml.contains(entry.getValue().stringToMatch + ",")) {
+                    formattedXml = formattedXml.replace(
+                        entry.getValue().stringToMatch + ",",
+                        entry.getValue().tagForKeyReplacement.render() + "," + entry.getValue().tagForValueReplacement
+                            .render());
+                } else if (formattedXml.contains(entry.getValue().stringToMatch)) {
+                    formattedXml = formattedXml.replace(
+                        entry.getValue().stringToMatch,
+                        entry.getValue().tagForKeyReplacement.render() + entry.getValue().tagForValueReplacement
+                            .render());
+                }
+            }
+            return ancestorTitle()
+                .with(
+                    vertParentTitle().with(
+                        div().withClass("tile is-child pr-3").with(
+                            pre(new Text(formattedXml))
+                                .withClass("json")
+                        ).with(convertNested(el))));
+        });
+
         htmlRenderer.put(RbelJwtElement.class, (el, key) -> div(
             t1ms("JWT")
                 .with(showContentButtonAndDialog(el)),
@@ -220,6 +259,8 @@ public class RbelHtmlRenderer {
                     .withText("Was verified using Key ")
                     .with(b(((RbelJwtSignature) el).getVerifiedUsing()))
             ));
+        htmlRenderer.put(RbelNestedJsonElement.class, (el, key) -> htmlRenderer.get(RbelJsonElement.class)
+            .apply(((RbelNestedJsonElement) el).getData(), key));
         htmlRenderer.put(RbelJweEncryptionInfo.class, (el, key) ->
             childBoxNotifTitle((((RbelJweEncryptionInfo) el).isWasDecryptable()) ? CLS_PKIOK : CLS_PKINOK).with(
                 t2("Encryption info"),
@@ -228,6 +269,64 @@ public class RbelHtmlRenderer {
                     .withText("Was decrypted using Key ")
                     .with(b(((RbelJweEncryptionInfo) el).getDecryptedUsingKeyWithId()))
             ));
+        htmlRenderer.put(RbelVauMessage.class, (el, key) -> div(
+            t1ms("VAU Encrypted Message")
+                .with(showContentButtonAndDialog(el)),
+            addNote(el, "mb-5"),
+            ancestorTitle().with(
+                vertParentTitle().with(
+                    childBoxNotifTitle(CLS_BODY).with(
+                        t2("Header"),
+                        Optional.ofNullable(((RbelVauMessage) el).getAdditionalHeaders())
+                            .map(headers ->
+                                convert(headers, Optional.empty())
+                            )
+                            .orElse(span()),
+                        Optional.ofNullable(((RbelVauMessage) el).getPVersionNumber())
+                            .map(v -> p(b("Version Number: ")).withText(v.toString()))
+                            .orElse(span()),
+                        Optional.ofNullable(((RbelVauMessage) el).getSequenceNumber())
+                            .map(v -> p(b("Sequence Number: ")).withText(v.toString()))
+                            .orElse(span()),
+                        Optional.ofNullable(((RbelVauMessage) el).getRequestId())
+                            .map(v -> p(b("Request ID: ")).withText(v))
+                            .orElse(span())
+                    ),
+                    childBoxNotifTitle(CLS_BODY).with(
+                        t2("Body"),
+                        addNote(((RbelVauMessage) el).getMessage()),
+                        convert(((RbelVauMessage) el).getMessage(), Optional.empty())
+                    ),
+                    childBoxNotifTitle(CLS_PKIOK).with(
+                        p()
+                            .withClass(CLS_PKIOK)
+                            .withText("Was decrypted using Key ")
+                            .with(b(((RbelVauMessage) el).getKeyIdUsed())),
+                        addNote(el)
+                    ))
+            )
+        ));
+
+        htmlRenderer.put(RbelBinaryElement.class, (el, key) -> div(
+            pre(StringUtils.abbreviate(Base64.getEncoder()
+                .encodeToString(((RbelBinaryElement) el).getRawData()), 1000))
+            .withClass("binary"),
+            br(),
+            ancestorTitle().with(
+                vertParentTitle().with(
+                    Optional.ofNullable(el)
+                        .map(RbelBinaryElement.class::cast)
+                        .map(RbelBinaryElement::getNestedElement)
+                        .filter(Objects::nonNull)
+                        .map(nested ->
+                            childBoxNotifTitle(CLS_BODY).with(
+                                addNote(nested),
+                                convert(nested, Optional.empty())
+                            ))
+                        .orElse(span())
+                ))
+        ));
+
         htmlRenderer.put(RbelNullElement.class, (el, key) -> div("- empty -"));
 
         htmlRenderer.put(RbelUriElement.class, (el, key) -> {
@@ -341,6 +440,19 @@ public class RbelHtmlRenderer {
         }
     }
 
+    private String prettyPrintXml(String content) {
+        try {
+            final OutputFormat format = OutputFormat.createPrettyPrint();
+            final org.dom4j.Document document = DocumentHelper.parseText(content);
+            StringWriter sw = new StringWriter();
+            final XMLWriter writer = new XMLWriter(sw, format);
+            writer.write(document);
+            return sw.getBuffer().toString();
+        } catch (IOException | DocumentException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private DomContent showContentButtonAndDialog(RbelElement el) {
         String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);
         return span().with(
@@ -440,7 +552,8 @@ public class RbelHtmlRenderer {
             }
             for (int i = 0; i < input.getAsJsonArray().size(); i++) {
                 final int finalI = i;
-                final List<? extends RbelElement> rbelListElements = originalElement.getChildNodes().get(0).getChildNodes();
+                final List<? extends RbelElement> rbelListElements = originalElement.getChildNodes().get(0)
+                    .getChildNodes();
                 output.add(shadeJson(input.getAsJsonArray().get(i), key
                     .map(v -> v + "." + finalI), rbelListElements.get(i)));
             }

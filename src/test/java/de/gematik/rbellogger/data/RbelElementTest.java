@@ -1,5 +1,6 @@
 package de.gematik.rbellogger.data;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -16,9 +17,9 @@ public class RbelElementTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        RbelJexlExecutor.ACTIVATE_JEXL_DEBUGGING = true;
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        RbelJexlExecutor.activateJexlDebugging();
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);

@@ -1,3 +1,7 @@
+# Release 0.8.3
+- VAU-Protocol Decryption added (ERP and ePA)
+- Binary-Data Support added
+
 # Release 0.8.2
 - Support for TCP Segmentation
 - Reworked Read-In of PCAP-Files

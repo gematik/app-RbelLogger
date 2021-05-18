@@ -19,7 +19,8 @@ package de.gematik.rbellogger.converter;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.gematik.rbellogger.data.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -36,36 +37,44 @@ public class RbelJsonConverter implements RbelConverterPlugin {
 
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context);
+        return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context, rbel);
     }
 
-    private RbelElement jsonElementToRbelElement(final JsonElement jsonElement, final RbelConverter context) {
-        //TODO set parent/child connections correctly!
+    private RbelElement jsonElementToRbelElement(final JsonElement jsonElement, final RbelConverter context,
+        final RbelElement parentElement) {
         if (jsonElement.isJsonObject()) {
-            final RbelMapElement rbelMapElement = new RbelMapElement(
-                jsonElement.getAsJsonObject().entrySet().stream()
-                    .collect(Collectors.toMap(Entry::getKey,
-                        v -> jsonElementToRbelElement(v.getValue(), context))));
-            rbelMapElement.getChildNodes()
-                .forEach(child -> child.setParentNode(rbelMapElement));
+            final LinkedHashMap<String, RbelElement> elementMap = new LinkedHashMap<>();
+            final RbelMapElement rbelMapElement = new RbelMapElement(elementMap);
+            final RbelJsonElement rbelJsonElement = new RbelJsonElement(rbelMapElement, jsonElement.toString());
+            rbelMapElement.setParentNode(rbelJsonElement);
+            rbelJsonElement.setParentNode(parentElement);
+            jsonElement.getAsJsonObject().entrySet().stream()
+                .forEach(entry -> elementMap.put(entry.getKey(),
+                    jsonElementToRbelElement(entry.getValue(), context, rbelMapElement)));
             rbelMapElement.getChildNodes()
                 .forEach(context::triggerPostConversionListenerFor);
-            return new RbelJsonElement(rbelMapElement, jsonElement.toString());
+            return rbelJsonElement;
         }
         if (jsonElement.isJsonArray()) {
-            final RbelJsonElement rbelJsonElement = new RbelJsonElement(new RbelListElement(
-                StreamSupport.stream(jsonElement.getAsJsonArray()
-                    .spliterator(), false)
-                    .map(el -> jsonElementToRbelElement(el, context))
-                    .collect(Collectors.toList())), jsonElement.toString());
-            rbelJsonElement.getJsonElement().getChildNodes()
-                .forEach(child -> child.setParentNode(rbelJsonElement.getJsonElement()));
+            final ArrayList<RbelElement> elementList = new ArrayList<>();
+            final RbelListElement rbelListElement = new RbelListElement(elementList);
+            final RbelJsonElement rbelJsonElement = new RbelJsonElement(rbelListElement, jsonElement.toString());
+            rbelJsonElement.setParentNode(parentElement);
+            rbelListElement.setParentNode(rbelJsonElement);
+
+            StreamSupport.stream(jsonElement.getAsJsonArray()
+                .spliterator(), false)
+                .map(el -> jsonElementToRbelElement(el, context, rbelListElement))
+                .forEach(elementList::add);
+
             rbelJsonElement.getJsonElement().getChildNodes()
                 .forEach(context::triggerPostConversionListenerFor);
             return rbelJsonElement;
         }
         if (jsonElement.isJsonPrimitive()) {
-            final RbelElement element = context.convertMessage(jsonElement.getAsString());
+            final RbelStringElement stringElement = new RbelStringElement(jsonElement.getAsString());
+            stringElement.setParentNode(parentElement);
+            final RbelElement element = context.convertMessage(stringElement);
             if (jsonElement.getAsJsonPrimitive().isString()) {
                 element.setRawMessage("\"" + jsonElement.getAsString() + "\"");
             } else {

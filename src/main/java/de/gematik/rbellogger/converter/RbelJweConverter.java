@@ -42,7 +42,11 @@ public class RbelJweConverter implements RbelConverterPlugin {
 
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        final JsonWebEncryption jwe = initializeJwe(rbel).get();
+        final Optional<JsonWebEncryption> jweOptional = initializeJwe(rbel);
+        if (jweOptional.isEmpty()) {
+            throw new RuntimeException("Unable to extract JWE from element");
+        }
+        final JsonWebEncryption jwe = jweOptional.get();
 
         final Optional<Pair<String, String>> correctKeyAndPayload = findCorrectKeyAndReturnPayload(context, jwe);
         if (correctKeyAndPayload.isEmpty()) {

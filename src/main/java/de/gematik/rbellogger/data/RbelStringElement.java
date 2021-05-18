@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RbelStringElement extends RbelElement {
 
+    private RbelElement nestedElement;
     private final String content;
 
     @Override

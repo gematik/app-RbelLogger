@@ -22,9 +22,9 @@ class RbelHttpRequestConverterTest {
     @Test
     public void doubleHeaderValue() {
         assertThat(new RbelHttpRequestConverter()
-            .convertElement(new RbelStringElement("GET /auth/realms/idp/.well-known/openid-configuration HTTP/1.1\n"
-                + "User-Agent: Value1\n"
-                + "User-Agent: Value2"), RbelConverter.builder().build())
+            .convertElement(new RbelStringElement("GET /auth/realms/idp/.well-known/openid-configuration HTTP/1.1\r\n"
+                + "User-Agent: Value1\r\n"
+                + "User-Agent: Value2\r\n\r\n"), RbelConverter.builder().build())
         ).isNotNull();
     }
 

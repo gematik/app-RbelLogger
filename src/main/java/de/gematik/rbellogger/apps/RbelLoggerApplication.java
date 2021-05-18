@@ -99,14 +99,17 @@ public class RbelLoggerApplication {
             printAllPcapDevicesToSystemOut();
             return;
         } else {
+            final RbelCapturer capturer = getCapturer();
             final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
                 .addKey("IDP symmetricEncryptionKey",
                     new SecretKeySpec(DigestUtils.sha256("geheimerSchluesselDerNochGehashtWird"), "AES"),
                     RbelKey.PRECEDENCE_KEY_FOLDER)
                 .addInitializer(new RbelKeyFolderInitializer(keyFolder))
                 .addPostConversionListener(RbelJweElement.class, RbelKeyManager.RBEL_IDP_TOKEN_KEY_LISTENER)
-                .addCapturer(getCapturer())
+                .addCapturer(capturer)
             );
+
+            capturer.initialize();
 
             if (StringUtils.isNotBlank(htmlFile)) {
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -115,16 +118,19 @@ public class RbelLoggerApplication {
                             RbelHtmlRenderer
                                 .render(rbelLogger.getMessageHistory()), Charset.defaultCharset());
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        throw new RuntimeException("Error during HTML-Rendering", e);
                     }
                     log.info("Saved HTML report to " + new File(htmlFile).getAbsolutePath());
                 }));
             }
 
-            while (true) {
+            long steps = 0;
+            while (steps < Long.MAX_VALUE) {
                 try {
                     Thread.sleep(10);
+                    steps++;
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
         }

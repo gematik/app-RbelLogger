@@ -18,10 +18,8 @@ package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.*;
 import de.gematik.rbellogger.key.RbelKeyManager;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.security.Security;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -32,6 +30,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PUBLIC)
@@ -47,7 +46,7 @@ public class RbelConverter {
     private final Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
         = new HashMap<>();
     private final List<RbelConverterPlugin> converterPlugins = new ArrayList<>(List.of(
-        new RbelCurlHttpMessageConverter(),
+        new RbelHttpResponseConverter(),
         new RbelHttpRequestConverter(),
         new RbelJwtConverter(),
         new RbelJsonConverter(),
@@ -55,8 +54,18 @@ public class RbelConverter {
         new RbelJweConverter(),
         new RbelUriConverter(),
         new RbelBearerTokenConverter(),
-        new RbelBase64JsonConverter()
+        new RbelBase64JsonConverter(),
+        new RbelVauDecryptionConverter(),
+        new RbelErpVauDecryptionConverter()
     ));
+
+    {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
+    public RbelElement convertMessage(final byte[] input) {
+        return convertMessage(new RbelBinaryElement(input));
+    }
 
     public RbelElement convertMessage(final String input) {
         return convertMessage(new RbelStringElement(input));
@@ -74,6 +83,7 @@ public class RbelConverter {
                 }
             })
             .map(plugin -> plugin.convertElement(convertedInput, this))
+            .filter(Objects::nonNull)
             .findFirst()
             .orElse(convertedInput);
         if (convertedInput.getRawMessage() == null) {
@@ -82,19 +92,22 @@ public class RbelConverter {
             result.setRawMessage(convertedInput.getRawMessage());
         }
         if (result instanceof RbelHttpMessage) {
-            messageHistory.add(result);
             if (result instanceof RbelHttpResponse) {
                 ((RbelHttpResponse) result).setRequest(findLastRequest());
             }
             result.triggerPostConversionListener(this);
+            if (result.getParentNode() == null) {
+                messageHistory.add(result);
+            }
         }
         return result;
     }
 
     private RbelHttpRequest findLastRequest() {
+        final List<RbelElement> messageHistory = getMessageHistory();
         for (int i = messageHistory.size() - 1; i >= 0; i--) {
-            if (messageHistory.get(i) instanceof RbelHttpRequest) {
-                return (RbelHttpRequest) messageHistory.get(i);
+            if (this.messageHistory.get(i) instanceof RbelHttpRequest) {
+                return (RbelHttpRequest) this.messageHistory.get(i);
             }
         }
         return null;
@@ -140,5 +153,11 @@ public class RbelConverter {
         preConversionMappers
             .computeIfAbsent(clazz, key -> new ArrayList<>())
             .add(mapper);
+    }
+
+    public List<RbelElement> getMessageHistory() {
+        return messageHistory.stream()
+            .filter(message -> message.getParentNode() == null)
+            .collect(Collectors.toList());
     }
 }

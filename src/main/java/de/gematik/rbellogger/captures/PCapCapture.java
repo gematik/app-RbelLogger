@@ -52,6 +52,8 @@ public class PCapCapture extends RbelCapturer {
     private List<TcpPacket> unhandledTcpRequests = new ArrayList<>();
     private List<TcpPacket> unhandledTcpResponses = new ArrayList<>();
     private int tcpServerPort = -1;
+    private int packetReceived = 0;
+    private int tcpPacketReceived = 0;
 
     @Builder
     public PCapCapture(RbelConverter rbelConverter, String deviceName, String pcapFile, String filter,
@@ -99,7 +101,7 @@ public class PCapCapture extends RbelCapturer {
         final RBelPacketListener packetListener = new RBelPacketListener(handle, dumper);
 
         if (pcapFile != null) {
-            while (true) {
+            while (handle.isOpen()) {
                 try {
                     packetListener.gotPacket(handle.getNextPacketEx());
                     log.trace(
@@ -122,6 +124,7 @@ public class PCapCapture extends RbelCapturer {
                     handle.loop(maxPackets, packetListener);
                 } catch (final InterruptedException e) {
                     log.info("Packet capturing interrupted...");
+                    Thread.currentThread().interrupt();
                 } catch (PcapNativeException | NotOpenException e) {
                     throw new RuntimeException(e);
                 }
@@ -150,7 +153,7 @@ public class PCapCapture extends RbelCapturer {
         try {
             captureThread.join();
         } catch (InterruptedException e) {
-            // swallow
+            Thread.currentThread().interrupt();
         }
 
         try {
@@ -235,15 +238,18 @@ public class PCapCapture extends RbelCapturer {
         public void gotPacket(final Packet packet) {
             Optional<TcpPacket> tcpPacket = extractTcpPacket(packet);
             if (tcpServerPort == -1
+                && tcpPacket.isPresent()
                 && tcpPacket.get().getHeader().getSyn()
                 && !tcpPacket.get().getHeader().getAck()) {
                 tcpServerPort = tcpPacket.get().getHeader().getDstPort().valueAsInt();
             }
 
+            packetReceived++;
             if (tcpPacket.isEmpty() ||
                 tcpPacket.get().getPayload() == null) {
                 return;
             }
+            tcpPacketReceived++;
 
             if (tcpPacket.get().getHeader().getDstPort().valueAsInt() == tcpServerPort) {
                 addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpRequests);
@@ -251,25 +257,28 @@ public class PCapCapture extends RbelCapturer {
                 addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpResponses);
             }
 
+            if ((tcpPacketReceived % 1_000) == 0) {
+                log.info("Received {} TCP-Packets from {} packets overall", tcpPacketReceived, packetReceived);
+            }
             try {
                 if (dumper != null) {
                     dumper.dump(packet, handle.getTimestamp());
                 }
             } catch (final NotOpenException e) {
-                e.printStackTrace();
+                throw new RuntimeException("Encountered exception while receiving", e);
             }
         }
 
         private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer) {
             buffer.add(tcpPacket.get());
-            Optional<String> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
+            Optional<byte[]> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
             if (nextMessage.isPresent()) {
                 processSimpleHttpPackets(nextMessage.get());
                 buffer.clear();
             }
         }
 
-        private Optional<String> extractCompleteHttpMessage(byte[] currentBuffer) {
+        private Optional<byte[]> extractCompleteHttpMessage(byte[] currentBuffer) {
             String dumpString = new String(currentBuffer, StandardCharsets.US_ASCII);
             if (!isHttp(dumpString)) {
                 log.trace("No HTTP-message recognized, skipping");
@@ -286,15 +295,16 @@ public class PCapCapture extends RbelCapturer {
             if (messageLength.isPresent()) {
                 if (messageParts.length < 2) {
                     if (messageLength.isEmpty() || messageLength.get() == 0) {
-                        return Optional.of(dumpString);
+                        return Optional.of(currentBuffer);
                     } else {
                         log.trace("Header found, body segmented away. \n'{}'", dumpString);
                         return Optional.empty();
                     }
                 } else if (messageParts[1].length() == messageLength.get()) {
-                    return Optional.of(dumpString);
+                    return Optional.of(currentBuffer);
                 } else if (messageParts[1].length() > messageLength.get()) {
-                    throw new RuntimeException("Overshot while parsing message (collected more bytes then the message has)");
+                    throw new RuntimeException(
+                        "Overshot while parsing message (collected more bytes then the message has)");
                 } else {
                     log.trace("Message not yet complete. Wanted {} bytes, but found only {}", messageLength.get(),
                         messageParts[1].length());
@@ -304,14 +314,14 @@ public class PCapCapture extends RbelCapturer {
                 boolean chunked = Arrays.asList(headerFields).contains("Transfer-Encoding: chunked");
                 if (!chunked) {
                     log.trace("Returning (hopefully) body-less message");
-                    return Optional.of(dumpString);
+                    return Optional.of(currentBuffer);
                 }
                 if (!dumpString.endsWith("0\r\n\r\n")) {
                     log.trace("Chunked message, incomplete");
                     return Optional.empty();
                 }
                 log.trace("Returning chunked message");
-                return Optional.ofNullable(dumpString);
+                return Optional.ofNullable(currentBuffer);
             }
         }
 
@@ -328,13 +338,13 @@ public class PCapCapture extends RbelCapturer {
         }
 
         @SneakyThrows
-        private void processSimpleHttpPackets(final String content) {
-            if (content.contains("GET /EXIT_RBELLOGGER")) {
+        private void processSimpleHttpPackets(final byte[] content) {
+            if (new String(content).contains("GET /EXIT_RBELLOGGER")) {
                 handle.breakLoop();
                 return;
             }
             final RbelElement convertMessage = getRbelConverter().convertMessage(content);
-            if (printMessageToSystemOut && convertMessage != null && !content.isEmpty()) {
+            if (printMessageToSystemOut && convertMessage != null && content.length > 0) {
                 if (convertMessage.getContent() != null) {
                     log.info("RBEL: " + convertMessage.getContent());
                 } else {

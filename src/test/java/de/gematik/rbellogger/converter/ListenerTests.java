@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -30,8 +31,8 @@ public class ListenerTests {
 
     @Test
     public void simpleMessageWithCounterListener_shouldBeTriggered() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final AtomicInteger callCounter = new AtomicInteger(0);
 

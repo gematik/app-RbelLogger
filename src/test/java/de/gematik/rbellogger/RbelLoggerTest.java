@@ -1,5 +1,6 @@
 package de.gematik.rbellogger;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.captures.PCapCapture;
@@ -22,8 +23,8 @@ public class RbelLoggerTest {
 
     @Test
     public void addNoteToHeader() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'Version'", "Extra note");
@@ -46,8 +47,8 @@ public class RbelLoggerTest {
 
     @Test
     public void preConversionMapperToShadeUrls() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
             .addPreConversionMapper(RbelStringElement.class, (path, context) -> {
@@ -66,8 +67,8 @@ public class RbelLoggerTest {
 
     @Test
     public void addNoteToHttpHeaderButNotBody() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("path == 'header'", "Header note");

@@ -16,6 +16,8 @@
 
 package de.gematik.rbellogger.renderer;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
+
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
@@ -28,8 +30,8 @@ public class RbelMarkdownRendererTest {
 
     @Test
     public void convertToMarkdown() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 

@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.renderer;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -35,8 +36,8 @@ public class RbelHtmlRendererTest {
 
     @Test
     public void convertToHtml() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 
@@ -46,8 +47,7 @@ public class RbelHtmlRendererTest {
 
     @Test
     public void valueShading() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build()
             .getRbelConverter().convertMessage(curlMessage);
@@ -77,8 +77,8 @@ public class RbelHtmlRendererTest {
 
     @Test
     public void advancedShading() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 

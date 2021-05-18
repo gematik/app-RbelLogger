@@ -4,9 +4,13 @@ import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
+import de.gematik.rbellogger.converter.RbelVauDecryptionConverter;
+import de.gematik.rbellogger.converter.listener.RbelVauKeyDeriver;
 import de.gematik.rbellogger.converter.listener.RbelX5cKeyReader;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMapElement;
+import de.gematik.rbellogger.data.RbelNestedJsonElement;
+import de.gematik.rbellogger.data.RbelStringElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.List;
 import java.util.Objects;
@@ -38,6 +42,7 @@ public class RbelLogger {
             .rbelValueShader(new RbelValueShader())
             .build();
         rbelConverter.registerListener(RbelMapElement.class, new RbelX5cKeyReader());
+        rbelConverter.registerListener(RbelNestedJsonElement.class, new RbelVauKeyDeriver());
         if (configuration.getPostConversionListener() != null) {
             configuration.getPostConversionListener().entrySet().stream()
                 .forEach(entry -> entry.getValue().stream()

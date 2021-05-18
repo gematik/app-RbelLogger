@@ -1,6 +1,7 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelNestedJsonElement;
 import de.gematik.rbellogger.data.RbelStringElement;
 import java.util.Base64;
 import java.util.Base64.Decoder;
@@ -28,7 +29,8 @@ public class RbelBase64JsonConverter extends RbelJsonConverter {
         try{
             return Optional.ofNullable(decoder.decode(input))
                 .filter(json -> super.canConvertElement(new RbelStringElement(new String(json)), context))
-                .map(json -> super.convertElement(new RbelStringElement(new String(json)), context));
+                .map(json -> super.convertElement(new RbelStringElement(new String(json)), context))
+                .map(rbelJsonElement -> new RbelNestedJsonElement(rbelJsonElement));
         } catch (Exception e) {
             return Optional.empty();
         }

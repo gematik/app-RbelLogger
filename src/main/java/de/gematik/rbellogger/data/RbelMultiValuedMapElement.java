@@ -122,4 +122,13 @@ public class RbelMultiValuedMapElement extends RbelElement implements Map<String
             })
             .collect(Collectors.toList());
     }
+
+    public Stream<RbelElement> getCaseInsensitiveMatches(String key) {
+        final String lowerCaseKey = key.toLowerCase();
+        return values.entrySet().stream()
+            .filter(entry -> entry.getKey() != null)
+            .filter(entry -> entry.getKey().toLowerCase().equals(lowerCaseKey))
+            .map(Entry::getValue)
+            .flatMap(List::stream);
+    }
 }

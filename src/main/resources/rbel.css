@@ -62,10 +62,16 @@
 pre {
     color: #fa4 !important;
     background-color: #444 !important;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 pre.json {
     color: greenyellow !important;
+}
+pre.binary {
+    max-width: 800px;
+    padding: 0.7rem 1.5rem;
 }
 
 pre.value, pre.json, pre.value div, pre.json div {

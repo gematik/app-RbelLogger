@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -35,8 +36,8 @@ public class XmlConverterTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/xmlMessage.curl"));
+        curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/xmlMessage.curl");
     }
 
     @Test

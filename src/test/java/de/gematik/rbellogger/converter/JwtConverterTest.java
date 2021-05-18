@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -31,8 +32,8 @@ public class JwtConverterTest {
 
     @Test
     public void convertMessage_shouldGiveJwtBody() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jwtMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 
@@ -69,14 +70,10 @@ public class JwtConverterTest {
 
     @Test
     public void keyMessageAndJwtReply_shouldValidateSignature() throws IOException {
-        final String keyMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/idpSigMessage.curl"))
-            .replace("\n", "\r\n")
-            + "0\r\n";
-        final String challengeMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"))
-            .replace("\n", "\r\n")
-            + "0\r\n";
+        final String keyMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/idpSigMessage.curl");
+        final String challengeMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/getChallenge.curl");
         final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
 
         rbelConverter.convertMessage(keyMessage);

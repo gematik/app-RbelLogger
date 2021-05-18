@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -30,8 +31,8 @@ public class MessageConverterTest {
 
     @Test
     public void convertMessage_shouldGiveCorrectType() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
 
@@ -42,8 +43,8 @@ public class MessageConverterTest {
 
     @Test
     public void convertMessage_shouldGiveHeaderFields() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);
@@ -56,8 +57,8 @@ public class MessageConverterTest {
 
     @Test
     public void convertMessage_shouldGiveBodyAsJson() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"));
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);

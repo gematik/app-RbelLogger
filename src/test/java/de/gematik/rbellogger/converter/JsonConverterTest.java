@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
@@ -33,9 +34,8 @@ public class JsonConverterTest {
 
     @Test
     public void convertMessage_shouldGiveJsonBody() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/jsonMessage.curl"))
-            .replace("\n", "\r\n");
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks(
+            "src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);
@@ -48,10 +48,8 @@ public class JsonConverterTest {
 
     @Test
     public void jsonMessageWithNestedJwt_shouldFindAndPresentNestedItems() throws IOException {
-        final String curlMessage = FileUtils
-            .readFileToString(new File("src/test/resources/sampleMessages/getChallenge.curl"))
-            .replace("\n", "\r\n") // hack to convert copy&pasted curl-messages to correct http-format
-            + "0\r\n";
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks(
+            "src/test/resources/sampleMessages/getChallenge.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);
