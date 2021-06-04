@@ -16,20 +16,34 @@
 
 package de.gematik.rbellogger.data;
 
+import java.math.BigInteger;
+import java.util.List;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
-public class RbelStringElement extends RbelNestedElement {
+@RequiredArgsConstructor
+public class RbelIntegerElement extends RbelElement {
 
-    private final String content;
+    private final BigInteger content;
 
-    public RbelStringElement(String content) {
+    public RbelIntegerElement(long longValue) {
         super();
-        this.content = content;
+        content = BigInteger.valueOf(longValue);
     }
 
     @Override
     public String getContent() {
-        return content;
+        return content.toString();
+    }
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of();
+    }
+
+    @Override
+    public boolean isSimpleElement() {
+        return true;
     }
 }

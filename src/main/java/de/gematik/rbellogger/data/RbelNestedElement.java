@@ -40,4 +40,9 @@ public abstract class RbelNestedElement extends RbelElement {
             nestedElement.setParentNode(parentNode);
         }
     }
+
+    @Override
+    public boolean isSimpleElement() {
+        return nestedElement == null;
+    }
 }

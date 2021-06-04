@@ -37,6 +37,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -45,6 +46,7 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
+@Slf4j
 public class RbelHtmlRenderer {
 
     private static final Gson GSON = new GsonBuilder()
@@ -70,14 +72,6 @@ public class RbelHtmlRenderer {
         + "<p>This is where the RBeL Logger comes into play.</p> "
         + "<p>Attaching it to a network, RestAssured or Wiremock interface or instructing it to read from a recorded PCAP file, "
         + "produces this shiny communication log supporting Plain HTTP, JSON, JWT and even JWE!</p>";
-
-    private DomContent constructMessageId(RbelElement message) {
-        if (elementIndices.containsKey(message.getUuid())) {
-            return span(elementIndices.get(message.getUuid())).withClass("tag is-info is-light mr-3 is-size-3");
-        } else {
-            return span();
-        }
-    }
 
     {
         htmlRenderer.put(RbelHttpRequest.class, (el, key) -> collapsibleCard(
@@ -310,7 +304,7 @@ public class RbelHtmlRenderer {
         htmlRenderer.put(RbelBinaryElement.class, (el, key) -> div(
             pre(StringUtils.abbreviate(Base64.getEncoder()
                 .encodeToString(((RbelBinaryElement) el).getRawData()), 1000))
-            .withClass("binary"),
+                .withClass("binary"),
             br(),
             ancestorTitle().with(
                 vertParentTitle().with(
@@ -325,6 +319,14 @@ public class RbelHtmlRenderer {
                             ))
                         .orElse(span())
                 ))
+        ));
+
+        htmlRenderer.put(RbelAsn1Element.class, (el, key) -> div(
+            pre(el.getContent().replace("[", "[\n"))
+                .withClass("binary"),
+            br(),
+            ancestorTitle().with(
+                vertParentTitle().with(convertNested(el)))
         ));
 
         htmlRenderer.put(RbelNullElement.class, (el, key) -> div("- empty -"));
@@ -355,7 +357,13 @@ public class RbelHtmlRenderer {
                             .with(convertNested(el))));
             }
         });
-        htmlRenderer.put(RbelStringElement.class, (el, key) -> div(text(performElementToTextConversion(el, key))));
+        htmlRenderer.put(RbelStringElement.class, (el, key) -> {
+            if (el.isSimpleElement()) {
+                return div(text(performElementToTextConversion(el, key)));
+            } else {
+                return convert(((RbelStringElement)el).getNestedElement(), Optional.empty());
+            }
+        });
     }
 
     public RbelHtmlRenderer(RbelValueShader rbelValueShader) {
@@ -440,6 +448,14 @@ public class RbelHtmlRenderer {
         }
     }
 
+    private DomContent constructMessageId(RbelElement message) {
+        if (elementIndices.containsKey(message.getUuid())) {
+            return span(elementIndices.get(message.getUuid())).withClass("tag is-info is-light mr-3 is-size-3");
+        } else {
+            return span();
+        }
+    }
+
     private String prettyPrintXml(String content) {
         try {
             final OutputFormat format = OutputFormat.createPrettyPrint();
@@ -448,13 +464,16 @@ public class RbelHtmlRenderer {
             final XMLWriter writer = new XMLWriter(sw, format);
             writer.write(document);
             return sw.getBuffer().toString();
-        } catch (IOException | DocumentException e) {
-            throw new RuntimeException(e);
+//        } catch (IOException | DocumentException e) {
+//            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.warn("Exception while pretty-printing {}", content);
+            return content;
         }
     }
 
     private DomContent showContentButtonAndDialog(RbelElement el) {
-        String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);
+        String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);//NOSONAR
         return span().with(
             a().withClass("button modal-button is-pulled-right mx-3")
                 .attr("data-target", id)
@@ -618,8 +637,7 @@ public class RbelHtmlRenderer {
     private List<ContainerTag> convertNested(final RbelElement el) {
         return
             el.traverseAndReturnNestedMembers().entrySet().stream()
-                .filter(child -> !(child.getValue() instanceof RbelStringElement))
-                .filter(child -> !(child.getValue() instanceof RbelNullElement))
+                .filter(child -> !(child.getValue().isSimpleElement()))
                 .map(child ->
                     article().withClass("message is-ancestor notification is-warning my-6 py-3 px-3")
                         .with(
@@ -650,6 +668,8 @@ public class RbelHtmlRenderer {
                     link2CSS("https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css"),
                     link2CSS("https://jenil.github.io/bulmaswatch/simplex/bulmaswatch.min.css"),
                     link2CSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"),
+                    link().withRel("icon").withType("image/png").withHref(
+                        "data:image/png;base64,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"),
                     tag("style").with(
                         new UnescapedText(IOUtils.resourceToString("/rbel.css", StandardCharsets.UTF_8)))
                 ),

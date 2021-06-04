@@ -16,20 +16,30 @@
 
 package de.gematik.rbellogger.data;
 
+import java.time.ZonedDateTime;
+import java.time.temporal.Temporal;
+import java.util.List;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
-public class RbelStringElement extends RbelNestedElement {
+@RequiredArgsConstructor
+public class RbelDateTimeElement extends RbelElement {
 
-    private final String content;
-
-    public RbelStringElement(String content) {
-        super();
-        this.content = content;
-    }
+    private final ZonedDateTime content;
 
     @Override
     public String getContent() {
-        return content;
+        return content.toString();
+    }
+
+    @Override
+    public List<RbelElement> getChildNodes() {
+        return List.of();
+    }
+
+    @Override
+    public boolean isSimpleElement() {
+        return true;
     }
 }

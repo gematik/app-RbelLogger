@@ -43,6 +43,7 @@ public class RbelConfiguration {
     private List<Consumer<RbelConverter>> initializers = new ArrayList<>();
     private Map<String, RbelKey> keys = new HashMap<>();
     private RbelCapturer capturer;
+    private boolean activateAsn1Parsing = true;
 
     public <T extends RbelElement> RbelConfiguration addPostConversionListener(Class<T> clazz,
         BiConsumer<T, RbelConverter> consumer) {

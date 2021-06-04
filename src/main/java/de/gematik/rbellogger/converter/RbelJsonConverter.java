@@ -28,16 +28,18 @@ public class RbelJsonConverter implements RbelConverterPlugin {
 
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        try {
-            return !JsonParser.parseString(rbel.getContent()).isJsonPrimitive();
-        } catch (final Exception e) {
-            return false;
-        }
+        final String content = rbel.getContent();
+        return (content.contains("{") && content.contains("}"))
+            || (content.contains("[") && content.contains("]"));
     }
 
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context, rbel);
+        try {
+            return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context, rbel);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private RbelElement jsonElementToRbelElement(final JsonElement jsonElement, final RbelConverter context,

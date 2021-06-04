@@ -66,6 +66,11 @@ public class RbelElementTest {
             .contains(convertedMessage.getFirst("body").get().
                 getFirst("body").get().
                 getFirst("nbf").get());
+        assertThat(convertedMessage.findRbelPathMembers("$.body..nbf"))
+            .hasSize(1)
+            .contains(convertedMessage.getFirst("body").get().
+                getFirst("body").get().
+                getFirst("nbf").get());
     }
 
     @Test
@@ -89,6 +94,6 @@ public class RbelElementTest {
     @Test
     public void findAllMembers() {
         assertThat(convertedMessage.findRbelPathMembers("$..*"))
-            .hasSize(66);
+            .hasSize(243);
     }
 }

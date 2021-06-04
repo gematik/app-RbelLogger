@@ -1,3 +1,6 @@
+# Release 0.8.4
+- ASN.1 Parsing added
+
 # Release 0.8.3
 - VAU-Protocol Decryption added (ERP and ePA)
 - Binary-Data Support added

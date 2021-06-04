@@ -17,13 +17,12 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelNestedElement;
 import de.gematik.rbellogger.data.RbelXmlElement;
-import java.util.*;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import de.gematik.rbellogger.util.RbelException;
 import org.dom4j.*;
 import org.dom4j.tree.AbstractBranch;
-import org.dom4j.tree.DefaultElement;
+import org.dom4j.tree.DefaultComment;
 
 public class RbelXmlConverter implements RbelConverterPlugin {
 
@@ -31,25 +30,22 @@ public class RbelXmlConverter implements RbelConverterPlugin {
 
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        try {
-            DocumentHelper.parseText(rbel.getContent());
-            return true;
-        } catch (final Exception e) {
-            return false;
-        }
+        final String content = rbel.getContent();
+        return content.contains("<") && content.contains(">");
     }
 
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
         try {
-            return buildXmlElementForNode(DocumentHelper.parseText(rbel.getContent()), context);
+            return buildXmlElementForNode(DocumentHelper.parseText(rbel.getContent().trim()), context);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return null;
         }
     }
 
     private RbelXmlElement buildXmlElementForNode(Branch branch, RbelConverter converter) {
         RbelXmlElement result = new RbelXmlElement(branch);
+        result.setRawMessage(branch.asXML());
         for (Object child : branch.content()) {
             if (child instanceof Text) {
                 result.put(XML_TEXT_KEY, converter.convertMessage(((Text) child).getText()));
@@ -59,15 +55,18 @@ public class RbelXmlConverter implements RbelConverterPlugin {
             } else if (child instanceof Namespace) {
                 final String childXmlName = ((Namespace) child).getPrefix();
                 result.put(childXmlName, converter.convertMessage(((Namespace) child).getText()));
+            } else if (child instanceof DefaultComment) {
+                // do nothing
             } else {
-                throw new RuntimeException("Could not convert XML element of type " + child.getClass().getSimpleName());
+                throw new RbelException("Could not convert XML element of type " + child.getClass().getSimpleName());
             }
         }
 
         if (branch instanceof Element) {
             for (Object attribute : ((Element) branch).attributes()) {
                 if (!(attribute instanceof Attribute)) {
-                    throw new RuntimeException("Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
+                    throw new RbelException(
+                        "Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
                 }
                 result.put(((Attribute) attribute).getName(),
                     converter.convertMessage(((Attribute) attribute).getText()));

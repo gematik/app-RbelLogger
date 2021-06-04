@@ -52,4 +52,9 @@ public class RbelUriElement extends RbelElement {
     public List<Entry<String, RbelElement>> getChildElements() {
         return queryParameter.getChildElements();
     }
+
+    @Override
+    public boolean isSimpleElement() {
+        return true;
+    }
 }

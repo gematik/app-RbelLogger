@@ -16,11 +16,17 @@
 
 package de.gematik.rbellogger.util;
 
+import java.text.ParseException;
+
 public class RbelException extends RuntimeException {
 
     private static final long serialVersionUID = -2312909087086432824L;
 
     public RbelException(final String s) {
         super(s);
+    }
+
+    public RbelException(final String s, Exception e) {
+        super(s, e);
     }
 }

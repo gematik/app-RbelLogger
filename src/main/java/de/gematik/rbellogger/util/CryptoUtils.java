@@ -56,7 +56,7 @@ public class CryptoUtils {
         try {
             byte[] iv = Arrays.copyOfRange(encMessage, 0, gcmIvLengthInBytes);
             byte[] cipherText = Arrays.copyOfRange(encMessage, GCM_IV_LENGTH_IN_BYTES, encMessage.length);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");//NOSONAR
 
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(gcmTagLengthInBytes * 8, iv));
 

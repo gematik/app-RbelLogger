@@ -25,8 +25,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
-import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> {
 
     @Override
@@ -35,13 +36,17 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
             .map(RbelMapElement.class::cast)
             .filter(map -> map.getElementMap().containsKey("x5c"));
         if (keyMap.isPresent()) {
-            final Optional<String> x509Certificate = getX509Certificate(keyMap);
+            final Optional<byte[]> certificateData = getX509Certificate(keyMap);
             final Optional<String> keyId = getKeyId(keyMap);
-            if (keyId.isPresent() && x509Certificate.isPresent()) {
-                final X509Certificate certificate = CryptoLoader
-                    .getCertificateFromPem(Base64.getDecoder().decode(x509Certificate.get()));
-                converter.getRbelKeyManager()
-                    .addKey(keyId.get(), certificate.getPublicKey(), RbelKey.PRECEDENCE_X5C_HEADER_VALUE);
+            if (keyId.isPresent() && certificateData.isPresent()) {
+                try {
+                    final X509Certificate certificate = CryptoLoader
+                        .getCertificateFromPem(certificateData.get());
+                    converter.getRbelKeyManager()
+                        .addKey(keyId.get(), certificate.getPublicKey(), RbelKey.PRECEDENCE_X5C_HEADER_VALUE);
+                } catch (Exception e) {
+                    log.warn("Exception while extracting X5C: {}", e);
+                }
             }
         }
     }
@@ -53,7 +58,7 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
             .map(RbelElement::getContent);
     }
 
-    private Optional<String> getX509Certificate(Optional<RbelMapElement> keyMap) {
+    private Optional<byte[]> getX509Certificate(Optional<RbelMapElement> keyMap) {
         return keyMap
             .map(map -> map.getElementMap().get("x5c"))
             .filter(RbelJsonElement.class::isInstance)
@@ -64,7 +69,9 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
             .map(RbelListElement::getElementList)
             .stream()
             .flatMap(List::stream)
-            .map(RbelElement::getContent)
+            .filter(RbelAsn1Element.class::isInstance)
+            .map(RbelAsn1Element.class::cast)
+            .map(RbelAsn1Element::getEncoded)
             .findFirst();
     }
 }

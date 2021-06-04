@@ -117,7 +117,8 @@ public class RbelJexlExecutor {
             return Optional.empty();
         }
         RbelElement ptr = (RbelElement) element;
-        while ((ptr != null) && !(ptr instanceof RbelHttpMessage)) {
+        while ((ptr != null) && !(
+            (ptr instanceof RbelHttpMessage) && (ptr.getParentNode() == null))) {
             ptr = ptr.getParentNode();
         }
         if (ptr == null) {
@@ -148,7 +149,8 @@ public class RbelJexlExecutor {
             return Optional.empty();
         }
         RbelElement ptr = (RbelElement) element;
-        while ((ptr != null) && !(ptr instanceof RbelHttpMessage)) {
+        while ((ptr != null) && !(
+            (ptr instanceof RbelHttpMessage) && (ptr.getParentNode() == null))) {
             if (ptr.getParentNode() == ptr) {
                 break;
             }

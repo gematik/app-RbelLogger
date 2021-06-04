@@ -5,6 +5,7 @@ import de.gematik.rbellogger.data.*;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoUtils;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -53,19 +54,6 @@ public class RbelErpVauDecryptionConverter implements RbelConverterPlugin {
             .filter(key -> key.getKey() instanceof ECPrivateKey
                 || key.getKey() instanceof SecretKey)
             .collect(Collectors.toList());
-//        final Optional<RbelVauMessage> decryptedWithRequestKey = tryToFindRequestAesVauKey(element)
-//            .map(key -> decrypt(content, key))
-//            .filter(Optional::isPresent)
-//            .map(Optional::get)
-//            .map(decryptedBytes ->
-//                buildVauMessageFromCleartext(converter, decryptedBytes, content,
-//                    "Response-Key from VAU-Request"))
-//            .filter(Optional::isPresent)
-//            .map(Optional::get);
-//        if (decryptedWithRequestKey.isPresent()) {
-//            return decryptedWithRequestKey;
-//        }
-//
         for (RbelKey rbelKey : potentialVauKeys) {
             final Optional<byte[]> decryptedBytes = decrypt(content, rbelKey.getKey());
             if (decryptedBytes.isPresent()) {
@@ -88,7 +76,11 @@ public class RbelErpVauDecryptionConverter implements RbelConverterPlugin {
     }
 
     private boolean isVauResponse(Optional<byte[]> decryptedBytes) {
-        return new String(decryptedBytes.get()).split("1 [\\da-f]{32} ").length > 1;
+        return decryptedBytes
+            .map(bytes -> new String(bytes, StandardCharsets.US_ASCII))
+            .map(s -> s.split("1 [\\da-f]{32} ").length)
+            .map(length -> length > 1)
+            .orElse(false);
     }
 
     private Optional<byte[]> decrypt(byte[] content, Key key) {

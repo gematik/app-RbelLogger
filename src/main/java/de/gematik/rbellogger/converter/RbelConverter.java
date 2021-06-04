@@ -155,6 +155,10 @@ public class RbelConverter {
             .add(mapper);
     }
 
+    public void addConverter(RbelConverterPlugin converter) {
+        converterPlugins.add(converter);
+    }
+
     public List<RbelElement> getMessageHistory() {
         return messageHistory.stream()
             .filter(message -> message.getParentNode() == null)

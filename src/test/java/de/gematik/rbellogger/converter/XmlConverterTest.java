@@ -45,7 +45,7 @@ public class XmlConverterTest {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .convertMessage(curlMessage);
 
-        assertThat(((RbelHttpResponse) convertedMessage).getBody())
+        assertThat(convertedMessage.findRbelPathMembers("$.body").get(0))
             .isInstanceOf(RbelXmlElement.class);
     }
 

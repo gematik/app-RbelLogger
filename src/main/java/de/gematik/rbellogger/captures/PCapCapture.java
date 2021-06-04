@@ -270,7 +270,7 @@ public class PCapCapture extends RbelCapturer {
         }
 
         private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer) {
-            buffer.add(tcpPacket.get());
+            tcpPacket.ifPresent(buffer::add);
             Optional<byte[]> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
             if (nextMessage.isPresent()) {
                 processSimpleHttpPackets(nextMessage.get());

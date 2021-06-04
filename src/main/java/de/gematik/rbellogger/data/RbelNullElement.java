@@ -29,4 +29,9 @@ public class RbelNullElement extends RbelElement {
     public String getContent() {
         return null;
     }
+
+    @Override
+    public boolean isSimpleElement() {
+        return true;
+    }
 }

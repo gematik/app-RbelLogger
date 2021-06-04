@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
+import de.gematik.rbellogger.data.RbelAsn1Element;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelXmlElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.util.stream.Collectors;
@@ -70,5 +72,13 @@ public class VauErpConverterTest {
             .stream().map(RbelElement::getContent).collect(Collectors.toList()))
             .containsExactly("https://gematik.de/fhir/NamingSystem/PrescriptionID",
                 "https://gematik.de/fhir/NamingSystem/AccessCode");
+    }
+
+    @Test
+    public void testNestedRbelPathIntoSignedErpVauMessage() {
+        assertThat(((RbelAsn1Element)rbelLogger.getMessageHistory().get(107)
+            .findRbelPathMembers("$.body.message.body.Bundle.entry.resource.Binary.data.value"
+                + ".1.content.2.1.content").get(0)).getNestedElement())
+            .isInstanceOf(RbelXmlElement.class);
     }
 }

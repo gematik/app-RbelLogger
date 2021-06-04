@@ -157,7 +157,7 @@ public abstract class RbelElement {
     public String findNodePath() {
         LinkedList<Optional<String>> keyList = new LinkedList<>();
         final AtomicReference<RbelElement> ptr = new AtomicReference(this);
-        while (!(ptr.get() instanceof RbelHttpMessage)) {
+        while (!(ptr.get().getParentNode() == null)) {
             keyList.addFirst(ptr.get().getParentNode().getChildElements().stream()
                 .filter(entry -> entry.getValue() == ptr.get())
                 .map(Entry::getKey).findFirst());
@@ -203,5 +203,9 @@ public abstract class RbelElement {
     public List<RbelElement> findRbelPathMembers(String rbelPath) {
         return new RbelPathExecutor(this, rbelPath)
             .execute();
+    }
+
+    public boolean isSimpleElement() {
+        return false;
     }
 }

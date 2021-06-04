@@ -73,7 +73,7 @@ public class BrainpoolCurves {
         try {
             final Method method = EllipticCurves.class
                 .getDeclaredMethod("addCurve", String.class, ECParameterSpec.class);
-            method.setAccessible(true);
+            method.setAccessible(true);//NOSONAR
             method.invoke(BrainpoolCurves.class, name, spec);
         } catch (final InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
             throw new RuntimeException(

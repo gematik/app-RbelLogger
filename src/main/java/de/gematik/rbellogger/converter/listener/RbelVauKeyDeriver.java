@@ -20,7 +20,10 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelNestedJsonElement;
 import de.gematik.rbellogger.key.RbelKey;
-import java.security.*;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
@@ -54,6 +57,7 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
         if (otherSidePublicKey.isEmpty()) {
             return;
         }
+        log.trace("Found otherside public key");
 
         for (Iterator<RbelKey> it = converter.getRbelKeyManager().getAllKeys().iterator(); it.hasNext(); ) {
             RbelKey rbelKey = it.next();
@@ -61,13 +65,16 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
             if (keyPair.isEmpty()) {
                 continue;
             }
+            log.trace("Trying key derivation...");
             final Optional<RbelKey> derivedKey = keyDerivation(otherSidePublicKey.get(), keyPair.get());
             if (derivedKey.isEmpty()) {
                 continue;
             }
+            log.trace("Succeeded key derivation...");
             if (converter.getRbelKeyManager()
                 .findKeyByName(derivedKey.get().getKeyName())
                 .isEmpty()) {
+                log.trace("Adding VAU key");
                 converter.getRbelKeyManager().addKey(derivedKey.get());
             }
         }
@@ -77,11 +84,16 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
         try {
             return Optional.ofNullable(
                 KeyFactory.getInstance("ECDSA", "BC")
-                    .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(element.getContent()))));
+                    .generatePublic(new X509EncodedKeySpec(extractBinaryDataFromElement(element))));
         } catch (Exception e) {
             log.debug("Exception while converting Public Key {}:", element.getContent(), e);
             return Optional.empty();
         }
+    }
+
+    private byte[] extractBinaryDataFromElement(RbelElement element) {
+        return Base64.getDecoder().decode(element.getRawMessage()
+            .replace("\"", ""));
     }
 
     private Optional<RbelKey> keyDerivation(PublicKey otherSidePublicKey, KeyPair ownKeyPair) {

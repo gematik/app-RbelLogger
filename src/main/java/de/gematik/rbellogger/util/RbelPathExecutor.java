@@ -2,6 +2,7 @@ package de.gematik.rbellogger.util;
 
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelNestedElement;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import java.util.*;
 import java.util.Map.Entry;
@@ -47,7 +48,17 @@ public class RbelPathExecutor {
                 .distinct()
                 .collect(Collectors.toList());
         }
-        return candidates;
+        // never let the expression end on a basic container with a nested Element inside
+        return candidates.stream()
+            .map(candidate -> {
+                if ((candidate instanceof RbelNestedElement)
+                && (((RbelNestedElement) candidate).getNestedElement() != null)){
+                    return ((RbelNestedElement) candidate).getNestedElement();
+                } else {
+                    return candidate;
+                }
+            })
+            .collect(Collectors.toList());
     }
 
     private List<? extends RbelElement> resolveRbelPathElement(final String key, final RbelElement element) {

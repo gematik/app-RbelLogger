@@ -64,7 +64,7 @@ public class RbelLoggerApplication {
     @Builder.Default
     private boolean help = false;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) {//NOSONAR
         setWindowsNpcapPath();
         final RbelLoggerApplication main = new RbelLoggerApplication();
         final JCommander jCommander = JCommander.newBuilder()
