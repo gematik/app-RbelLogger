@@ -17,13 +17,13 @@
 package de.gematik.rbellogger.renderer;
 
 import static j2html.TagCreator.*;
-
 import com.google.gson.*;
 import de.gematik.rbellogger.converter.RbelValueShader;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.data.elements.*;
 import j2html.TagCreator;
 import j2html.tags.*;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
@@ -41,7 +41,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
@@ -57,7 +56,7 @@ public class RbelHtmlRenderer {
     private static final String CLS_BODY = "is-info";
     private static final String CLS_PKIOK = "is-success";
     private static final String CLS_PKINOK = "is-primary";
-    private static final Map<String, String> elementIndices = new HashMap<>();
+    private static final Map<String, String> messageIndices = new HashMap<>();
     private final Map<Class<? extends RbelElement>, BiFunction<RbelElement, Optional<String>, ContainerTag>> htmlRenderer = new HashMap<>();
     private final RbelValueShader rbelValueShader;
     private final Map<UUID, JsonNoteEntry> noteTags = new HashMap<>();
@@ -81,6 +80,7 @@ public class RbelHtmlRenderer {
                 showContentButtonAndDialog(el),
                 h1(constructMessageId(el),
                     i().withClass("fas fa-share"), text(" " + ((RbelHttpRequest) el).getMethod() + " Request"))
+                    .with(buildAddressInfo(el))
                     .withClass("title has-text-link"),
                 addNote(el),
                 div().withClass("container is-widescreen").with(
@@ -107,28 +107,31 @@ public class RbelHtmlRenderer {
             div().with(
                 a().withName(el.getUuid()),
                 i().withClass("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3 has-text-success"),
-                h1(constructMessageId(el),
-                    i().withClass("fas fa-reply"), text(" Response")).withClass("title has-text-success"),
                 showContentButtonAndDialog(el),
-                addNote(el))
-                .withClass("full-width"),
-            div().withClass("container is-widescreen").with(
-                t1ms(((RbelHttpResponse) el).getResponseCode() + ""),
-                ancestorTitle().with(
-                    div().withClass("tile is-parent is-vertical pr-3").with(
-                        childBoxNotifTitle(CLS_HEADER).with(
-                            t2("RES Headers"),
-                            addNote(((RbelHttpResponse) el).getHeader()),
-                            convert(((RbelHttpResponse) el).getHeader(), Optional.empty())
-                        ),
-                        div().withClass("tile is-child is-vertical box notification is-info pr-3").with(
-                            t2("RES Body"),
-                            addNote(((RbelHttpResponse) el).getBody()),
-                            convert(((RbelHttpResponse) el).getBody(), Optional.empty())
-                        )
+                h1(constructMessageId(el),
+                    i().withClass("fas fa-reply"), text(" Response"))
+                    .with(buildAddressInfo(el))
+                    .withClass("title has-text-success"),
+                addNote(el),
+                div().withClass("container is-widescreen").with(
+                    t1ms(((RbelHttpResponse) el).getResponseCode() + "")
+                )
+            ).withClass("full-width"),
+            ancestorTitle().with(
+                div().withClass("tile is-parent is-vertical pr-3").with(
+                    childBoxNotifTitle(CLS_HEADER).with(
+                        t2("RES Headers"),
+                        addNote(((RbelHttpResponse) el).getHeader()),
+                        convert(((RbelHttpResponse) el).getHeader(), Optional.empty())
+                    ),
+                    div().withClass("tile is-child is-vertical box notification is-info pr-3").with(
+                        t2("RES Body"),
+                        addNote(((RbelHttpResponse) el).getBody()),
+                        convert(((RbelHttpResponse) el).getBody(), Optional.empty())
                     )
                 )
-            )));
+            )
+        ));
 
         final BiFunction<RbelElement, Optional<String>, ContainerTag> mapRenderer = (el, key) -> table()
             .withClass("table").with(
@@ -159,7 +162,7 @@ public class RbelHtmlRenderer {
                     Optional.empty(),
                     el
                 ));
-            for (Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
+            for (final Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
                 if (formatedJson.contains(entry.getValue().stringToMatch + ",")) {
                     formatedJson = formatedJson.replace(
                         entry.getValue().stringToMatch + ",",
@@ -183,7 +186,7 @@ public class RbelHtmlRenderer {
 
         htmlRenderer.put(RbelXmlElement.class, (el, key) -> {
             String formattedXml = prettyPrintXml(el.getRawMessage());
-            for (Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
+            for (final Entry<UUID, JsonNoteEntry> entry : noteTags.entrySet()) {
                 if (formattedXml.contains(entry.getValue().stringToMatch + ",")) {
                     formattedXml = formattedXml.replace(
                         entry.getValue().stringToMatch + ",",
@@ -263,39 +266,67 @@ public class RbelHtmlRenderer {
                     .withText("Was decrypted using Key ")
                     .with(b(((RbelJweEncryptionInfo) el).getDecryptedUsingKeyWithId()))
             ));
-        htmlRenderer.put(RbelVauMessage.class, (el, key) -> div(
-            t1ms("VAU Encrypted Message")
+
+        htmlRenderer.put(RbelVauEpaMessage.class, (el, key) -> div(
+            t1ms("VAU Encrypted Message (EPA)")
                 .with(showContentButtonAndDialog(el)),
             addNote(el, "mb-5"),
             ancestorTitle().with(
                 vertParentTitle().with(
                     childBoxNotifTitle(CLS_BODY).with(
                         t2("Header"),
-                        Optional.ofNullable(((RbelVauMessage) el).getAdditionalHeaders())
+                        Optional.ofNullable(((RbelVauEpaMessage) el).getAdditionalHeaders())
                             .map(headers ->
                                 convert(headers, Optional.empty())
                             )
                             .orElse(span()),
-                        Optional.ofNullable(((RbelVauMessage) el).getPVersionNumber())
+                        Optional.ofNullable(((RbelVauEpaMessage) el).getPVersionNumber())
                             .map(v -> p(b("Version Number: ")).withText(v.toString()))
                             .orElse(span()),
-                        Optional.ofNullable(((RbelVauMessage) el).getSequenceNumber())
+                        Optional.ofNullable(((RbelVauEpaMessage) el).getSequenceNumber())
                             .map(v -> p(b("Sequence Number: ")).withText(v.toString()))
-                            .orElse(span()),
-                        Optional.ofNullable(((RbelVauMessage) el).getRequestId())
-                            .map(v -> p(b("Request ID: ")).withText(v))
                             .orElse(span())
                     ),
                     childBoxNotifTitle(CLS_BODY).with(
                         t2("Body"),
-                        addNote(((RbelVauMessage) el).getMessage()),
-                        convert(((RbelVauMessage) el).getMessage(), Optional.empty())
+                        addNote(((RbelVauEpaMessage) el).getMessage()),
+                        convert(((RbelVauEpaMessage) el).getMessage(), Optional.empty())
                     ),
                     childBoxNotifTitle(CLS_PKIOK).with(
                         p()
                             .withClass(CLS_PKIOK)
                             .withText("Was decrypted using Key ")
-                            .with(b(((RbelVauMessage) el).getKeyIdUsed())),
+                            .with(b(((RbelVauEpaMessage) el).getKeyIdUsed())),
+                        addNote(el)
+                    ))
+            )
+        ));
+
+        htmlRenderer.put(RbelVauErpMessage.class, (el, key) -> div(
+            t1ms("VAU Encrypted Message (E-Rezept)")
+                .with(showContentButtonAndDialog(el)),
+            addNote(el, "mb-5"),
+            ancestorTitle().with(
+                vertParentTitle().with(
+                    childBoxNotifTitle(CLS_BODY).with(
+                        t2("Header"),
+                        Optional.ofNullable(((RbelVauErpMessage) el).getPVersionNumber())
+                            .map(v -> p(b("Version Number: ")).withText(v.toString()))
+                            .orElse(span()),
+                        Optional.ofNullable(((RbelVauErpMessage) el).getRequestId())
+                            .map(v -> p(b("Request ID: ")).withText(v))
+                            .orElse(span())
+                    ),
+                    childBoxNotifTitle(CLS_BODY).with(
+                        t2("Body"),
+                        addNote(((RbelVauErpMessage) el).getMessage()),
+                        convert(((RbelVauErpMessage) el).getMessage(), Optional.empty())
+                    ),
+                    childBoxNotifTitle(CLS_PKIOK).with(
+                        p()
+                            .withClass(CLS_PKIOK)
+                            .withText("Was decrypted using Key ")
+                            .with(b(((RbelVauErpMessage) el).getKeyIdUsed())),
                         addNote(el)
                     ))
             )
@@ -322,7 +353,7 @@ public class RbelHtmlRenderer {
         ));
 
         htmlRenderer.put(RbelAsn1Element.class, (el, key) -> div(
-            pre(el.getContent().replace("[", "[\n"))
+            pre(el.getContent())
                 .withClass("binary"),
             br(),
             ancestorTitle().with(
@@ -333,7 +364,7 @@ public class RbelHtmlRenderer {
 
         htmlRenderer.put(RbelUriElement.class, (el, key) -> {
             final ContainerTag urlContent = renderUrlContent((RbelUriElement) el);
-            DomContent note = (el.getParentNode() instanceof RbelHttpRequest) ? text("") : addNote(el);
+            final DomContent note = (el.getParentNode() instanceof RbelHttpRequest) ? text("") : addNote(el);
             if (el.getChildElements().isEmpty()) {
                 return div().with(urlContent).with(note);
             } else {
@@ -361,17 +392,17 @@ public class RbelHtmlRenderer {
             if (el.isSimpleElement()) {
                 return div(text(performElementToTextConversion(el, key)));
             } else {
-                return convert(((RbelStringElement)el).getNestedElement(), Optional.empty());
+                return convert(((RbelStringElement) el).getNestedElement(), Optional.empty());
             }
         });
     }
 
-    public RbelHtmlRenderer(RbelValueShader rbelValueShader) {
+    public RbelHtmlRenderer(final RbelValueShader rbelValueShader) {
         this.rbelValueShader = rbelValueShader;
     }
 
     public RbelHtmlRenderer() {
-        this.rbelValueShader = new RbelValueShader();
+        rbelValueShader = new RbelValueShader();
     }
 
     private static EmptyTag link2CSS(final String url) {
@@ -399,23 +430,23 @@ public class RbelHtmlRenderer {
         return h2(text).withClass("title");
     }
 
-    public static String render(final List<RbelElement> elements) {
+    public static String render(final List<RbelMessage> elements) {
         return render(elements, new RbelValueShader());
     }
 
-    public static String render(final List<RbelElement> elements, final RbelValueShader valueShader) {
+    public static String render(final List<RbelMessage> elements, final RbelValueShader valueShader) {
         return new RbelHtmlRenderer(valueShader)
             .performRendering(elements);
     }
 
-    private static DomContent renderMenu(final List<RbelElement> elements) {
+    private static DomContent renderMenu(final List<RbelMessage> elements) {
         return div().withClass(" column is-one-fifth menu is-size-4 sidebar").with(
             a(i().withClass("fas fa-angle-double-up")).withId("collapse-all").withHref("#")
                 .withClass("is-pulled-right mr-3"),
             a(i().withClass("fas fa-angle-double-down")).withId("expand-all").withHref("#")
                 .withClass("is-pulled-right mr-3"),
             h2("Flow").withClass("mb-4 ml-2"),
-            div().withClass("ml-5").with(
+            div().withClass("ml-5").withId("sidebar-menu").with(
                 elements.stream()
                     .map(RbelHtmlRenderer::menuTab)
                     .collect(Collectors.toList())
@@ -423,57 +454,91 @@ public class RbelHtmlRenderer {
         );
     }
 
-    private static void initializeElementIndexMap(final List<RbelElement> elements) {
-        IntStream.range(0, elements.size())
-            .forEach(i -> elementIndices.put(elements.get(i).getUuid(), String.valueOf(i + 1)));
+    private static void initializeElementIndexMap(final List<RbelMessage> messages) {
+        IntStream.range(0, messages.size())
+            .forEach(i -> {
+                messageIndices.put(messages.get(i).getUuid(), String.valueOf(i + 1));
+                messageIndices.put(messages.get(i).getHttpMessage().getUuid(), String.valueOf(i + 1));
+            });
     }
 
-    private static DomContent menuTab(final RbelElement element) {
-        if (element instanceof RbelHttpRequest) {
+    private static DomContent menuTab(final RbelMessage message) {
+        final String uuid = message.getHttpMessage().getUuid();
+        if (message.getHttpMessage() instanceof RbelHttpRequest) {
             return div().withClass("ml-5").with(
-                a().withHref("#" + element.getUuid()).withClass("mt-3 is-block").with(
-                    div(span(elementIndices.get(element.getUuid())).withClass("tag is-info is-light mr-1"),
+                a().withHref("#" + uuid).withClass("mt-3 is-block").with(
+                    div(span(messageIndices.get(uuid)).withClass("tag is-info is-light mr-1"),
                         i().withClass("fas fa-share"),
                         text(" REQUEST")).withClass("menu-label mb-1 has-text-link"),
-                    div(((RbelHttpRequest) element).getMethod() + "  " + ((RbelHttpRequest) element).getPath()
+                    div(((RbelHttpRequest) message.getHttpMessage()).getMethod()
+                        + "  " + ((RbelHttpRequest) message.getHttpMessage()).getPath()
                         .getOriginalUrl()).attr("style", "text-overflow: ellipsis;overflow: hidden;")
                         .withClass("is-size-6 ml-3")
                 )
             );
         } else {
-            return a(span(elementIndices.get(element.getUuid())).withClass("tag is-info is-light mr-1"),
+            return a(span(messageIndices.get(uuid)).withClass("tag is-info is-light mr-1"),
                 i().withClass("fas fa-reply"),
                 text(" RESPONSE"))
-                .withHref("#" + element.getUuid()).withClass("menu-label ml-5 mt-3 is-block has-text-success");
+                .withHref("#" + uuid).withClass("menu-label ml-5 mt-3 is-block has-text-success");
         }
     }
 
-    private DomContent constructMessageId(RbelElement message) {
-        if (elementIndices.containsKey(message.getUuid())) {
-            return span(elementIndices.get(message.getUuid())).withClass("tag is-info is-light mr-3 is-size-3");
-        } else {
+    private ContainerTag buildAddressInfo(final RbelElement el) {
+        if (el.getRbelMessage() == null ||
+            (el.getRbelMessage().getSender() == null &&
+                el.getRbelMessage().getRecipient() == null)) {
             return span();
         }
+        final RbelHostname left;
+        final RbelHostname right;
+        final String icon;
+        if (el instanceof RbelHttpRequest) {
+            left = el.getRbelMessage().getSender();
+            right = el.getRbelMessage().getRecipient();
+            icon = "fa-arrow-right";
+        } else {
+            left = el.getRbelMessage().getRecipient();
+            right = el.getRbelMessage().getSender();
+            icon = "fa-arrow-left";
+        }
+        return span()
+            .withText(left == null ? "" : left.toString())
+            .with(icon(icon))
+            .with(text(right == null ? "" : right.toString()))
+            .withClass("is-size-6 ml-4");
     }
 
-    private String prettyPrintXml(String content) {
+    private ContainerTag icon(final String iconName) {
+        return span().withClass("icon")
+            .with(i().withClass("fas " + iconName));
+    }
+
+    private DomContent constructMessageId(final RbelElement message) {
+        if (messageIndices.containsKey(message.getUuid())) {
+            return span(messageIndices.get(message.getUuid()))
+                .withClass("msg-sequence tag is-info is-light mr-3 is-size-3");
+        } else {
+            return span().withClass("msg-sequence");
+        }
+    }
+
+    private String prettyPrintXml(final String content) {
         try {
             final OutputFormat format = OutputFormat.createPrettyPrint();
             final org.dom4j.Document document = DocumentHelper.parseText(content);
-            StringWriter sw = new StringWriter();
+            final StringWriter sw = new StringWriter();
             final XMLWriter writer = new XMLWriter(sw, format);
             writer.write(document);
             return sw.getBuffer().toString();
-//        } catch (IOException | DocumentException e) {
-//            throw new RuntimeException(e);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.warn("Exception while pretty-printing {}", content);
             return content;
         }
     }
 
-    private DomContent showContentButtonAndDialog(RbelElement el) {
-        String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);//NOSONAR
+    private DomContent showContentButtonAndDialog(final RbelElement el) {
+        final String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);//NOSONAR
         return span().with(
             a().withClass("button modal-button is-pulled-right mx-3")
                 .attr("data-target", id)
@@ -501,7 +566,7 @@ public class RbelHtmlRenderer {
         );
     }
 
-    private DomContent addNote(RbelElement el, String... extraClasses) {
+    private DomContent addNote(final RbelElement el, final String... extraClasses) {
         if (StringUtils.isNotBlank(el.getNote())) {
             final String className = extraClasses.length == 0 ? "" : " " + extraClasses[0];
             return div(i().withText(el.getNote()))
@@ -512,7 +577,7 @@ public class RbelHtmlRenderer {
         }
     }
 
-    public String doRender(final List<RbelElement> elements) {
+    public String doRender(final List<RbelMessage> elements) {
         return performRendering(elements);
     }
 
@@ -620,7 +685,7 @@ public class RbelHtmlRenderer {
         } else {
             final ContainerTag div = div(path.getBasicPath().getContent() + "?").with(br());
             boolean firstElement = true;
-            for (Entry<String, RbelElement> queryElementEntry : path.getQueryParameter().getChildElements()) {
+            for (final Entry<String, RbelElement> queryElementEntry : path.getQueryParameter().getChildElements()) {
                 final String shadedStringContent = rbelValueShader
                     .shadeValue(queryElementEntry.getValue(), Optional.of(queryElementEntry.getKey()))
                     .map(content -> queryElementEntry.getKey() + "=" + content)
@@ -655,7 +720,7 @@ public class RbelHtmlRenderer {
     }
 
     @SneakyThrows
-    private synchronized String performRendering(final List<RbelElement> elements) {
+    private synchronized String performRendering(final List<RbelMessage> elements) {
 
         initializeElementIndexMap(elements);
 
@@ -673,8 +738,9 @@ public class RbelHtmlRenderer {
                     tag("style").with(
                         new UnescapedText(IOUtils.resourceToString("/rbel.css", StandardCharsets.UTF_8)))
                 ),
-                body()
+                body().withClass("has-navbar-fixed-bottom")
                     .with(
+                        div().withId("navbardiv"),
                         section().withClass("main-content").with(
                             section().withClass("columns is-vcentered header").with(
                                 div().withClass("column is-one-fifth is-inline-block logo").with(
@@ -691,15 +757,16 @@ public class RbelHtmlRenderer {
                                 div().withClass("column ml-6").with(
                                     div("Created " +
                                         DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now()))
-                                        .withClass("is-italic is-size-6 is-pulled-right mr-6"),
+                                        .withClass("created is-italic is-size-6 is-pulled-right mr-6"),
                                     div().with(
                                         elements.stream()
+                                            .map(RbelMessage::getHttpMessage)
                                             .map(el -> convert(el, Optional.empty()))
                                             .collect(Collectors.toList())
                                     ),
                                     div("Created " +
                                         DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now()))
-                                        .withClass("is-italic is-size-6 is-pulled-right mr-6")
+                                        .withClass("created is-italic is-size-6 is-pulled-right mr-6")
                                 )
                             )
                         )
@@ -711,7 +778,7 @@ public class RbelHtmlRenderer {
         );
     }
 
-    private ContainerTag convert(final RbelElement element, final Optional<String> key) {
+    public ContainerTag convert(final RbelElement element, final Optional<String> key) {
         if (htmlRenderer.containsKey(element.getClass())) {
             return htmlRenderer.get(element.getClass()).apply(element, key);
         } else {
@@ -719,12 +786,16 @@ public class RbelHtmlRenderer {
         }
     }
 
+    public String getEmptyPage() {
+        return performRendering(List.of());
+    }
+
     @Builder
     @AllArgsConstructor
     private static class JsonNoteEntry {
 
-        private String stringToMatch;
-        private Tag tagForKeyReplacement;
-        private Tag tagForValueReplacement;
+        private final String stringToMatch;
+        private final Tag tagForKeyReplacement;
+        private final Tag tagForValueReplacement;
     }
 }

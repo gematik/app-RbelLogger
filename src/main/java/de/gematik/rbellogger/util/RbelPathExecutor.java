@@ -1,8 +1,8 @@
 package de.gematik.rbellogger.util;
 
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelNestedElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelNestedElement;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import java.util.*;
 import java.util.Map.Entry;

@@ -21,9 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelValueShader;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelJwtElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelHttpMessage;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelJwtElement;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -39,10 +42,10 @@ public class RbelHtmlRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage);
 
         FileUtils.writeStringToFile(new File("target/out.html"),
-            RbelHtmlRenderer.render(List.of(convertedMessage)), Charset.defaultCharset());
+            RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage)), Charset.defaultCharset());
     }
 
     @Test
@@ -50,7 +53,7 @@ public class RbelHtmlRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build()
-            .getRbelConverter().convertMessage(curlMessage);
+            .getRbelConverter().convertElement(curlMessage);
         convertedMessage.setNote("foobar Message");
         convertedMessage.getHeader().setNote("foobar Header");
         convertedMessage.getHeader().getChildNodes().stream()
@@ -60,7 +63,7 @@ public class RbelHtmlRendererTest {
         ((RbelJwtElement) convertedMessage.getBody()).getBody().setNote("foobar JWT Body");
         ((RbelJwtElement) convertedMessage.getBody()).getSignature().setNote("foobar Signature");
 
-        final String convertedHtml = RbelHtmlRenderer.render(List.of(convertedMessage), new RbelValueShader()
+        final String convertedHtml = RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage), new RbelValueShader()
             .addSimpleShadingCriterion("Date", "<halt ein date>")
             .addSimpleShadingCriterion("Content-Length", "<Die Länge. Hier %s>")
             .addSimpleShadingCriterion("exp", "<Nested Shading>")
@@ -80,9 +83,11 @@ public class RbelHtmlRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(curlMessage.getBytes(), null, null)
+            .getHttpMessage();
 
-        final String convertedHtml = RbelHtmlRenderer.render(List.of(convertedMessage), new RbelValueShader()
+        final String convertedHtml = RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage), new RbelValueShader()
             .addJexlShadingCriterion("key == 'Version'", "<version: %s>")
             .addJexlShadingCriterion("key == 'nbf' && empty(element.parentNode)", "<nbf in JWT: %s>")
         );
@@ -94,5 +99,27 @@ public class RbelHtmlRendererTest {
             .contains("nbf-Wert in http header")
             .contains("\\u003cnbf in JWT: 1614339303\\u003e")
             .doesNotContain("nbf in JWT: nbf-Wert in http header");
+    }
+
+    @Test
+    public void onlyServerNameKnown_shouldStillRender() throws IOException {
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(curlMessage.getBytes(), new RbelHostname("foobar", 666), null)
+            .getHttpMessage();
+
+        final String convertedHtml = RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage));
+
+        FileUtils.writeStringToFile(new File("target/out.html"), convertedHtml);
+
+        assertThat(convertedHtml)
+            .contains("foobar:666")
+            .doesNotContain("null");
+    }
+
+    private List<RbelMessage> wrapHttpMessage(RbelElement convertedMessage) {
+        return List.of(RbelMessage.builder().httpMessage((RbelHttpMessage) convertedMessage).build());
     }
 }

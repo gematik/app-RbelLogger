@@ -16,7 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
 
 public interface RbelConverterPlugin {
 

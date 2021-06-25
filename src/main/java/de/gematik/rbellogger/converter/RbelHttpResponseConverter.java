@@ -16,10 +16,9 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
+import de.gematik.rbellogger.util.BinaryClassifier;
 import de.gematik.rbellogger.util.RbelArrayUtils;
-import de.gematik.rbellogger.util.RbelException;
-import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
@@ -39,11 +38,12 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        int separator = rbel.getContent().indexOf(eol + eol) + 2 * eol.length();
+        int separator = rbel.getContent().indexOf(eol + eol);
         if (separator == -1) {
             throw new RuntimeException("Unexpected HTTP-Message encountered (did not find double \\r\\n break. "
                 + "Did you read the message from the HDD and your OS messed with the line breaks?)");
         }
+        separator += 2 * eol.length();
 
         final Map<String, List<RbelElement>> headerMap = Arrays
             .stream(rbel.getContent().substring(0, separator).split(eol))
@@ -51,17 +51,17 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             .map(line -> parseStringToKeyValuePair(line, context))
             .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
         final RbelMultiValuedMapElement header = new RbelMultiValuedMapElement(headerMap);
-        boolean isBinaryData = header.getCaseInsensitiveMatches("Content-Type")
-            .filter(type -> type.getContent().trim().startsWith("application/octet-stream"))
-            .findAny().isPresent();
 
         final byte[] bodyData = extractBodyData(rbel, separator, headerMap);
+        boolean isBinaryData = BinaryClassifier.isBinary(bodyData);
         final RbelElement bodyElement =
             isBinaryData ? new RbelBinaryElement(bodyData) : new RbelStringElement(new String(bodyData));
         return RbelHttpResponse.builder()
             .header(header)
-            .body(context.convertMessage(bodyElement))
+            .body(context.convertElement(bodyElement))
             .responseCode(Integer.parseInt(rbel.getContent().split("\\s")[1]))
+            .rawMessage(rbel.getContent())
+            .rawBody(bodyData)
             .build();
     }
 
@@ -72,9 +72,10 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             && !headerMap.get("Transfer-Encoding").isEmpty()
             && headerMap.get("Transfer-Encoding").get(0).getContent().equals("chunked")) {
             separator = rbel.getContent().indexOf(eol, separator) + eol.length();
-            return Arrays.copyOfRange(inputData, separator, RbelArrayUtils.indexOf(inputData, (eol + "0" + eol).getBytes(), separator));
+            return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator),
+                RbelArrayUtils.indexOf(inputData, (eol + "0" + eol).getBytes(), separator));
         } else {
-            return Arrays.copyOfRange(inputData, separator, inputData.length);
+            return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator), inputData.length);
         }
     }
 
@@ -95,6 +96,6 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
         final String key = line.substring(0, colon).trim();
         final RbelStringElement el = new RbelStringElement(line.substring(colon + 1).trim());
 
-        return new SimpleImmutableEntry<>(key, context.convertMessage(el));
+        return new SimpleImmutableEntry<>(key, context.convertElement(el));
     }
 }

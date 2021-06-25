@@ -16,7 +16,10 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelMapElement;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
+import de.gematik.rbellogger.data.elements.RbelUriElement;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -42,7 +45,7 @@ public class RbelUriConverter implements RbelConverterPlugin {
                 .map(param -> param.split("="))
                 .collect(Collectors.toMap(
                     array -> array[0],
-                    array -> context.convertMessage(array[1])
+                    array -> context.convertElement(array[1])
                         .setRawMessage(rawStringMap.get(array[0]))
                 )));
     }

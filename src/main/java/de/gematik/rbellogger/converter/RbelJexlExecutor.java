@@ -16,10 +16,10 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpMessage;
-import de.gematik.rbellogger.data.RbelHttpRequest;
-import de.gematik.rbellogger.data.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelHttpMessage;
+import de.gematik.rbellogger.data.elements.RbelHttpRequest;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Builder;

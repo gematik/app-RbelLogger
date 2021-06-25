@@ -16,7 +16,8 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
+import de.gematik.rbellogger.util.BinaryClassifier;
 import de.gematik.rbellogger.util.RbelArrayUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -69,16 +70,21 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
             .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
         final RbelMultiValuedMapElement headers = new RbelMultiValuedMapElement(headerMap);
 
-        final RbelElement pathElement = context.convertMessage(path);
+        final RbelElement pathElement = context.convertElement(path);
         if (!(pathElement instanceof RbelUriElement)) {
             throw new RuntimeException("Encountered ill-formatted path: " + path);
         }
 
-        final RbelHttpRequest rbelHttpRequest = new RbelHttpRequest(headers,
-            convertBodyToRbelElement(extractBodyData(messageContent, messageHeader.length() + 4, headers),
-                headers, context),
-            method,
-            (RbelUriElement) pathElement);
+        final byte[] bodyData = extractBodyData(messageContent, messageHeader.length() + 4, headers);
+        final RbelHttpRequest rbelHttpRequest = RbelHttpRequest.builder()
+            .header(headers)
+            .body(convertBodyToRbelElement(bodyData,
+                headers, context))
+            .method(method)
+            .path((RbelUriElement) pathElement)
+            .rawMessage(rbel.getContent())
+            .rawBody(bodyData)
+            .build();
         return rbelHttpRequest;
     }
 
@@ -88,7 +94,7 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
             return Arrays.copyOfRange(inputData, separator, RbelArrayUtils
                 .indexOf(inputData, ("0" + eol).getBytes(), separator));
         } else {
-            return Arrays.copyOfRange(inputData, separator, inputData.length);
+            return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator), inputData.length);
         }
     }
 
@@ -108,12 +114,12 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
             return new RbelMapElement(Stream.of(new String(bodyData).split("&"))
                 .map(param -> param.split("="))
                 .filter(params -> params.length == 2)
-                .map(paramList -> Pair.of(paramList[0], context.convertMessage(paramList[1])))
+                .map(paramList -> Pair.of(paramList[0], context.convertElement(paramList[1])))
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
-        } else if (hasContentTypeMatching(headerMap, "Content-Type", "application/octet-stream")) {
-            return context.convertMessage(new RbelBinaryElement(bodyData));
+        } else if (BinaryClassifier.isBinary(bodyData)) {
+            return context.convertElement(new RbelBinaryElement(bodyData));
         }
-        return context.convertMessage(new RbelStringElement(new String(bodyData)));
+        return context.convertElement(new RbelStringElement(new String(bodyData)));
     }
 
     private boolean hasContentTypeMatching(RbelMultiValuedMapElement headerMap, String headerKey, String prefix) {

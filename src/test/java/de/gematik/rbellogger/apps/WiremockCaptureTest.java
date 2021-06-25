@@ -28,15 +28,14 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.WiremockCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
-import de.gematik.rbellogger.data.RbelHttpRequest;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.elements.RbelHttpRequest;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelMapElement;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Map.Entry;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.AfterAll;
@@ -91,7 +90,7 @@ public class WiremockCaptureTest {
             .field("foo", "bar")
             .asString();
 
-        final RbelHttpRequest request = (RbelHttpRequest) rbelLogger.getMessageHistory().get(0);
+        final RbelHttpRequest request = (RbelHttpRequest) rbelLogger.getMessageHistory().get(0).getHttpMessage();
         assertThat(request)
             .hasFieldOrPropertyWithValue("method", "POST");
         assertThat(request.getPath().getOriginalUrl())
@@ -99,7 +98,7 @@ public class WiremockCaptureTest {
         assertThat(request.getBody())
             .isInstanceOf(RbelMapElement.class);
 
-        final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1);
+        final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1).getHttpMessage();
         assertThat(response)
             .hasFieldOrPropertyWithValue("responseCode", 666);
         assertThat(response.getBody().getContent())
@@ -133,7 +132,7 @@ public class WiremockCaptureTest {
             new RbelHtmlRenderer()
                 .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
 
-        final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1);
+        final RbelHttpResponse response = (RbelHttpResponse) rbelLogger.getMessageHistory().get(1).getHttpMessage();
         assertThat(response.getHeader().getChildElements())
             .contains(Pair.of("foo", new RbelStringElement("bar1")),
                 Pair.of("foo", new RbelStringElement("bar2")));

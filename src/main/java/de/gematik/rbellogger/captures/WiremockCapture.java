@@ -24,7 +24,8 @@ import com.github.tomakehurst.wiremock.common.ProxySettings;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.*;
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.elements.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,8 +71,12 @@ public class WiremockCapture extends RbelCapturer {
             .willReturn(aResponse().proxiedFrom(proxyFor)));
 
         wireMockServer.addMockServiceRequestListener((request, response) -> {
-            getRbelConverter().convertMessage(requestToRbelMessage(request));
-            getRbelConverter().convertMessage(responseToRbelMessage(response));
+            getRbelConverter().parseMessage(requestToRbelMessage(request),
+                new RbelHostname(request.getClientIp(), -1),
+                new RbelHostname(request.getHost(), request.getPort()));
+            getRbelConverter().parseMessage(responseToRbelMessage(response),
+                new RbelHostname(request.getClientIp(), -1),
+                new RbelHostname(request.getHost(), request.getPort()));
         });
 
         log.info("Started Wiremock-Server at '{}'.", wireMockServer.baseUrl());
@@ -95,23 +100,25 @@ public class WiremockCapture extends RbelCapturer {
         return wireMockConfiguration;
     }
 
-    private RbelElement requestToRbelMessage(final Request request) {
-        return RbelHttpRequest.builder()
+    private RbelHttpRequest requestToRbelMessage(final Request request) {
+        final RbelHttpRequest rbelHttpRequest = RbelHttpRequest.builder()
             .method(request.getMethod().getName())
             .path(getRequestUrl(request))
             .header(mapHeader(request.getHeaders()))
-            .body(getRbelConverter().convertMessage(
+            .body(getRbelConverter().convertElement(
                 convertMessageBody(request.getBodyAsString(), request.getHeaders().getContentTypeHeader())))
-            .build()
-            .setRawMessage(request.getMethod().toString() + " " + request.getUrl() + " HTTP/1.1\n"
-                + request.getHeaders().all().stream().map(HttpHeader::toString)
-                .collect(Collectors.joining("\n")) + "\n\n"
-                + request.getBodyAsString());
+            .rawBody(request.getBody())
+            .build();
+        rbelHttpRequest.setRawMessage(request.getMethod().toString() + " " + request.getUrl() + " HTTP/1.1\n"
+            + request.getHeaders().all().stream().map(HttpHeader::toString)
+            .collect(Collectors.joining("\n")) + "\n\n"
+            + request.getBodyAsString());
+        return rbelHttpRequest;
     }
 
     private RbelUriElement getRequestUrl(Request request) {
         final RbelElement pathElement = getRbelConverter()
-            .convertMessage((proxyFor == null ? "" : proxyFor)
+            .convertElement((proxyFor == null ? "" : proxyFor)
                 + request.getUrl());
         if (pathElement instanceof RbelUriElement) {
             return (RbelUriElement) pathElement;
@@ -120,18 +127,20 @@ public class WiremockCapture extends RbelCapturer {
         }
     }
 
-    private RbelElement responseToRbelMessage(final Response response) {
-        return RbelHttpResponse.builder()
+    private RbelHttpResponse responseToRbelMessage(final Response response) {
+        final RbelHttpResponse rbelHttpResponse = RbelHttpResponse.builder()
             .responseCode(response.getStatus())
             .header(mapHeader(response.getHeaders()))
-            .body(getRbelConverter().convertMessage(
+            .rawBody(response.getBody())
+            .body(getRbelConverter().convertElement(
                 convertMessageBody(response.getBodyAsString(), response.getHeaders().getContentTypeHeader())))
-            .build()
-            .setRawMessage("HTTP/1.1 " + response.getStatus() + " "
-                + (response.getStatusMessage() != null ? response.getStatusMessage() : "") + "\n"
-                + response.getHeaders().all().stream().map(HttpHeader::toString)
-                .collect(Collectors.joining("\n"))
-                + "\n\n" + response.getBodyAsString());
+            .build();
+        rbelHttpResponse.setRawMessage("HTTP/1.1 " + response.getStatus() + " "
+            + (response.getStatusMessage() != null ? response.getStatusMessage() : "") + "\n"
+            + response.getHeaders().all().stream().map(HttpHeader::toString)
+            .collect(Collectors.joining("\n"))
+            + "\n\n" + response.getBodyAsString());
+        return rbelHttpResponse;
     }
 
     private RbelElement convertMessageBody(String bodyAsString, ContentTypeHeader contentTypeHeader) {
@@ -143,20 +152,20 @@ public class WiremockCapture extends RbelCapturer {
                 return new RbelMapElement(Stream.of(bodyAsString.split("&"))
                     .map(str -> str.split("="))
                     .collect(
-                        Collectors.toMap(array -> array[0], array -> getRbelConverter().convertMessage(array[1]))));
+                        Collectors.toMap(array -> array[0], array -> getRbelConverter().convertElement(array[1]))));
             } catch (Exception e) {
                 log.warn("Unable to parse form-data '" + bodyAsString + "'. Using fallback");
-                return getRbelConverter().convertMessage(bodyAsString);
+                return getRbelConverter().convertElement(bodyAsString);
             }
         } else {
-            return getRbelConverter().convertMessage(bodyAsString);
+            return getRbelConverter().convertElement(bodyAsString);
         }
     }
 
     private RbelMultiValuedMapElement mapHeader(HttpHeaders headers) {
         final Map<String, List<RbelElement>> headersMap = headers.all().stream()
             .collect(Collectors.toMap(e -> e.key(), e -> e.values().stream()
-                .map(v -> getRbelConverter().convertMessage(v))
+                .map(v -> getRbelConverter().convertElement(v))
                 .collect(Collectors.toList())));
         return new RbelMultiValuedMapElement(headersMap);
     }

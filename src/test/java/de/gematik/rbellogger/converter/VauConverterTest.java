@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelVauMessage;
+import de.gematik.rbellogger.data.elements.RbelVauEpaMessage;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import lombok.SneakyThrows;
@@ -65,7 +65,7 @@ public class VauConverterTest {
 
     @Test
     public void vauClientSigFin_shouldDecipherMessageWithCorrectKeyId() {
-        final RbelVauMessage vauMessage = (RbelVauMessage) rbelLogger.getMessageHistory().get(2)
+        final RbelVauEpaMessage vauMessage = (RbelVauEpaMessage) rbelLogger.getMessageHistory().get(2)
             .findRbelPathMembers("$.body.FinishedData").get(0);
         assertThat(vauMessage.getKeyIdUsed())
             .isEqualTo("f787a8db0b2e0d7c418ea20aba6125349871dfe36ab0f60a3d55bf4d1b556023");

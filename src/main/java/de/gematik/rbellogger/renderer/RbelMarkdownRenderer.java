@@ -19,7 +19,7 @@ package de.gematik.rbellogger.renderer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
 import java.util.stream.Collectors;
 
 public class RbelMarkdownRenderer {

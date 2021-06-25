@@ -17,7 +17,7 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.captures.RbelCapturer;
-import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
 import de.gematik.rbellogger.key.RbelKey;
 import java.security.Key;
 import java.util.ArrayList;

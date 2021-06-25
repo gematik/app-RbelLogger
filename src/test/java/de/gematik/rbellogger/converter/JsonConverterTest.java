@@ -20,14 +20,12 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelJsonElement;
-import de.gematik.rbellogger.data.RbelJwtElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelJsonElement;
+import de.gematik.rbellogger.data.elements.RbelJwtElement;
 import de.gematik.rbellogger.renderer.RbelMarkdownRenderer;
-import java.io.File;
 import java.io.IOException;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class JsonConverterTest {
@@ -38,7 +36,7 @@ public class JsonConverterTest {
             "src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
 
@@ -52,7 +50,7 @@ public class JsonConverterTest {
             "src/test/resources/sampleMessages/getChallenge.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
         final RbelJsonElement body = (RbelJsonElement) ((RbelHttpResponse) convertedMessage).getBody();

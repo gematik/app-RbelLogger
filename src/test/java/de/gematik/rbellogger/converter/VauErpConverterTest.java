@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelAsn1Element;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelXmlElement;
+import de.gematik.rbellogger.data.elements.RbelAsn1Element;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelXmlElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.util.stream.Collectors;
@@ -59,7 +59,7 @@ public class VauErpConverterTest {
 
     @Test
     public void testNestedRbelPathIntoErpRequest() {
-        assertThat(rbelLogger.getMessageHistory().get(55)
+        assertThat(rbelLogger.getMessageHistory().get(52)
             .findRbelPathMembers("$.body.message.body.Parameters.parameter.valueCoding.system.value")
             .get(0).getContent())
             .isEqualTo("https://gematik.de/fhir/CodeSystem/Flowtype");
@@ -67,7 +67,7 @@ public class VauErpConverterTest {
 
     @Test
     public void testNestedRbelPathIntoErpVauResponse() {
-        assertThat(rbelLogger.getMessageHistory().get(57)
+        assertThat(rbelLogger.getMessageHistory().get(54)
             .findRbelPathMembers("$.body.message.body.Task.identifier.system.value")
             .stream().map(RbelElement::getContent).collect(Collectors.toList()))
             .containsExactly("https://gematik.de/fhir/NamingSystem/PrescriptionID",
@@ -76,7 +76,7 @@ public class VauErpConverterTest {
 
     @Test
     public void testNestedRbelPathIntoSignedErpVauMessage() {
-        assertThat(((RbelAsn1Element)rbelLogger.getMessageHistory().get(107)
+        assertThat(((RbelAsn1Element)rbelLogger.getMessageHistory().get(95)
             .findRbelPathMembers("$.body.message.body.Bundle.entry.resource.Binary.data.value"
                 + ".1.content.2.1.content").get(0)).getNestedElement())
             .isInstanceOf(RbelXmlElement.class);

@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 

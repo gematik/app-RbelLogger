@@ -6,13 +6,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -29,7 +30,7 @@ public class RbelLoggerTest {
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'Version'", "Extra note");
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
-            .convertMessage(curlMessage);
+            .parseMessage(curlMessage.getBytes(), null, null).getHttpMessage();
 
         assertThat(convertedMessage.getHeader().getFirst("Version").get().getNote())
             .isEqualTo("Extra note");
@@ -39,7 +40,7 @@ public class RbelLoggerTest {
     public void shouldConvertNullElement() {
         final RbelLogger rbelLogger = RbelLogger.build();
         final RbelElement convertedMessage = rbelLogger.getRbelConverter()
-            .convertMessage(new RbelNullElement());
+            .convertElement(new RbelNullElement());
 
         assertThat(convertedMessage)
             .isInstanceOf(RbelNullElement.class);
@@ -59,7 +60,7 @@ public class RbelLoggerTest {
                 }
             }));
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         assertThat(convertedMessage.getHeader().getFirst("Host").get().getContent())
             .isEqualTo("meinedomain.de");
@@ -73,7 +74,7 @@ public class RbelLoggerTest {
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("path == 'header'", "Header note");
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) rbelLogger.getRbelConverter()
-            .convertMessage(curlMessage);
+            .parseMessage(curlMessage.getBytes(), null, null).getHttpMessage();
 
         assertThat(convertedMessage.getHeader().getNote())
             .isEqualTo("Header note");
@@ -106,6 +107,7 @@ public class RbelLoggerTest {
                 .doRender(rbelLogger.getMessageHistory()), Charset.defaultCharset());
 
         final RbelJweEncryptionInfo jweEncryptionInfo = (RbelJweEncryptionInfo) rbelLogger.getMessageHistory().get(9)
+            .getHttpMessage()
             .getFirst("header").get()
             .getFirst("Location").get()
             .getFirst("code").get()

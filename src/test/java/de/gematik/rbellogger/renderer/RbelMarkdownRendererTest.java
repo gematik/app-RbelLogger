@@ -19,11 +19,8 @@ package de.gematik.rbellogger.renderer;
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.RbelElement;
-import java.io.File;
+import de.gematik.rbellogger.data.elements.RbelElement;
 import java.io.IOException;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class RbelMarkdownRendererTest {
@@ -33,14 +30,14 @@ public class RbelMarkdownRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage);
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
     }
 
     @Test
     public void printJsonToMarkdown() {
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage("{\"foo\":[\"bar\", 2, 4]}");
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement("{\"foo\":[\"bar\", 2, 4]}");
 
         System.out.println(RbelMarkdownRenderer.render(convertedMessage));
     }

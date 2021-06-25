@@ -16,9 +16,9 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelNestedElement;
-import de.gematik.rbellogger.data.RbelXmlElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelNullElement;
+import de.gematik.rbellogger.data.elements.RbelXmlElement;
 import de.gematik.rbellogger.util.RbelException;
 import org.dom4j.*;
 import org.dom4j.tree.AbstractBranch;
@@ -48,18 +48,22 @@ public class RbelXmlConverter implements RbelConverterPlugin {
         result.setRawMessage(branch.asXML());
         for (Object child : branch.content()) {
             if (child instanceof Text) {
-                result.put(XML_TEXT_KEY, converter.convertMessage(((Text) child).getText()));
+                result.put(XML_TEXT_KEY, converter.convertElement(((Text) child).getText()));
             } else if (child instanceof AbstractBranch) {
                 final String childXmlName = ((AbstractBranch) child).getName();
                 result.put(childXmlName, buildXmlElementForNode((AbstractBranch) child, converter));
             } else if (child instanceof Namespace) {
                 final String childXmlName = ((Namespace) child).getPrefix();
-                result.put(childXmlName, converter.convertMessage(((Namespace) child).getText()));
+                result.put(childXmlName, converter.convertElement(((Namespace) child).getText()));
             } else if (child instanceof DefaultComment) {
                 // do nothing
             } else {
                 throw new RbelException("Could not convert XML element of type " + child.getClass().getSimpleName());
             }
+        }
+
+        if (!result.containsKey(XML_TEXT_KEY)) {
+            result.put(XML_TEXT_KEY, new RbelNullElement());
         }
 
         if (branch instanceof Element) {
@@ -69,7 +73,7 @@ public class RbelXmlConverter implements RbelConverterPlugin {
                         "Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
                 }
                 result.put(((Attribute) attribute).getName(),
-                    converter.convertMessage(((Attribute) attribute).getText()));
+                    converter.convertElement(((Attribute) attribute).getText()));
             }
         }
 

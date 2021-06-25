@@ -1,7 +1,10 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.RbelBinaryElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelNestedElement;
+import de.gematik.rbellogger.data.elements.RbelVauErpMessage;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoUtils;
 import java.math.BigInteger;
@@ -48,7 +51,7 @@ public class RbelErpVauDecryptionConverter implements RbelConverterPlugin {
         return (ECPublicKey) KeyFactory.getInstance("EC").generatePublic(keySpec);
     }
 
-    private Optional<RbelVauMessage> decipherVauMessage(RbelElement element, RbelConverter converter) {
+    private Optional<RbelVauErpMessage> decipherVauMessage(RbelElement element, RbelConverter converter) {
         byte[] content = getBinaryContent(element);
         final List<RbelKey> potentialVauKeys = converter.getRbelKeyManager().getAllKeys()
             .filter(key -> key.getKey() instanceof ECPrivateKey
@@ -93,31 +96,29 @@ public class RbelErpVauDecryptionConverter implements RbelConverterPlugin {
         }
     }
 
-    private Optional<RbelVauMessage> buildVauMessageFromCleartextRequest(RbelConverter converter, byte[] decryptedBytes,
+    private Optional<RbelVauErpMessage> buildVauMessageFromCleartextRequest(RbelConverter converter, byte[] decryptedBytes,
         byte[] encryptedMessage, String keyName) {
         String[] vauMessageParts = new String(decryptedBytes).split(" ", 5);
         final SecretKeySpec responseKey = buildAesKeyFromHex(vauMessageParts[3]);
         converter.getRbelKeyManager().addKey("VAU Response-Key", responseKey, 0);
-        return Optional.of(RbelVauMessage.builder()
-            .message(converter.convertMessage(vauMessageParts[4]))
+        return Optional.of(RbelVauErpMessage.builder()
+            .message(converter.convertElement(vauMessageParts[4]))
             .encryptedMessage(encryptedMessage)
             .requestId(vauMessageParts[2])
             .pVersionNumber(Integer.parseInt(vauMessageParts[0]))
             .responseKey(responseKey)
-            .rbelVauProtocolType(RbelVauProtocolType.VAU_EREZEPT)
             .keyIdUsed(keyName)
             .build());
     }
 
-    private Optional<RbelVauMessage> buildVauMessageFromCleartextResponse(RbelConverter converter, byte[] decryptedBytes,
+    private Optional<RbelVauErpMessage> buildVauMessageFromCleartextResponse(RbelConverter converter, byte[] decryptedBytes,
         byte[] encryptedMessage, String keyName) {
         String[] vauMessageParts = new String(decryptedBytes).split(" ", 3);
-        return Optional.of(RbelVauMessage.builder()
-            .message(converter.convertMessage(vauMessageParts[2]))
+        return Optional.of(RbelVauErpMessage.builder()
+            .message(converter.convertElement(vauMessageParts[2]))
             .encryptedMessage(encryptedMessage)
             .requestId(vauMessageParts[1])
             .pVersionNumber(Integer.parseInt(vauMessageParts[0]))
-            .rbelVauProtocolType(RbelVauProtocolType.VAU_EREZEPT)
             .keyIdUsed(keyName)
             .build());
     }
@@ -139,7 +140,7 @@ public class RbelErpVauDecryptionConverter implements RbelConverterPlugin {
     @Override
     public RbelElement convertElement(RbelElement element, RbelConverter context) {
         log.trace("Trying to decipher '{}'...", element.getContent());
-        final Optional<RbelVauMessage> rbelVauMessage = decipherVauMessage(element, context);
+        final Optional<RbelVauErpMessage> rbelVauMessage = decipherVauMessage(element, context);
         if (rbelVauMessage.isEmpty()) {
             return element;
         }

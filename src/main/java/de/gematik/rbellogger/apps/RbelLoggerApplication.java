@@ -8,7 +8,7 @@ import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.captures.WiremockCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelJweElement;
+import de.gematik.rbellogger.data.elements.RbelJweElement;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;

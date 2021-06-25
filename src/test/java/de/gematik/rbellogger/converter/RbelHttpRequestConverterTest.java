@@ -2,7 +2,7 @@ package de.gematik.rbellogger.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
 import org.junit.jupiter.api.Test;
 
 class RbelHttpRequestConverterTest {

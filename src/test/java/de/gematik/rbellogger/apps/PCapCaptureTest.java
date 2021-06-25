@@ -22,9 +22,10 @@ import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelHttpRequest;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelJweElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.elements.RbelHttpRequest;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelJweElement;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
@@ -101,8 +102,6 @@ public class PCapCaptureTest {
         MASKING_FUNCTIONS.put("Date", "[Zeitpunkt der Antwort. Beispiel %s]");
     }
 
-    ;
-
     @Test
     public void listAllDevices() {
         RbelLoggerApplication.builder()
@@ -120,6 +119,24 @@ public class PCapCaptureTest {
                 .build())
             .addPostConversionListener(RbelHttpResponse.class,
                 (el, context) -> System.out.println(el)));
+    }
+
+    @Test
+    public void pcapFile_checkMetadata() {
+        final PCapCapture pCapCapture = PCapCapture.builder()
+            .pcapFile("src/test/resources/discDoc.pcap")
+            .printMessageToSystemOut(false)
+            .build();
+
+        final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
+            .addCapturer(pCapCapture));
+
+        pCapCapture.initialize();
+
+        assertThat(rbelLogger.getMessageHistory().get(0).getSender())
+            .isEqualTo(new RbelHostname("127.0.0.1", 51441));
+        assertThat(rbelLogger.getMessageHistory().get(0).getRecipient())
+            .isEqualTo(new RbelHostname("127.0.0.1",8080));
     }
 
     @SneakyThrows
@@ -168,9 +185,9 @@ public class PCapCaptureTest {
             render, Charset.defaultCharset());
         log.info("completed rendering " + LocalDateTime.now());
 
-        assertThat(rbelLogger.getMessageHistory().get(0))
+        assertThat(rbelLogger.getMessageHistory().get(0).getHttpMessage())
             .isInstanceOf(RbelHttpRequest.class);
-        assertThat(rbelLogger.getMessageHistory().get(1))
+        assertThat(rbelLogger.getMessageHistory().get(1).getHttpMessage())
             .isInstanceOf(RbelHttpResponse.class);
         assertThat(rbelLogger.getMessageHistory().get(0).getNote())
             .isEqualTo("Discovery Document anfragen");
@@ -180,9 +197,4 @@ public class PCapCaptureTest {
         assertThat(render).contains("some note about x5c");
         assertThat(render).contains("Note an einem Object");
     }
-    /* How to print from cmdline
-
-    t.eitzenberger@GNDEV038 MINGW64 ~/IdeaProjects/rbel-logger/target (master)
-    $ /c/Program\ Files/Google/Chrome/Application/chrome.exe --headless -disable-gpu C:/Users/t.eitzenberger/IdeaProjects/rbel-logger/target/pairingList.html  --print-to-pdf=C:/temp/output.pdf
-     */
 }

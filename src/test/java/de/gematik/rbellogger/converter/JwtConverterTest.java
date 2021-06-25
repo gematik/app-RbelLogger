@@ -20,10 +20,8 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.*;
-import java.io.File;
+import de.gematik.rbellogger.data.elements.*;
 import java.io.IOException;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class JwtConverterTest {
@@ -35,7 +33,7 @@ public class JwtConverterTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage);
 
         assertThat(((RbelHttpResponse) convertedMessage).getBody())
             .isInstanceOf(RbelJwtElement.class);
@@ -76,8 +74,9 @@ public class JwtConverterTest {
             ("src/test/resources/sampleMessages/getChallenge.curl");
         final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
 
-        rbelConverter.convertMessage(keyMessage);
-        final RbelElement convertedMessage = rbelConverter.convertMessage(challengeMessage);
+        rbelConverter.parseMessage(keyMessage.getBytes(), null, null);
+        final RbelElement convertedMessage = rbelConverter
+            .parseMessage(challengeMessage.getBytes(), null, null).getHttpMessage();
         final RbelJwtElement challenge = ((RbelJwtElement) ((RbelMapElement) ((RbelJsonElement) ((RbelHttpResponse) convertedMessage)
             .getBody()).getJsonElement()).getElementMap()
             .get("challenge"));

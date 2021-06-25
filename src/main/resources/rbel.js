@@ -3,15 +3,18 @@ document.addEventListener('DOMContentLoaded', function () {
   var rootEl = document.documentElement;
   var $modals = getAll('.modal');
   var $modalButtons = getAll('.modal-button');
-  var $modalCloses = getAll('.modal-background, .modal-close, .message-header .delete, .modal-card-foot .button');
+  var $modalCloses = getAll(
+      '.modal-background, .modal-close, .message-header .delete, .modal-card-foot .button');
 
   if ($modalButtons.length > 0) {
     $modalButtons.forEach(function ($el) {
-      $el.addEventListener('click', function () {
+      $el.addEventListener('click', function (e) {
         var target = $el.dataset.target;
         var $target = document.getElementById(target);
         rootEl.classList.add('is-clipped');
         $target.classList.add('is-active');
+        e.preventDefault();
+        return false;
       });
     });
   }
@@ -42,6 +45,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function getAll(selector) {
     return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
+  }
+
+  function htmlToElement(html) {
+    const template = document.createElement('template');
+    html = html.trim(); // Never return a text node of whitespace as the result
+    template.innerHTML = html;
+    return template.content.firstChild;
   }
 });
 

@@ -20,13 +20,10 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import de.gematik.rbellogger.data.RbelXmlElement;
-import java.io.File;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelXmlElement;
 import java.io.IOException;
 import java.util.List;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +40,7 @@ public class XmlConverterTest {
     @Test
     public void convertMessage_shouldGiveXmlBody() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         assertThat(convertedMessage.findRbelPathMembers("$.body").get(0))
             .isInstanceOf(RbelXmlElement.class);
@@ -52,7 +49,7 @@ public class XmlConverterTest {
     @Test
     public void retrieveXmlAttribute_shouldReturnAttributeWithContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         assertThat(convertedMessage
             .findRbelPathMembers("$.body.RegistryResponse.status")
@@ -63,7 +60,7 @@ public class XmlConverterTest {
     @Test
     public void retrieveListMemberAttribute() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         final List<RbelElement> deepPathResults = convertedMessage
             .findRbelPathMembers("$.body.RegistryResponse.RegistryErrorList.RegistryError[0].errorCode");
@@ -77,7 +74,7 @@ public class XmlConverterTest {
     @Test
     public void retrieveTextContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..RegistryError[0].text");
 
@@ -89,7 +86,7 @@ public class XmlConverterTest {
     @Test
     public void diveIntoNestedJwt() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         final List<RbelElement> rbelPathResult =
             convertedMessage.findRbelPathMembers("$..jwtTag.text.body.scopes_supported.0");
@@ -97,5 +94,29 @@ public class XmlConverterTest {
         assertThat(rbelPathResult).hasSize(1);
         assertThat(rbelPathResult.get(0).getContent().trim())
             .isEqualTo("openid");
+    }
+
+    @Test
+    public void retrieveEmptyTextContent() {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessage);
+
+        final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..textTest.text");
+
+        assertThat(rbelPathResult).hasSize(1);
+        assertThat(rbelPathResult.get(0).getContent())
+            .isEqualTo("");
+    }
+
+    @Test
+    public void retrieveUrlAsTextContent() {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessage);
+
+        final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..urlText.text");
+
+        assertThat(rbelPathResult).hasSize(1);
+        assertThat(rbelPathResult.get(0).getContent())
+            .isEqualTo("http://url.text.de");
     }
 }

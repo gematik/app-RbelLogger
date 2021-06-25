@@ -20,11 +20,9 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.RbelHttpResponse;
-import java.io.File;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class ListenerTests {
@@ -38,7 +36,7 @@ public class ListenerTests {
 
         final RbelConverter rbelConverter = RbelLogger.build().getRbelConverter();
         rbelConverter.registerListener(RbelHttpResponse.class, (m, c) -> callCounter.incrementAndGet());
-        rbelConverter.convertMessage(curlMessage);
+        rbelConverter.parseMessage(curlMessage.getBytes(), null, null);
 
         assertThat(callCounter.get()).isEqualTo(1);
     }

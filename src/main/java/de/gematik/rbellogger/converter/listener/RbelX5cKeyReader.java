@@ -17,11 +17,10 @@
 package de.gematik.rbellogger.converter.listener;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoLoader;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;

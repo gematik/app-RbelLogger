@@ -17,10 +17,10 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelJweElement;
-import de.gematik.rbellogger.data.RbelJweEncryptionInfo;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelJweElement;
+import de.gematik.rbellogger.data.elements.RbelJweEncryptionInfo;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
 import de.gematik.rbellogger.key.RbelKey;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,12 +50,12 @@ public class RbelJweConverter implements RbelConverterPlugin {
 
         final Optional<Pair<String, String>> correctKeyAndPayload = findCorrectKeyAndReturnPayload(context, jwe);
         if (correctKeyAndPayload.isEmpty()) {
-            return new RbelJweElement(context.convertMessage(jwe.getHeaders().getFullHeaderAsJsonString()),
+            return new RbelJweElement(context.convertElement(jwe.getHeaders().getFullHeaderAsJsonString()),
                 new RbelStringElement("<Encrypted Payload>"), new RbelJweEncryptionInfo(false, null));
         }
 
-        return new RbelJweElement(context.convertMessage(jwe.getHeaders().getFullHeaderAsJsonString()),
-            context.convertMessage(correctKeyAndPayload.get().getValue()),
+        return new RbelJweElement(context.convertElement(jwe.getHeaders().getFullHeaderAsJsonString()),
+            context.convertElement(correctKeyAndPayload.get().getValue()),
             new RbelJweEncryptionInfo(true, correctKeyAndPayload.get().getKey()));
     }
 

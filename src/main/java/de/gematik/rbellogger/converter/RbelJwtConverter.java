@@ -17,9 +17,9 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelJwtElement;
-import de.gematik.rbellogger.data.RbelJwtSignature;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelJwtElement;
+import de.gematik.rbellogger.data.elements.RbelJwtSignature;
 import java.security.Key;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
@@ -51,8 +51,8 @@ public class RbelJwtConverter implements RbelConverterPlugin {
         final JsonWebSignature jsonWebSignature = initializeJws(rbel);
 
         final RbelElement headerElement = context
-            .convertMessage(jsonWebSignature.getHeaders().getFullHeaderAsJsonString());
-        final RbelElement bodyElement = context.convertMessage(jsonWebSignature.getUnverifiedPayload());
+            .convertElement(jsonWebSignature.getHeaders().getFullHeaderAsJsonString());
+        final RbelElement bodyElement = context.convertElement(jsonWebSignature.getUnverifiedPayload());
         final RbelJwtSignature signature = context.getRbelKeyManager().getAllKeys()
             .map(rbelKey -> verifySig(jsonWebSignature, rbelKey.getKey(), rbelKey.getKeyName()))
             .filter(Optional::isPresent)

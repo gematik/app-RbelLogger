@@ -16,16 +16,12 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.RbelElement;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.jexl3.JexlBuilder;
-import org.apache.commons.jexl3.JexlExpression;
-import org.apache.commons.jexl3.MapContext;
 
 @Slf4j
 @Data

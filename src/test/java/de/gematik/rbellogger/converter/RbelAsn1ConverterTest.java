@@ -22,9 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelAsn1Element;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelUriElement;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.data.elements.RbelAsn1Element;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelUriElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +36,6 @@ import org.apache.commons.io.FileUtils;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RbelAsn1ConverterTest {
@@ -73,66 +73,64 @@ public class RbelAsn1ConverterTest {
     @Test
     public void checkXmlInPkcs7InXml() throws IOException {
         // check OID
-        final RbelElement convertMessage = rbelLogger.getRbelConverter().convertMessage(
+        final RbelElement convertMessage = rbelLogger.getRbelConverter().convertElement(
             readCurlFromFileWithCorrectedLineBreaks("src/test/resources/xmlWithNestedPkcs7.curl")
         );
         assertThat(convertMessage
             .findRbelPathMembers("$..author.type.value")
             .stream().map(RbelElement::getContent).collect(Collectors.toList()))
             .contains("Practitioner");
-
-        FileUtils.writeStringToFile(new File("target/nestedXml.html"),
-            RbelHtmlRenderer.render(List.of(convertMessage)));
     }
 
     @Test
     public void testVariousRbelPathInPcap() {
         parseRezepsCapture();
         // check OID
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        final RbelMessage rbelMessage = rbelLogger.getMessageHistory().get(58);
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.0.2.0")
             .get(0).getContent())
             .isEqualTo("1.2.840.10045.4.3.2");
 
         // check X509-Version (Tagged-sequence)
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.0.0.content")
             .get(0).getContent())
             .isEqualTo("2");
 
         // check OCSP URL
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0.1.content.content")
             .get(0))
             .isInstanceOf(RbelUriElement.class);
 
-        assertThat(((RbelAsn1Element) rbelLogger.getMessageHistory().get(62)
+        assertThat(((RbelAsn1Element) rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0")
             .get(0)).getAsn1Element())
             .isInstanceOf(ASN1Sequence.class);
 
-        assertThat(((RbelAsn1Element) rbelLogger.getMessageHistory().get(62)
+        assertThat(((RbelAsn1Element) rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0")
             .get(0)).getAsn1Element())
             .isInstanceOf(ASN1Sequence.class);
 
-        assertThat(((RbelAsn1Element) rbelLogger.getMessageHistory().get(62)
+        assertThat(((RbelAsn1Element) rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0.1")
             .get(0)).getAsn1Element())
             .isInstanceOf(ASN1TaggedObject.class);
 
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0.1.tag")
             .get(0).getContent())
             .isEqualTo("6");
 
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.0.7.content.3.1.content.0.1.content.content")
             .get(0).getContent())
             .isEqualTo("http://ehca.gematik.de/ocsp/");
 
         // Parse y-coordinate of signature (Nested in BitString)
-        assertThat(rbelLogger.getMessageHistory().get(62)
+        assertThat(rbelMessage
             .findRbelPathMembers("$.body.2.content.1").get(0)
             .getContent())
             .startsWith("9528585714247878020400211740123936754253798904841060501006300662224159");

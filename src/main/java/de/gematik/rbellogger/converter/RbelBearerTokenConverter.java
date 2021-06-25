@@ -16,10 +16,10 @@
 
 package de.gematik.rbellogger.converter;
 
-import static de.gematik.rbellogger.data.RbelBearerTokenElement.BEARER_TOKEN_PREFIX;
+import static de.gematik.rbellogger.data.elements.RbelBearerTokenElement.BEARER_TOKEN_PREFIX;
 
-import de.gematik.rbellogger.data.RbelBearerTokenElement;
-import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelBearerTokenElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
 
 public class RbelBearerTokenConverter implements RbelConverterPlugin {
 
@@ -31,7 +31,7 @@ public class RbelBearerTokenConverter implements RbelConverterPlugin {
     @Override
     public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
         return new RbelBearerTokenElement(
-            context.convertMessage(rbel.getContent().substring(BEARER_TOKEN_PREFIX.length())),
+            context.convertElement(rbel.getContent().substring(BEARER_TOKEN_PREFIX.length())),
             rbel.getContent()
         );
     }

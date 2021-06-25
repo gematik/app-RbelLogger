@@ -1,6 +1,6 @@
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
 import de.gematik.rbellogger.util.RbelException;
 import java.text.ParseException;
 import java.time.ZoneId;
@@ -46,9 +46,7 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
     }
 
     private Optional<RbelAsn1Element> tryToParseAsn1Structure(byte[] data, RbelConverter converter) {
-        try {
-            ASN1InputStream input = new ASN1InputStream(data);
-
+        try (ASN1InputStream input = new ASN1InputStream(data)) {
             ASN1Primitive primitive;
             while ((primitive = input.readObject()) != null) {
                 ASN1Sequence asn1 = ASN1Sequence.getInstance(primitive);
@@ -81,13 +79,13 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
         } else if (asn1 instanceof ASN1Integer) {
             return new RbelAsn1Element(asn1, new RbelIntegerElement(((ASN1Integer) asn1).getValue()));
         } else if (asn1 instanceof ASN1ObjectIdentifier) {
-            return new RbelAsn1Element(asn1, converter.convertMessage(((ASN1ObjectIdentifier) asn1).getId()));
+            return new RbelAsn1Element(asn1, converter.convertElement(((ASN1ObjectIdentifier) asn1).getId()));
         } else if (asn1 instanceof ASN1OctetString) {
-            return new RbelAsn1Element(asn1, converter.convertMessage(((ASN1OctetString) asn1).getOctets()));
+            return new RbelAsn1Element(asn1, converter.convertElement(((ASN1OctetString) asn1).getOctets()));
         } else if (asn1 instanceof ASN1BitString) {
-            return new RbelAsn1Element(asn1, converter.convertMessage(((ASN1BitString) asn1).getOctets()));
+            return new RbelAsn1Element(asn1, converter.convertElement(((ASN1BitString) asn1).getOctets()));
         } else if (asn1 instanceof ASN1String) {
-            return new RbelAsn1Element(asn1, converter.convertMessage(((ASN1String) asn1).getString()));
+            return new RbelAsn1Element(asn1, converter.convertElement(((ASN1String) asn1).getString()));
         } else if (asn1 instanceof ASN1Boolean) {
             return new RbelAsn1Element(asn1, new RbelBooleanElement(((ASN1Boolean) asn1).isTrue()));
         } else if (asn1 instanceof ASN1Null) {

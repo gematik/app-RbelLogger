@@ -18,7 +18,9 @@ package de.gematik.rbellogger.captures;
 
 import com.sun.jna.Platform;
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.util.RbelException;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -32,10 +34,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
 import org.pcap4j.core.*;
 import org.pcap4j.core.PcapHandle.TimestampPrecision;
 import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
+import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.Packet;
 import org.pcap4j.packet.TcpPacket;
 
@@ -251,10 +255,13 @@ public class PCapCapture extends RbelCapturer {
             }
             tcpPacketReceived++;
 
+            final Pair<RbelHostname, RbelHostname> ipAddresses = getIpAddresses(packet);
             if (tcpPacket.get().getHeader().getDstPort().valueAsInt() == tcpServerPort) {
-                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpRequests);
+                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpRequests,
+                    ipAddresses.getKey(), ipAddresses.getValue());
             } else {
-                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpResponses);
+                addToBufferAndExtractCompletedMessages(tcpPacket, unhandledTcpResponses,
+                    ipAddresses.getKey(), ipAddresses.getValue());
             }
 
             if ((tcpPacketReceived % 1_000) == 0) {
@@ -269,11 +276,42 @@ public class PCapCapture extends RbelCapturer {
             }
         }
 
-        private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer) {
+        private Pair<RbelHostname, RbelHostname> getIpAddresses(Packet packet) {
+            Optional<Integer> srcPort = Optional.empty();
+            Optional<String> srcIpAddress = Optional.empty();
+            Optional<Integer> dstPort = Optional.empty();
+            Optional<String> dstIpAddress = Optional.empty();
+            do {
+                if (packet instanceof IpV4Packet) {
+                    dstIpAddress = Optional.of(((IpV4Packet) packet)
+                        .getHeader().getDstAddr().getHostAddress());
+                    srcIpAddress = Optional.of(((IpV4Packet) packet)
+                        .getHeader().getSrcAddr().getHostAddress());
+                }
+                if (packet instanceof TcpPacket) {
+                    dstPort = Optional.of(((TcpPacket) packet)
+                        .getHeader().getDstPort().valueAsInt());
+                    srcPort = Optional.of(((TcpPacket) packet)
+                        .getHeader().getSrcPort().valueAsInt());
+                }
+                packet = packet.getPayload();
+            } while (packet.getPayload() != null);
+            if (srcPort.isEmpty() || srcIpAddress.isEmpty()
+                || dstPort.isEmpty() || dstIpAddress.isEmpty()) {
+                throw new RbelException("Error while trying to gather src/dst Data from " + packet);
+            }
+            return Pair.of(
+                new RbelHostname(srcIpAddress.get(), srcPort.get()),
+                new RbelHostname(dstIpAddress.get(), dstPort.get())
+            );
+        }
+
+        private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer,
+            RbelHostname sender, RbelHostname recipient) {
             tcpPacket.ifPresent(buffer::add);
             Optional<byte[]> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
             if (nextMessage.isPresent()) {
-                processSimpleHttpPackets(nextMessage.get());
+                processSimpleHttpPackets(nextMessage.get(), sender, recipient);
                 buffer.clear();
             }
         }
@@ -338,17 +376,13 @@ public class PCapCapture extends RbelCapturer {
         }
 
         @SneakyThrows
-        private void processSimpleHttpPackets(final byte[] content) {
-            if (new String(content).contains("GET /EXIT_RBELLOGGER")) {
-                handle.breakLoop();
-                return;
-            }
-            final RbelElement convertMessage = getRbelConverter().convertMessage(content);
-            if (printMessageToSystemOut && convertMessage != null && content.length > 0) {
-                if (convertMessage.getContent() != null) {
-                    log.info("RBEL: " + convertMessage.getContent());
+        private void processSimpleHttpPackets(final byte[] content, RbelHostname sender, RbelHostname recipient) {
+            final RbelMessage convertedMessage = getRbelConverter().parseMessage(content, sender, recipient);
+            if (printMessageToSystemOut && convertedMessage != null && content.length > 0) {
+                if (convertedMessage.getContent() != null) {
+                    log.trace("RBEL: " + convertedMessage.getContent());
                 } else {
-                    log.info("RBEL: <null> message encountered!");
+                    log.trace("RBEL: <null> message encountered!");
                 }
             }
         }
@@ -373,5 +407,4 @@ public class PCapCapture extends RbelCapturer {
             return content.startsWith("POST ") || content.startsWith("PUT ");
         }
     }
-
 }

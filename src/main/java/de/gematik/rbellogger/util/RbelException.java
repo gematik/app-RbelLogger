@@ -29,4 +29,8 @@ public class RbelException extends RuntimeException {
     public RbelException(final String s, Exception e) {
         super(s, e);
     }
+
+    public RbelException(Exception e) {
+        super(e);
+    }
 }

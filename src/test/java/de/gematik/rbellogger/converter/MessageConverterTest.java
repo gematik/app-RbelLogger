@@ -20,11 +20,12 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.*;
-import java.io.File;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.elements.RbelJsonElement;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
 import java.io.IOException;
 import java.util.Map;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class MessageConverterTest {
@@ -34,7 +35,7 @@ public class MessageConverterTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jsonMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertMessage(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage);
 
         assertThat(convertedMessage)
             .isInstanceOf(RbelHttpResponse.class);
@@ -47,7 +48,7 @@ public class MessageConverterTest {
             ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         final Map<String, RbelElement> elementMap = convertedMessage.getHeader();
         assertThat(elementMap)
@@ -61,7 +62,7 @@ public class MessageConverterTest {
             ("src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
-            .convertMessage(curlMessage);
+            .convertElement(curlMessage);
 
         assertThat(convertedMessage.getBody())
             .isInstanceOf(RbelJsonElement.class);

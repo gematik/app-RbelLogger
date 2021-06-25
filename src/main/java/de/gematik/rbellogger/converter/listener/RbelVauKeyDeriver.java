@@ -17,8 +17,8 @@
 package de.gematik.rbellogger.converter.listener;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelNestedJsonElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelNestedJsonElement;
 import de.gematik.rbellogger.key.RbelKey;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -28,6 +28,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import javax.crypto.KeyAgreement;
@@ -45,6 +46,8 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
 
     private static final String KeyID = "KeyID";
     private static final String AES256GCMKey = "AES-256-GCM-Key";
+    private static final String AES256GCMKeyServer2Client = "AES-256-GCM-Key-Server-to-Client";
+    private static final String AES256GCMKeyClient2Server = "AES-256-GCM-Key-Client-to-Server";
 
     @Override
     public void accept(RbelElement rbelElement, RbelConverter converter) {
@@ -61,21 +64,28 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
 
         for (Iterator<RbelKey> it = converter.getRbelKeyManager().getAllKeys().iterator(); it.hasNext(); ) {
             RbelKey rbelKey = it.next();
-            final Optional<KeyPair> keyPair = rbelKey.retrieveCorrespondingKeyPair();
-            if (keyPair.isEmpty()) {
+            final Optional<PrivateKey> privateKey = rbelKey.retrieveCorrespondingKeyPair()
+                .map(KeyPair::getPrivate)
+                .filter(PrivateKey.class::isInstance)
+                .map(PrivateKey.class::cast)
+                .or(() -> Optional.of(rbelKey.getKey())
+                    .filter(PrivateKey.class::isInstance)
+                    .map(PrivateKey.class::cast));
+            if (privateKey.isEmpty()) {
                 continue;
             }
             log.trace("Trying key derivation...");
-            final Optional<RbelKey> derivedKey = keyDerivation(otherSidePublicKey.get(), keyPair.get());
-            if (derivedKey.isEmpty()) {
+            final List<RbelKey> derivedKeys = keyDerivation(otherSidePublicKey.get(), privateKey.get());
+            if (derivedKeys.isEmpty()) {
                 continue;
             }
-            log.trace("Succeeded key derivation...");
-            if (converter.getRbelKeyManager()
-                .findKeyByName(derivedKey.get().getKeyName())
-                .isEmpty()) {
-                log.trace("Adding VAU key");
-                converter.getRbelKeyManager().addKey(derivedKey.get());
+            for (RbelKey derivedKey : derivedKeys) {
+                if (converter.getRbelKeyManager()
+                    .findKeyByName(derivedKey.getKeyName())
+                    .isEmpty()) {
+                    log.trace("Adding VAU key");
+                    converter.getRbelKeyManager().addKey(derivedKey);
+                }
             }
         }
     }
@@ -96,29 +106,37 @@ public class RbelVauKeyDeriver implements BiConsumer<RbelElement, RbelConverter>
             .replace("\"", ""));
     }
 
-    private Optional<RbelKey> keyDerivation(PublicKey otherSidePublicKey, KeyPair ownKeyPair) {
+    private List<RbelKey> keyDerivation(PublicKey otherSidePublicKey, PrivateKey privateKey) {
         try {
             if (!(otherSidePublicKey instanceof ECPublicKey)) {
-                return Optional.empty();
+                return List.of();
             }
             ECPublicKey ephemeralPublicKeyClientBC = (ECPublicKey) otherSidePublicKey;
             ECNamedCurveSpec spec = (ECNamedCurveSpec) ephemeralPublicKeyClientBC.getParams();
             if (!"brainpoolP256r1".equals(spec.getName())) {
-                return Optional.empty();
+                return List.of();
             }
             log.trace("Performing ECKA with {} and {}",
-                Base64.getEncoder().encodeToString(ownKeyPair.getPrivate().getEncoded()),
+                Base64.getEncoder().encodeToString(privateKey.getEncoded()),
                 Base64.getEncoder().encodeToString(otherSidePublicKey.getEncoded()));
-            byte[] sharedSecret = ecka(ownKeyPair.getPrivate(), otherSidePublicKey);
+            byte[] sharedSecret = ecka(privateKey, otherSidePublicKey);
             log.trace("shared secret: " + Hex.encodeHexString(sharedSecret));
             byte[] keyId = hkdf(sharedSecret, KeyID, 256);
             log.trace("keyID: " + Hex.encodeHexString(keyId));
-            byte[] symmetricKey = hkdf(sharedSecret, AES256GCMKey, 256);
-            log.trace("symKey: " + Hex.encodeHexString(symmetricKey));
-            return Optional.of(new RbelKey(new SecretKeySpec(symmetricKey, "AES"), Hex.encodeHexString(keyId), 0));
+            return List.of(
+                mapToRbelKey(AES256GCMKeyClient2Server, "_client", keyId, sharedSecret),
+                mapToRbelKey(AES256GCMKeyServer2Client, "_server", keyId, sharedSecret),
+                mapToRbelKey(AES256GCMKey, "_old", keyId, sharedSecret));
         } catch (Exception e) {
-            return Optional.empty();
+            return List.of();
         }
+    }
+
+    private RbelKey mapToRbelKey(String deriver, String suffix, byte[] keyId, byte[] sharedSecret) {
+        var keyRawBytes = hkdf(sharedSecret, deriver, 256);
+        log.trace("symKey: " + Hex.encodeHexString(keyRawBytes));
+        return new RbelKey(new SecretKeySpec(keyRawBytes, "AES"),
+            Hex.encodeHexString(keyId) + suffix, 0);
     }
 
     private byte[] ecka(PrivateKey prk, PublicKey puk) throws Exception {

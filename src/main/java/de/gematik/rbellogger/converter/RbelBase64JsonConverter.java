@@ -1,8 +1,8 @@
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelNestedJsonElement;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelNestedJsonElement;
+import de.gematik.rbellogger.data.elements.RbelStringElement;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Optional;

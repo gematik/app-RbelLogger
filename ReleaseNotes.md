@@ -1,3 +1,8 @@
+# Release 0.8.5
+* Binary classification of HTTP-Bodies improved
+* RbelMessage as top-level object introduced
+* Vau-Message handling refined
+
 # Release 0.8.4
 - ASN.1 Parsing added
 

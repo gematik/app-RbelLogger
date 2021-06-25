@@ -4,10 +4,10 @@ import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.converter.*;
 import de.gematik.rbellogger.converter.listener.RbelVauKeyDeriver;
 import de.gematik.rbellogger.converter.listener.RbelX5cKeyReader;
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelMapElement;
-import de.gematik.rbellogger.data.RbelNestedJsonElement;
-import de.gematik.rbellogger.data.RbelStringElement;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.elements.RbelMapElement;
+import de.gematik.rbellogger.data.elements.RbelNestedJsonElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.List;
 import java.util.Objects;
@@ -38,6 +38,11 @@ public class RbelLogger {
             .rbelKeyManager(new RbelKeyManager())
             .rbelValueShader(new RbelValueShader())
             .build();
+        rbelConverter.registerListener(RbelElement.class, (el, conv) -> {
+            if (el.getRbelMessage() == null && el.getParentNode() != null) {
+                el.setRbelMessage(el.getParentNode().getRbelMessage());
+            }
+        });
         rbelConverter.registerListener(RbelMapElement.class, new RbelX5cKeyReader());
         rbelConverter.registerListener(RbelNestedJsonElement.class, new RbelVauKeyDeriver());
         if (configuration.getPostConversionListener() != null) {
@@ -74,7 +79,7 @@ public class RbelLogger {
             .build();
     }
 
-    public List<RbelElement> getMessageHistory() {
+    public List<RbelMessage> getMessageHistory() {
         return rbelConverter.getMessageHistory();
     }
 }

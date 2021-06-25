@@ -18,10 +18,10 @@ package de.gematik.rbellogger.converter;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.elements.*;
+import de.gematik.rbellogger.exceptions.RbelConversionException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class RbelJsonConverter implements RbelConverterPlugin {
@@ -29,8 +29,16 @@ public class RbelJsonConverter implements RbelConverterPlugin {
     @Override
     public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
         final String content = rbel.getContent();
-        return (content.contains("{") && content.contains("}"))
-            || (content.contains("[") && content.contains("]"));
+        if ((content.contains("{") && content.contains("}"))
+            || (content.contains("[") && content.contains("]"))) {
+            try {
+                JsonParser.parseString(rbel.getContent());
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -38,7 +46,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
         try {
             return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context, rbel);
         } catch (Exception e) {
-            return null;
+            throw new RbelConversionException(e);
         }
     }
 
@@ -76,7 +84,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
         if (jsonElement.isJsonPrimitive()) {
             final RbelStringElement stringElement = new RbelStringElement(jsonElement.getAsString());
             stringElement.setParentNode(parentElement);
-            final RbelElement element = context.convertMessage(stringElement);
+            final RbelElement element = context.convertElement(stringElement);
             if (jsonElement.getAsJsonPrimitive().isString()) {
                 element.setRawMessage("\"" + jsonElement.getAsString() + "\"");
             } else {

@@ -1,8 +1,8 @@
 package de.gematik.rbellogger.key;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.RbelJsonElement;
-import de.gematik.rbellogger.data.RbelJweElement;
+import de.gematik.rbellogger.data.elements.RbelJsonElement;
+import de.gematik.rbellogger.data.elements.RbelJweElement;
 import java.security.Key;
 import java.util.*;
 import java.util.function.BiConsumer;

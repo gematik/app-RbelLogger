@@ -16,7 +16,10 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.*;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMessage;
+import de.gematik.rbellogger.data.elements.*;
+import de.gematik.rbellogger.exceptions.RbelConversionException;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.security.Security;
 import java.util.*;
@@ -24,21 +27,22 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PUBLIC)
 @Getter
 @Slf4j
 public class RbelConverter {
 
-    private final List<RbelElement> messageHistory = new ArrayList<>();
+    {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
+    private final List<RbelMessage> messageHistory = new ArrayList<>();
     private final RbelKeyManager rbelKeyManager;
     private final RbelValueShader rbelValueShader;
     private final Map<Class<? extends RbelElement>, List<BiConsumer<RbelElement, RbelConverter>>> postConversionListener
@@ -58,20 +62,17 @@ public class RbelConverter {
         new RbelVauDecryptionConverter(),
         new RbelErpVauDecryptionConverter()
     ));
+    private long messageSequenceNumber = 0;
 
-    {
-        Security.addProvider(new BouncyCastleProvider());
+    public RbelElement convertElement(final byte[] input) {
+        return convertElement(new RbelBinaryElement(input));
     }
 
-    public RbelElement convertMessage(final byte[] input) {
-        return convertMessage(new RbelBinaryElement(input));
+    public RbelElement convertElement(final String input) {
+        return convertElement(new RbelStringElement(input));
     }
 
-    public RbelElement convertMessage(final String input) {
-        return convertMessage(new RbelStringElement(input));
-    }
-
-    public RbelElement convertMessage(final RbelElement rawInput) {
+    public RbelElement convertElement(final RbelElement rawInput) {
         log.trace("Converting {}...", rawInput);
         final RbelElement convertedInput = filterInputThroughPreConversionMappers(rawInput);
         final RbelElement result = converterPlugins.stream()
@@ -91,23 +92,14 @@ public class RbelConverter {
         } else {
             result.setRawMessage(convertedInput.getRawMessage());
         }
-        if (result instanceof RbelHttpMessage) {
-            if (result instanceof RbelHttpResponse) {
-                ((RbelHttpResponse) result).setRequest(findLastRequest());
-            }
-            result.triggerPostConversionListener(this);
-            if (result.getParentNode() == null) {
-                messageHistory.add(result);
-            }
-        }
         return result;
     }
 
-    private RbelHttpRequest findLastRequest() {
-        final List<RbelElement> messageHistory = getMessageHistory();
+    private RbelMessage findLastRequest() {
+        final List<RbelMessage> messageHistory = getMessageHistory();
         for (int i = messageHistory.size() - 1; i >= 0; i--) {
-            if (this.messageHistory.get(i) instanceof RbelHttpRequest) {
-                return (RbelHttpRequest) this.messageHistory.get(i);
+            if (this.messageHistory.get(i).getHttpMessage() instanceof RbelHttpRequest) {
+                return this.messageHistory.get(i);
             }
         }
         return null;
@@ -159,9 +151,32 @@ public class RbelConverter {
         converterPlugins.add(converter);
     }
 
-    public List<RbelElement> getMessageHistory() {
-        return messageHistory.stream()
-            .filter(message -> message.getParentNode() == null)
-            .collect(Collectors.toList());
+    public RbelMessage parseMessage(byte[] content, RbelHostname sender, RbelHostname recipient) {
+        final RbelElement rbelHttpMessage = convertElement(content);
+        return parseMessage(rbelHttpMessage, sender, recipient);
+    }
+
+    public RbelMessage parseMessage(final RbelElement rbelHttpMessage, RbelHostname sender, RbelHostname recipient) {
+        if (!(rbelHttpMessage instanceof RbelHttpMessage)) {
+            throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "
+                + rbelHttpMessage.getClass().getSimpleName()
+                + ". Expected RbelHttpMessage (Rbel can only handle HTTP messages right now)");
+        }
+        if (rbelHttpMessage instanceof RbelHttpResponse) {
+            final RbelMessage lastRequest = findLastRequest();
+            if (lastRequest != null) {
+                ((RbelHttpResponse) rbelHttpMessage).setRequest((RbelHttpRequest) lastRequest.getHttpMessage());
+            }
+        }
+        final RbelMessage rbelMessage = RbelMessage.builder()
+            .httpMessage((RbelHttpMessage) rbelHttpMessage)
+            .recipient(recipient)
+            .sender(sender)
+            .sequenceNumber(messageSequenceNumber++)
+            .build();
+        rbelHttpMessage.setRbelMessage(rbelMessage);
+        rbelHttpMessage.triggerPostConversionListener(this);
+        messageHistory.add(rbelMessage);
+        return rbelMessage;
     }
 }
