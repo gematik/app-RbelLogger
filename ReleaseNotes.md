@@ -1,3 +1,6 @@
+# Release 0.8.6
+internal fix release
+
 # Release 0.8.5
 * Binary classification of HTTP-Bodies improved
 * RbelMessage as top-level object introduced
