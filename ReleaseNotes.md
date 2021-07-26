@@ -1,3 +1,10 @@
+# Release 0.9.0
+* Restructuring of parsing model
+* Introducing Facets
+* Restructuring of Renderer
+* Removal of Wiremock from release (includes wiremockListener)
+* Removal of CLI-Application
+
 # Release 0.8.6
 internal fix release
 

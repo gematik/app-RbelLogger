@@ -17,14 +17,13 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.captures.RbelCapturer;
-import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKey;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
@@ -36,8 +35,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RbelConfiguration {
 
-    private Map<Class<? extends RbelElement>, List<BiConsumer<RbelElement, RbelConverter>>> postConversionListener
-        = new HashMap<>();
+    private List<RbelConverterPlugin> postConversionListener = new ArrayList<>();
     private Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
         = new HashMap<>();
     private List<Consumer<RbelConverter>> initializers = new ArrayList<>();
@@ -45,12 +43,8 @@ public class RbelConfiguration {
     private RbelCapturer capturer;
     private boolean activateAsn1Parsing = true;
 
-    public <T extends RbelElement> RbelConfiguration addPostConversionListener(Class<T> clazz,
-        BiConsumer<T, RbelConverter> consumer) {
-        if (!postConversionListener.containsKey(clazz)) {
-            postConversionListener.put(clazz, new ArrayList<>());
-        }
-        postConversionListener.get(clazz).add((rawKey, context) -> consumer.accept((T) rawKey, context));
+    public RbelConfiguration addPostConversionListener(RbelConverterPlugin listener) {
+        postConversionListener.add(listener);
         return this;
     }
 
@@ -79,6 +73,11 @@ public class RbelConfiguration {
 
     public RbelConfiguration addCapturer(RbelCapturer capturer) {
         this.capturer = capturer;
+        return this;
+    }
+
+    public RbelConfiguration setActivateAsn1Parsing(boolean activateAsn1Parsing) {
+        this.activateAsn1Parsing = activateAsn1Parsing;
         return this;
     }
 }

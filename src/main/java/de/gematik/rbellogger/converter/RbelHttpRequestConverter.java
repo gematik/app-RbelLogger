@@ -16,115 +16,84 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.elements.*;
-import de.gematik.rbellogger.util.BinaryClassifier;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
+import de.gematik.rbellogger.data.facet.RbelUriFacet;
 import de.gematik.rbellogger.util.RbelArrayUtils;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 
 public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
 
-    private static final String eol = "\r\n";
-
     @Override
-    public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        if (StringUtils.isEmpty(rbel.getContent())) {
-            return false;
+    public void consumeElement(final RbelElement rbel, final RbelConverter converter) {
+        final String content = rbel.getRawStringContent();
+        if (StringUtils.isEmpty(content)
+                || !content.contains("\n")) {
+            return;
         }
-        String firstLine = new String(getContent(rbel), StandardCharsets.US_ASCII)
-            .split("\n")[0].trim();
-        return (firstLine.startsWith("GET ")
+        String eol = findEolInHttpMessage(content);
+        if (content.split(eol).length == 0) {
+            return;
+        }
+        String firstLine = content.split(eol)[0].trim();
+        if (!((firstLine.startsWith("GET ")
             || firstLine.startsWith("POST ")
             || firstLine.startsWith("PUT ")
-            || firstLine.startsWith("DELETE ")
-        )
+            || firstLine.startsWith("DELETE "))
             && (firstLine.endsWith("HTTP/1.0")
             || firstLine.endsWith("HTTP/1.1")
             || firstLine.endsWith("HTTP/2.0")
-        );
-    }
-
-    @Override
-    public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        byte[] messageContent = getContent(rbel);
-        String messageHeader = new String(messageContent, StandardCharsets.US_ASCII).split(eol + eol)[0];
+        ))) {
+            return;
+        }
+        String messageHeader = content.split(eol + eol)[0];
         final int space = messageHeader.indexOf(" ");
         final int space2 = messageHeader.indexOf(" ", space + 1);
         final String method = messageHeader.substring(0, space);
         final String path = messageHeader.substring(space + 1, space2);
 
-        final String[] lines = messageHeader.split(eol);
-        final int bodySeparator = Arrays.asList(lines).indexOf("");
+        final RbelElement headerElement = extractHeaderFromMessage(rbel, converter, eol);
 
-        final Map<String, List<RbelElement>> headerMap = Arrays.stream(lines)
-            .limit(bodySeparator == -1 ? lines.length : bodySeparator)
-            .filter(line -> !line.isEmpty() && !line.startsWith(method))
-            .map(line -> parseStringToKeyValuePair(line, context))
-            .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
-        final RbelMultiValuedMapElement headers = new RbelMultiValuedMapElement(headerMap);
-
-        final RbelElement pathElement = context.convertElement(path);
-        if (!(pathElement instanceof RbelUriElement)) {
+        final RbelElement pathElement = converter.convertElement(path, rbel);
+        if (!pathElement.hasFacet(RbelUriFacet.class)) {
             throw new RuntimeException("Encountered ill-formatted path: " + path);
         }
 
-        final byte[] bodyData = extractBodyData(messageContent, messageHeader.length() + 4, headers);
-        final RbelHttpRequest rbelHttpRequest = RbelHttpRequest.builder()
-            .header(headers)
-            .body(convertBodyToRbelElement(bodyData,
-                headers, context))
-            .method(method)
-            .path((RbelUriElement) pathElement)
-            .rawMessage(rbel.getContent())
-            .rawBody(bodyData)
+        final byte[] bodyData = extractBodyData(rbel.getRawContent(), messageHeader.length() + 4,
+            headerElement.getFacetOrFail(RbelHttpHeaderFacet.class), eol);
+        final RbelElement bodyElement = new RbelElement(bodyData, rbel);
+
+        final RbelHttpRequestFacet httpRequest = RbelHttpRequestFacet.builder()
+            .method(converter.convertElement(method, rbel))
+            .path(pathElement)
             .build();
-        return rbelHttpRequest;
+        rbel.addFacet(httpRequest);
+        rbel.addFacet(RbelHttpMessageFacet.builder()
+            .header(headerElement)
+            .body(bodyElement)
+            .build());
+        converter.convertElement(bodyElement);
     }
 
-    private byte[] extractBodyData(byte[] inputData, int separator, RbelMultiValuedMapElement headerMap) {
-        if (hasContentTypeMatching(headerMap, "Transfer-Encoding", "chunked")) {
+    public static String findEolInHttpMessage(String content) {
+        if (content.contains("\r\n")) {
+            if (content.indexOf("\r\n") < content.indexOf("\n")) {
+                return "\r\n";
+            }
+        }
+        return "\n";
+    }
+
+    private byte[] extractBodyData(byte[] inputData, int separator, RbelHttpHeaderFacet headerMap, String eol) {
+        if (headerMap.hasValueMatching("Transfer-Encoding", "chunked")) {
             separator = new String(inputData).indexOf(eol, separator) + eol.length();
             return Arrays.copyOfRange(inputData, separator, RbelArrayUtils
                 .indexOf(inputData, ("0" + eol).getBytes(), separator));
         } else {
             return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator), inputData.length);
         }
-    }
-
-    private byte[] getContent(RbelElement rbel) {
-        if (rbel instanceof RbelBinaryElement) {
-            return ((RbelBinaryElement) rbel).getRawData();
-        } else if (rbel instanceof RbelStringElement) {
-            return rbel.getContent().getBytes();
-        } else {
-            throw new RuntimeException("Unhandleable Content");
-        }
-    }
-
-    private RbelElement convertBodyToRbelElement(final byte[] bodyData, final RbelMultiValuedMapElement headerMap,
-        final RbelConverter context) {
-        if (hasContentTypeMatching(headerMap, "Content-Type", "application/x-www-form-urlencoded")) {
-            return new RbelMapElement(Stream.of(new String(bodyData).split("&"))
-                .map(param -> param.split("="))
-                .filter(params -> params.length == 2)
-                .map(paramList -> Pair.of(paramList[0], context.convertElement(paramList[1])))
-                .collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
-        } else if (BinaryClassifier.isBinary(bodyData)) {
-            return context.convertElement(new RbelBinaryElement(bodyData));
-        }
-        return context.convertElement(new RbelStringElement(new String(bodyData)));
-    }
-
-    private boolean hasContentTypeMatching(RbelMultiValuedMapElement headerMap, String headerKey, String prefix) {
-        return headerMap.getAll(headerKey).stream()
-            .map(RbelElement::getContent)
-            .anyMatch(str -> str.startsWith(prefix));
     }
 }

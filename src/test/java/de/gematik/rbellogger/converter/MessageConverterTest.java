@@ -20,10 +20,10 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelHttpResponse;
-import de.gematik.rbellogger.data.elements.RbelJsonElement;
-import de.gematik.rbellogger.data.elements.RbelStringElement;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import java.io.IOException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -35,11 +35,10 @@ public class MessageConverterTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jsonMessage.curl");
 
-        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage, null);
 
-        assertThat(convertedMessage)
-            .isInstanceOf(RbelHttpResponse.class);
-
+        assertThat(convertedMessage.getFacet(RbelHttpResponseFacet.class))
+            .isPresent();
     }
 
     @Test
@@ -47,24 +46,15 @@ public class MessageConverterTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jsonMessage.curl");
 
-        final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessage, null);
 
-        final Map<String, RbelElement> elementMap = convertedMessage.getHeader();
+        final Map<String, RbelElement> elementMap = convertedMessage
+            .getFacetOrFail(RbelHttpMessageFacet.class).getHeader()
+            .getFacetOrFail(RbelHttpHeaderFacet.class);
         assertThat(elementMap)
-            .containsEntry("Content-Type", new RbelStringElement("application/json"))
             .hasSize(3);
-    }
-
-    @Test
-    public void convertMessage_shouldGiveBodyAsJson() throws IOException {
-        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
-            ("src/test/resources/sampleMessages/jsonMessage.curl");
-
-        final RbelHttpResponse convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
-
-        assertThat(convertedMessage.getBody())
-            .isInstanceOf(RbelJsonElement.class);
+        assertThat(elementMap.get("Content-Type").getRawStringContent())
+            .isEqualTo("application/json");
     }
 }

@@ -17,11 +17,13 @@
 package de.gematik.rbellogger.converter.listener;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.elements.*;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelMapFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoLoader;
 import java.security.cert.X509Certificate;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +33,8 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
 
     @Override
     public void accept(RbelElement rbelElement, RbelConverter converter) {
-        final Optional<RbelMapElement> keyMap = Optional.ofNullable(rbelElement)
-            .map(RbelMapElement.class::cast)
-            .filter(map -> map.getElementMap().containsKey("x5c"));
+        final Optional<RbelMapFacet> keyMap = rbelElement.getFacet(RbelMapFacet.class)
+            .filter(map -> map.getChildNodes().containsKey("x5c"));
         if (keyMap.isPresent()) {
             final Optional<byte[]> certificateData = getX509Certificate(keyMap);
             final Optional<String> keyId = getKeyId(keyMap);
@@ -50,27 +51,22 @@ public class RbelX5cKeyReader implements BiConsumer<RbelElement, RbelConverter> 
         }
     }
 
-    private Optional<String> getKeyId(Optional<RbelMapElement> keyMap) {
+    private Optional<String> getKeyId(Optional<RbelMapFacet> keyMap) {
         return keyMap
-            .filter(map -> map.getElementMap().containsKey("kid"))
-            .map(map -> map.getElementMap().get("kid"))
-            .map(RbelElement::getContent);
+            .filter(map -> map.getChildNodes().containsKey("kid"))
+            .map(map -> map.getChildNodes().get("kid"))
+            .map(RbelElement::getRawStringContent);
     }
 
-    private Optional<byte[]> getX509Certificate(Optional<RbelMapElement> keyMap) {
+    private Optional<byte[]> getX509Certificate(Optional<RbelMapFacet> keyMap) {
         return keyMap
-            .map(map -> map.getElementMap().get("x5c"))
-            .filter(RbelJsonElement.class::isInstance)
-            .map(RbelJsonElement.class::cast)
-            .map(RbelJsonElement::getJsonElement)
-            .filter(RbelListElement.class::isInstance)
-            .map(RbelListElement.class::cast)
-            .map(RbelListElement::getElementList)
+            .map(map -> map.getChildNodes().get("x5c"))
+            .flatMap(el -> el.getFacet(RbelMapFacet.class))
+            .map(RbelMapFacet::getChildNodes)
+            .map(Map::values)
             .stream()
-            .flatMap(List::stream)
-            .filter(RbelAsn1Element.class::isInstance)
-            .map(RbelAsn1Element.class::cast)
-            .map(RbelAsn1Element::getEncoded)
+            .flatMap(Collection::stream)
+            .map(RbelElement::getRawContent)
             .findFirst();
     }
 }

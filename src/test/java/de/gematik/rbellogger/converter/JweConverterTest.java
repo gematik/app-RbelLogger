@@ -21,14 +21,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.elements.*;
-import org.junit.jupiter.api.Disabled;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelJweFacet;
+import de.gematik.rbellogger.data.facet.RbelJwtFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
+import de.gematik.rbellogger.data.facet.RbelJsonFacet;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 
 public class JweConverterTest {
 
     @Test
-    @Disabled
+    @SneakyThrows
     public void shouldConvertJwe() {
         final RbelLogger rbelConverter = RbelLogger.build(new RbelConfiguration()
             .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
@@ -36,22 +40,21 @@ public class JweConverterTest {
                 .pcapFile("src/test/resources/ssoTokenFlow.pcap")
                 .printMessageToSystemOut(false)
                 .build()));
+        rbelConverter.getRbelCapturer().close();
 
-        final RbelHttpRequest postChallengeResponse = rbelConverter.getMessageHistory().stream()
-            .filter(RbelHttpRequest.class::isInstance)
-            .map(RbelHttpRequest.class::cast)
-            .filter(request -> request.getPath().getBasicPath().getContent().equals("/sign_response")
-                && request.getMethod().equals("POST"))
+        final RbelElement postChallengeResponse = rbelConverter.getMessageHistory().stream()
+            .filter(e -> e.hasFacet(RbelHttpRequestFacet.class))
+            .filter(request -> request.getFacet(RbelHttpRequestFacet.class).get()
+                .getPath().getRawStringContent().contains("/sign_response")
+                && request.getFacet(RbelHttpRequestFacet.class).get().getMethod().getRawStringContent().equals("POST"))
             .findFirst().get();
 
-        final RbelJweElement signedChallenge = (RbelJweElement) ((RbelMapElement) postChallengeResponse.getBody())
-            .getElementMap()
-            .get("signed_challenge");
-        assertThat(signedChallenge)
-            .isInstanceOf(RbelJweElement.class);
-        assertThat(signedChallenge.getHeader())
-            .isInstanceOf(RbelJsonElement.class);
-        assertThat(signedChallenge.getBody())
-            .isInstanceOf(RbelJwtElement.class);
+        final RbelElement signedChallenge = postChallengeResponse.findRbelPathMembers("$..signed_challenge").get(0);
+        assertThat(signedChallenge.hasFacet(RbelJweFacet.class))
+            .isTrue();
+        assertThat(signedChallenge.getFirst("header").get().hasFacet(RbelJsonFacet.class))
+            .isTrue();
+        assertThat(signedChallenge.getFirst("body").get().hasFacet(RbelJwtFacet.class))
+            .isTrue();
     }
 }

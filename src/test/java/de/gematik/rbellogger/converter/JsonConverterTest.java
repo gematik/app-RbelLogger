@@ -20,12 +20,16 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelHttpResponse;
-import de.gematik.rbellogger.data.elements.RbelJsonElement;
-import de.gematik.rbellogger.data.elements.RbelJwtElement;
-import de.gematik.rbellogger.renderer.RbelMarkdownRenderer;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelJsonFacet;
+import de.gematik.rbellogger.data.facet.RbelJwtFacet;
+import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 public class JsonConverterTest {
@@ -36,12 +40,24 @@ public class JsonConverterTest {
             "src/test/resources/sampleMessages/jsonMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
-        System.out.println(RbelMarkdownRenderer.render(convertedMessage));
+        assertThat(convertedMessage.getFirst("body").get().hasFacet(RbelJsonFacet.class))
+            .isTrue();
+    }
 
-        assertThat(((RbelHttpResponse) convertedMessage).getBody())
-            .isInstanceOf(RbelJsonElement.class);
+    @Test
+    public void shouldRenderCleanHtml() throws IOException {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(readCurlFromFileWithCorrectedLineBreaks(
+                "src/test/resources/sampleMessages/idpEncMessage.curl"), null);
+        convertedMessage.addFacet(RbelTcpIpMessageFacet.builder()
+            .receiver(RbelElement.wrap(null, convertedMessage, new RbelHostname("recipient", 1)))
+            .sender(RbelElement.wrap(null, convertedMessage, new RbelHostname("sender", 1)))
+            .build());
+
+        FileUtils.writeStringToFile(new File("target/jsonNested.html"),
+            RbelHtmlRenderer.render(List.of(convertedMessage)));
     }
 
     @Test
@@ -50,16 +66,13 @@ public class JsonConverterTest {
             "src/test/resources/sampleMessages/getChallenge.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .parseMessage(curlMessage.getBytes(), null, null);
 
-        System.out.println(RbelMarkdownRenderer.render(convertedMessage));
-        final RbelJsonElement body = (RbelJsonElement) ((RbelHttpResponse) convertedMessage).getBody();
+        FileUtils.writeStringToFile(new File("target/jsonNested.html"),
+            RbelHtmlRenderer.render(List.of(convertedMessage)));
 
-        assertThat(body.traverseAndReturnNestedMembers())
-            .hasSize(7);
-
-        assertThat(body.traverseAndReturnNestedMembers().values().stream()
-            .filter(RbelJwtElement.class::isInstance)
+        assertThat(convertedMessage.getFirst("body").get().traverseAndReturnNestedMembers().stream()
+            .filter(el -> el.hasFacet(RbelJwtFacet.class))
             .findAny())
             .isPresent();
     }

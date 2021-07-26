@@ -5,14 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
-import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RbelPathTest {
 
-    private RbelHttpResponse convertedMessage;
+    private RbelElement convertedMessage;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -20,26 +20,29 @@ public class RbelPathTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        convertedMessage = (RbelHttpResponse) RbelLogger.build().getRbelConverter()
-            .parseMessage(curlMessage.getBytes(), null, null).getHttpMessage();
+        convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(curlMessage.getBytes(), null, null);
     }
 
     @Test
     public void assertThatPathValueFollowsConvention() {
-        assertThat(convertedMessage.findNodePath()).isEqualTo("");
-        assertThat(convertedMessage.getHeader().findNodePath()).isEqualTo("header");
-        assertThat(convertedMessage.getHeader().getChildNodes().get(0).findNodePath()).startsWith("header.");
+        assertThat(convertedMessage.findNodePath())
+            .isEqualTo("");
+        assertThat(convertedMessage.getFirst("header").get().findNodePath())
+            .isEqualTo("header");
+        assertThat(convertedMessage.getFirst("header").get().getChildNodes().get(0).findNodePath())
+            .startsWith("header.");
     }
 
     @Test
     public void simpleRbelPath_shouldFindTarget() {
         assertThat(convertedMessage.findRbelPathMembers("$.header"))
-            .containsExactly(convertedMessage.getHeader());
+            .containsExactly(convertedMessage.getFacetOrFail(RbelHttpMessageFacet.class).getHeader());
 
         assertThat(convertedMessage.findRbelPathMembers("$.body.body.nbf"))
-            .containsExactly(convertedMessage.getFirst("body").get().
-                getFirst("body").get().
-                getFirst("nbf").get());
+            .containsExactly(convertedMessage.getFirst("body").get()
+                .getFirst("body").get()
+                .getFirst("nbf").get());
     }
 
     @Test
@@ -76,9 +79,9 @@ public class RbelPathTest {
     public void jexlExpression_shouldFindSpecificTarget() {
         assertThat(convertedMessage.findRbelPathMembers("$..[?(key=='nbf')]"))
             .hasSize(2)
-            .contains(convertedMessage.getFirst("body").get().
-                getFirst("body").get().
-                getFirst("nbf").get());
+            .contains(convertedMessage.getFirst("body").get()
+                .getFirst("body").get()
+                .getFirst("nbf").get());
     }
 
     @Test
@@ -93,6 +96,6 @@ public class RbelPathTest {
     @Test
     public void findAllMembers() {
         assertThat(convertedMessage.findRbelPathMembers("$..*"))
-            .hasSize(243);
+            .hasSize(199);
     }
 }

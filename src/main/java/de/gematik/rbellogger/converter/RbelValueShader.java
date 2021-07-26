@@ -16,9 +16,9 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.elements.RbelElement;
+import de.gematik.rbellogger.data.RbelJexlShadingExpression;
+import de.gematik.rbellogger.data.RbelElement;
 import java.util.*;
-import java.util.function.BiConsumer;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -27,50 +27,61 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 public class RbelValueShader {
 
-    private final Map<String, String> jexlShadingMap = new HashMap<>();
-    private final Map<String, String> jexlNoteMap = new HashMap<>();
+    private final List<RbelJexlShadingExpression> jexlShadingMap = new ArrayList<>();
+    private final List<RbelJexlShadingExpression> jexlNoteMap = new ArrayList<>();
     private final RbelJexlExecutor rbelJexlExecutor = new RbelJexlExecutor();
 
     public Optional<String> shadeValue(final Object element, final Optional<String> key) {
-        return jexlShadingMap.entrySet().stream()
-            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getKey(), key))
-            .map(entry -> String.format(entry.getValue(), toStringValue(element)))
+        return jexlShadingMap.stream()
+            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getJexlExpression(), key))
+            .peek(entry -> entry.getNumberOfMatches().incrementAndGet())
+            .map(entry -> String.format(entry.getShadingValue(), toStringValue(element)))
             .findFirst();
     }
 
-    public void addNote(final RbelElement element, final RbelConverter converter) {
-        jexlNoteMap.entrySet().stream()
-            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getKey(), element.findKeyInParentElement()))
-            .map(entry -> String.format(entry.getValue(), toStringValue(element)))
+    public void addNote(final RbelElement element) {
+        jexlNoteMap.stream()
+            .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getJexlExpression(), element.findKeyInParentElement()))
+            .peek(entry -> entry.getNumberOfMatches().incrementAndGet())
+            .map(entry -> String.format(entry.getShadingValue(), toStringValue(element)))
             .findFirst()
             .ifPresent(element::setNote);
     }
 
     private String toStringValue(final Object value) {
         if (value instanceof RbelElement) {
-            return ((RbelElement) value).getContent();
+            return ((RbelElement) value).getRawStringContent();
         } else {
             return value.toString();
         }
     }
 
     public RbelValueShader addSimpleShadingCriterion(String attributeName, String stringFValue) {
-        jexlShadingMap.put("key == '" + attributeName + "'", stringFValue);
+        jexlShadingMap.add(RbelJexlShadingExpression.builder()
+            .jexlExpression("key == '" + attributeName + "'")
+            .shadingValue(stringFValue)
+            .build());
         return this;
     }
 
     public RbelValueShader addJexlShadingCriterion(String jsonPathExpression, String stringFValue) {
-        jexlShadingMap.put(jsonPathExpression, stringFValue);
+        jexlShadingMap.add(RbelJexlShadingExpression.builder()
+            .jexlExpression(jsonPathExpression)
+            .shadingValue(stringFValue)
+            .build());
         return this;
     }
 
     public RbelValueShader addJexlNoteCriterion(String jsonPathExpression, String stringFValue) {
-        jexlNoteMap.put(jsonPathExpression, stringFValue);
+        jexlNoteMap.add(RbelJexlShadingExpression.builder()
+            .jexlExpression(jsonPathExpression)
+            .shadingValue(stringFValue)
+            .build());
         return this;
     }
 
-    public BiConsumer<RbelElement, RbelConverter> getPostConversionListener() {
-        return (element, converter) -> addNote(element, converter);
+    public RbelConverterPlugin getPostConversionListener() {
+        return (element, converter) -> addNote(element);
     }
 
     @Builder

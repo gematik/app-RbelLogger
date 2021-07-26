@@ -1,8 +1,7 @@
 package de.gematik.rbellogger.util;
 
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelNestedElement;
+import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import java.util.*;
 import java.util.Map.Entry;
@@ -14,15 +13,6 @@ public class RbelPathExecutor {
 
     private final RbelElement rbelElement;
     private final String rbelPath;
-
-    private static boolean tryToParseInteger(String value) {
-        try {
-            Integer.parseInt(value);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     private static List<RbelElement> findAllChildsRecursive(final RbelElement element) {
         final List<? extends RbelElement> childNodes = element.getChildNodes();
@@ -48,17 +38,7 @@ public class RbelPathExecutor {
                 .distinct()
                 .collect(Collectors.toList());
         }
-        // never let the expression end on a basic container with a nested Element inside
-        return candidates.stream()
-            .map(candidate -> {
-                if ((candidate instanceof RbelNestedElement)
-                && (((RbelNestedElement) candidate).getNestedElement() != null)){
-                    return ((RbelNestedElement) candidate).getNestedElement();
-                } else {
-                    return candidate;
-                }
-            })
-            .collect(Collectors.toList());
+        return candidates;
     }
 
     private List<? extends RbelElement> resolveRbelPathElement(final String key, final RbelElement element) {
@@ -110,7 +90,7 @@ public class RbelPathExecutor {
 
     private List<RbelElement> findChildNodesByJexlExpression(final RbelElement element, final String jexl) {
         RbelJexlExecutor executor = new RbelJexlExecutor();
-        return element.getChildElements().stream()
+        return element.getChildNodesWithKey().stream()
             .filter(candidate ->
                 executor.matchesAsJexlExpression(candidate.getValue(), jexl, Optional.of(candidate.getKey())))
             .map(Entry::getValue)

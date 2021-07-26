@@ -16,25 +16,70 @@
 
 package de.gematik.rbellogger.data.elements;
 
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
+import static j2html.TagCreator.b;
+import static j2html.TagCreator.p;
+
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelFacet;
+import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
+import j2html.tags.ContainerTag;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Optional;
+import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @RequiredArgsConstructor
-public class RbelJwtSignature extends RbelElement {
+@Builder
+public class RbelJwtSignature implements RbelFacet {
 
-    private final boolean isValid;
-    private final String verifiedUsing;
+    static {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+            @Override
+            public boolean checkForRendering(RbelElement element) {
+                return element.hasFacet(RbelJwtSignature.class);
+            }
 
-    @Override
-    public List<RbelElement> getChildNodes() {
-        return List.of();
+            @Override
+            public ContainerTag performRendering(RbelElement element, Optional<String> key,
+                RbelHtmlRenderingToolkit renderingToolkit) {
+                return
+                    childBoxNotifTitle((element.getFacetOrFail(RbelJwtSignature.class).isValid()) ? CLS_PKIOK : CLS_PKINOK).with(
+                        t2("Signature"),
+                        addNote(element),
+                        p()
+                            .withText("Was verified using Key ")
+                            .with(b(element.getFacetOrFail(RbelJwtSignature.class).wasVerifiedUsing()))
+                    );
+            }
+        });
     }
 
+    private final RbelElement isValid;
+    private final RbelElement verifiedUsing;
+
     @Override
-    public String getContent() {
-        return null;
+    public List<Entry<String, RbelElement>> getChildElements() {
+        return List.of(
+            Pair.of("isValid",isValid),
+            Pair.of("verifiedUsing",verifiedUsing)
+        );
     }
 
+    public boolean isValid() {
+        return isValid.seekValue(Boolean.class)
+            .orElseThrow();
+    }
+
+    private String wasVerifiedUsing() {
+        return Optional.ofNullable(verifiedUsing)
+            .flatMap(verifiedUsing -> verifiedUsing.seekValue(String.class))
+            .orElse("");
+    }
 }

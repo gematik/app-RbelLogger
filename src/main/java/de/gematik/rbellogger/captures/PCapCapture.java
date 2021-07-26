@@ -18,8 +18,8 @@ package de.gematik.rbellogger.captures;
 
 import com.sun.jna.Platform;
 import de.gematik.rbellogger.converter.RbelConverter;
+import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.RbelMessage;
 import de.gematik.rbellogger.util.RbelException;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -338,7 +338,8 @@ public class PCapCapture extends RbelCapturer {
                         log.trace("Header found, body segmented away. \n'{}'", dumpString);
                         return Optional.empty();
                     }
-                } else if (messageParts[1].length() == messageLength.get()) {
+                } else if (messageParts[1].length() == messageLength.get()
+                || messageParts[1].length() == messageLength.get() + 1) {
                     return Optional.of(currentBuffer);
                 } else if (messageParts[1].length() > messageLength.get()) {
                     throw new RuntimeException(
@@ -377,10 +378,10 @@ public class PCapCapture extends RbelCapturer {
 
         @SneakyThrows
         private void processSimpleHttpPackets(final byte[] content, RbelHostname sender, RbelHostname recipient) {
-            final RbelMessage convertedMessage = getRbelConverter().parseMessage(content, sender, recipient);
+            final RbelElement convertedMessage = getRbelConverter().parseMessage(content, sender, recipient);
             if (printMessageToSystemOut && convertedMessage != null && content.length > 0) {
-                if (convertedMessage.getContent() != null) {
-                    log.trace("RBEL: " + convertedMessage.getContent());
+                if (convertedMessage.getRawStringContent() != null) {
+                    log.trace("RBEL: " + convertedMessage.getRawStringContent());
                 } else {
                     log.trace("RBEL: <null> message encountered!");
                 }

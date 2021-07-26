@@ -16,11 +16,13 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelHttpMessage;
-import de.gematik.rbellogger.data.elements.RbelHttpRequest;
-import de.gematik.rbellogger.data.elements.RbelHttpResponse;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
+import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
@@ -66,7 +68,7 @@ public class RbelJexlExecutor {
             return result;
         } catch (Exception e) {
             if (ACTIVATE_JEXL_DEBUGGING) {
-                log.debug("Error during Jexl-Evaluation.", e);
+                log.info("Error during Jexl-Evaluation.", e);
             }
             return false;
         }
@@ -88,12 +90,22 @@ public class RbelJexlExecutor {
 
         mapContext.set("element", element);
         mapContext.set("parent", parentElement.orElse(null));
-        mapContext.set("message", findMessage(element)
+        final Optional<RbelElement> message = findMessage(element);
+        mapContext.set("message", message
             .map(this::convertToJexlMessage)
             .orElse(null));
         mapContext.set("request", tryToFindRequestMessage(element)
             .map(this::convertToJexlMessage)
             .orElse(null));
+        mapContext.set("facets", Optional.ofNullable(element)
+            .filter(RbelElement.class::isInstance)
+            .map(RbelElement.class::cast)
+            .map(RbelElement::getFacets)
+            .stream()
+            .flatMap(List::stream)
+            .map(Object::getClass)
+            .map(Class::getSimpleName)
+            .collect(Collectors.toSet()));
         mapContext.set("key", key
             .or(() -> tryToFindKeyFromParentMap(element, parentElement))
             .orElse(null));
@@ -104,7 +116,7 @@ public class RbelJexlExecutor {
             .orElse(null));
         mapContext.set("type", element.getClass().getSimpleName());
         if (element instanceof RbelElement) {
-            mapContext.set("content", ((RbelElement) element).getContent());
+            mapContext.set("content", ((RbelElement) element).getRawStringContent());
         } else {
             mapContext.set("content", element.toString());
         }
@@ -112,52 +124,62 @@ public class RbelJexlExecutor {
         return mapContext;
     }
 
-    private Optional<RbelHttpRequest> tryToFindRequestMessage(Object element) {
+    private Optional<RbelElement> tryToFindRequestMessage(Object element) {
         if (!(element instanceof RbelElement)) {
             return Optional.empty();
         }
-        RbelElement ptr = (RbelElement) element;
-        while ((ptr != null) && !(
-            (ptr instanceof RbelHttpMessage) && (ptr.getParentNode() == null))) {
-            ptr = ptr.getParentNode();
-        }
-        if (ptr == null) {
+        final Optional<RbelElement> message = findMessage(element);
+        if (message.isEmpty()) {
             return Optional.empty();
         }
-        if (ptr instanceof RbelHttpRequest) {
-            return Optional.of((RbelHttpRequest) ptr);
+        if (message.get().getFacet(RbelHttpRequestFacet.class).isPresent()) {
+            return message;
         } else {
-            return Optional.ofNullable(((RbelHttpResponse) ptr).getRequest());
+            return message
+                .flatMap(el -> el.getFacet(RbelHttpResponseFacet.class))
+                .map(RbelHttpResponseFacet::getRequest);
         }
     }
 
-    private JexlMessage convertToJexlMessage(RbelHttpMessage element) {
+    private JexlMessage convertToJexlMessage(RbelElement element) {
+        final Optional<RbelElement> bodyOptional = element.getFirst("body");
         return JexlMessage.builder()
-            .isRequest(element instanceof RbelHttpRequest)
-            .isResponse(element instanceof RbelHttpResponse)
-            .method((element instanceof RbelHttpRequest) ? ((RbelHttpRequest) element).getMethod() : null)
-            .url((element instanceof RbelHttpRequest) ? ((RbelHttpRequest) element).getPath().getOriginalUrl() : null)
-            .bodyAsString(element.getBody().getContent())
-            .body(element.getBody())
-            .headers(element.getHeader().entrySet().stream()
-                .collect(Collectors.toMap(e -> e.getKey(), entry -> entry.getValue().getContent())))
+            .request(element.getFacet(RbelHttpRequestFacet.class).isPresent())
+            .response(element.getFacet(RbelHttpResponseFacet.class).isPresent())
+            .method(element.getFacet(RbelHttpRequestFacet.class)
+                .map(RbelHttpRequestFacet::getMethod).map(RbelElement::getRawStringContent)
+                .orElse(null))
+            .url(element.getFacet(RbelHttpRequestFacet.class)
+                .map(RbelHttpRequestFacet::getPath).map(RbelElement::getRawStringContent)
+                .orElse(null))
+            .bodyAsString(bodyOptional.map(RbelElement::getRawStringContent).orElse(null))
+            .body(bodyOptional.orElse(null))
+            .headers(element.getFacet(RbelHttpMessageFacet.class)
+                .map(RbelHttpMessageFacet::getHeader)
+                .flatMap(el -> el.getFacet(RbelHttpHeaderFacet.class))
+                .filter(RbelHttpHeaderFacet.class::isInstance)
+                .map(RbelHttpHeaderFacet.class::cast)
+                .map(RbelHttpHeaderFacet::entrySet)
+                .stream()
+                .flatMap(Set::stream)
+                .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getRawStringContent())))
             .build();
     }
 
-    private Optional<RbelHttpMessage> findMessage(Object element) {
+    private Optional<RbelElement> findMessage(Object element) {
         if (!(element instanceof RbelElement)) {
             return Optional.empty();
         }
         RbelElement ptr = (RbelElement) element;
-        while ((ptr != null) && !(
-            (ptr instanceof RbelHttpMessage) && (ptr.getParentNode() == null))) {
+        while (ptr.getParentNode() != null) {
             if (ptr.getParentNode() == ptr) {
                 break;
             }
             ptr = ptr.getParentNode();
         }
-        if (ptr instanceof RbelHttpMessage) {
-            return Optional.of((RbelHttpMessage) ptr);
+        if (ptr.hasFacet(RbelHttpMessageFacet.class)
+            && ptr.getParentNode() == null) {
+            return Optional.of(ptr);
         } else {
             return Optional.empty();
         }
@@ -173,7 +195,7 @@ public class RbelJexlExecutor {
     private Optional<String> tryToFindKeyFromParentMap(Object element, Optional<RbelElement> parent) {
         return parent
             .stream()
-            .map(RbelElement::getChildElements)
+            .map(RbelElement::getChildNodesWithKey)
             .flatMap(List::stream)
             .filter(entry -> entry.getValue() == element)
             .map(Map.Entry::getKey)
@@ -186,8 +208,8 @@ public class RbelJexlExecutor {
 
         public final String method;
         public final String url;
-        public final boolean isRequest;
-        public final boolean isResponse;
+        public final boolean request;
+        public final boolean response;
         public final Map<String, String> headers;
         public final String bodyAsString;
         public final RbelElement body;

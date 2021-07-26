@@ -16,45 +16,58 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelNullElement;
-import de.gematik.rbellogger.data.elements.RbelXmlElement;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelRootFacet;
+import de.gematik.rbellogger.data.facet.RbelXmlFacet;
 import de.gematik.rbellogger.util.RbelException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.dom4j.*;
 import org.dom4j.tree.AbstractBranch;
 import org.dom4j.tree.DefaultComment;
 
+@Slf4j
 public class RbelXmlConverter implements RbelConverterPlugin {
 
     private static final String XML_TEXT_KEY = "text";
 
     @Override
-    public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        final String content = rbel.getContent();
-        return content.contains("<") && content.contains(">");
-    }
-
-    @Override
-    public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        try {
-            return buildXmlElementForNode(DocumentHelper.parseText(rbel.getContent().trim()), context);
-        } catch (Exception e) {
-            return null;
+    public void consumeElement(final RbelElement rbel, final RbelConverter context) {
+        final String content = rbel.getRawStringContent();
+        if (content.contains("<") && content.contains(">")) {
+            try {
+                buildXmlElementForNode(DocumentHelper.parseText(content.trim()), rbel, context);
+                rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
+            } catch (DocumentException e) {
+                log.trace("Exception while trying to parse XML. Skipping", e);
+            }
         }
     }
 
-    private RbelXmlElement buildXmlElementForNode(Branch branch, RbelConverter converter) {
-        RbelXmlElement result = new RbelXmlElement(branch);
-        result.setRawMessage(branch.asXML());
+    private void buildXmlElementForNode(Branch branch, RbelElement parentElement, RbelConverter converter) {
+        final List<Entry<String, RbelElement>> childElements = new ArrayList<>();
+        parentElement.addFacet(RbelXmlFacet.builder()
+            .sourceElement(branch)
+            .childElements(childElements)
+            .build());
         for (Object child : branch.content()) {
             if (child instanceof Text) {
-                result.put(XML_TEXT_KEY, converter.convertElement(((Text) child).getText()));
+                childElements
+                    .add(Pair.of(XML_TEXT_KEY, converter.convertElement(((Text) child).getText(), parentElement)));
             } else if (child instanceof AbstractBranch) {
-                final String childXmlName = ((AbstractBranch) child).getName();
-                result.put(childXmlName, buildXmlElementForNode((AbstractBranch) child, converter));
+                final RbelElement element = new RbelElement(
+                    ((AbstractBranch) child).asXML().getBytes(StandardCharsets.UTF_8),
+                    parentElement);
+                buildXmlElementForNode((AbstractBranch) child, element, converter);
+                childElements.add(Pair.of(((AbstractBranch) child).getName(), element));
             } else if (child instanceof Namespace) {
                 final String childXmlName = ((Namespace) child).getPrefix();
-                result.put(childXmlName, converter.convertElement(((Namespace) child).getText()));
+                childElements
+                    .add(Pair.of(childXmlName, converter.convertElement(((Namespace) child).getText(), parentElement)));
             } else if (child instanceof DefaultComment) {
                 // do nothing
             } else {
@@ -62,8 +75,10 @@ public class RbelXmlConverter implements RbelConverterPlugin {
             }
         }
 
-        if (!result.containsKey(XML_TEXT_KEY)) {
-            result.put(XML_TEXT_KEY, new RbelNullElement());
+        if (childElements.stream()
+            .map(Entry::getKey)
+            .noneMatch(key -> key.equals(XML_TEXT_KEY))) {
+            childElements.add(Pair.of(XML_TEXT_KEY, new RbelElement(new byte[]{}, parentElement)));
         }
 
         if (branch instanceof Element) {
@@ -72,11 +87,10 @@ public class RbelXmlConverter implements RbelConverterPlugin {
                     throw new RbelException(
                         "Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
                 }
-                result.put(((Attribute) attribute).getName(),
-                    converter.convertElement(((Attribute) attribute).getText()));
+                childElements.add(Pair.of(
+                    ((Attribute) attribute).getName(),
+                    converter.convertElement(((Attribute) attribute).getText(), parentElement)));
             }
         }
-
-        return result;
     }
 }

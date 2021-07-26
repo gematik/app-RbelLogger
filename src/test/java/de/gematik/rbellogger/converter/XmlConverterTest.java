@@ -20,10 +20,15 @@ import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineB
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelXmlElement;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelXmlFacet;
+import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,85 +43,99 @@ public class XmlConverterTest {
     }
 
     @Test
+    public void shouldRenderCleanHtml() throws IOException {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessage, null);
+        convertedMessage.addFacet(RbelTcpIpMessageFacet.builder()
+            .receiver(RbelElement.wrap(null, convertedMessage, new RbelHostname("recipient", 1)))
+            .sender(RbelElement.wrap(null, convertedMessage, new RbelHostname("sender", 1)))
+            .build());
+
+        FileUtils.writeStringToFile(new File("target/xmlNested.html"),
+            RbelHtmlRenderer.render(List.of(convertedMessage)));
+    }
+
+    @Test
     public void convertMessage_shouldGiveXmlBody() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
-        assertThat(convertedMessage.findRbelPathMembers("$.body").get(0))
-            .isInstanceOf(RbelXmlElement.class);
+        assertThat(convertedMessage.findRbelPathMembers("$.body").get(0)
+            .hasFacet(RbelXmlFacet.class))
+            .isTrue();
     }
 
     @Test
     public void retrieveXmlAttribute_shouldReturnAttributeWithContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         assertThat(convertedMessage
             .findRbelPathMembers("$.body.RegistryResponse.status")
-            .get(0).getContent())
+            .get(0).getRawStringContent())
             .isEqualTo("urn:oasis:names:tc:ebxml-regrep:ResponseStatusType:Failure");
     }
 
     @Test
     public void retrieveListMemberAttribute() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         final List<RbelElement> deepPathResults = convertedMessage
             .findRbelPathMembers("$.body.RegistryResponse.RegistryErrorList.RegistryError[0].errorCode");
         assertThat(convertedMessage.findRbelPathMembers("$..RegistryError.errorCode"))
             .containsAll(deepPathResults);
 
-        assertThat(deepPathResults.get(0).getContent())
+        assertThat(deepPathResults.get(0).getRawStringContent())
             .isEqualTo("XDSDuplicateUniqueIdInRegistry");
     }
 
     @Test
     public void retrieveTextContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..RegistryError[0].text");
 
         assertThat(rbelPathResult).hasSize(1);
-        assertThat(rbelPathResult.get(0).getContent().trim())
+        assertThat(rbelPathResult.get(0).getRawStringContent().trim())
             .isEqualTo("text in element");
     }
 
     @Test
     public void diveIntoNestedJwt() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         final List<RbelElement> rbelPathResult =
             convertedMessage.findRbelPathMembers("$..jwtTag.text.body.scopes_supported.0");
 
         assertThat(rbelPathResult).hasSize(1);
-        assertThat(rbelPathResult.get(0).getContent().trim())
-            .isEqualTo("openid");
+        assertThat(rbelPathResult.get(0).getRawStringContent().trim())
+            .isEqualTo("\"openid\"");
     }
 
     @Test
     public void retrieveEmptyTextContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..textTest.text");
 
         assertThat(rbelPathResult).hasSize(1);
-        assertThat(rbelPathResult.get(0).getContent())
+        assertThat(rbelPathResult.get(0).getRawStringContent())
             .isEqualTo("");
     }
 
     @Test
     public void retrieveUrlAsTextContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(curlMessage);
+            .convertElement(curlMessage, null);
 
         final List<RbelElement> rbelPathResult = convertedMessage.findRbelPathMembers("$..urlText.text");
 
         assertThat(rbelPathResult).hasSize(1);
-        assertThat(rbelPathResult.get(0).getContent())
+        assertThat(rbelPathResult.get(0).getRawStringContent())
             .isEqualTo("http://url.text.de");
     }
 }

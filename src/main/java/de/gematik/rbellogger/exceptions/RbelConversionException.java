@@ -11,4 +11,8 @@ public class RbelConversionException extends RbelException {
     public RbelConversionException(Exception e) {
         super(e);
     }
+
+    public RbelConversionException(String msg, Throwable e) {
+        super(msg, e);
+    }
 }

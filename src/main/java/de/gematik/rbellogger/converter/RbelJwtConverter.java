@@ -17,18 +17,22 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelJwtElement;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.data.elements.RbelJwtSignature;
+import de.gematik.rbellogger.data.facet.RbelRootFacet;
+import de.gematik.rbellogger.data.facet.RbelValueFacet;
 import java.security.Key;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.Optional;
 import lombok.SneakyThrows;
-import org.jose4j.json.JsonUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.lang.JoseException;
 
+@Slf4j
 public class RbelJwtConverter implements RbelConverterPlugin {
 
     static {
@@ -36,36 +40,39 @@ public class RbelJwtConverter implements RbelConverterPlugin {
     }
 
     @Override
-    public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
+    public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         try {
-            final JsonWebSignature jsonWebSignature = initializeJws(rbel);
-            JsonUtil.parseJson(jsonWebSignature.getHeaders().getFullHeaderAsJsonString());
-            return true;
-        } catch (final JoseException e) {
-            return false;
-        }
-    }
+            final JsonWebSignature jsonWebSignature = initializeJws(rbelElement);
 
-    @Override
-    public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        final JsonWebSignature jsonWebSignature = initializeJws(rbel);
-
-        final RbelElement headerElement = context
-            .convertElement(jsonWebSignature.getHeaders().getFullHeaderAsJsonString());
-        final RbelElement bodyElement = context.convertElement(jsonWebSignature.getUnverifiedPayload());
-        final RbelJwtSignature signature = context.getRbelKeyManager().getAllKeys()
-            .map(rbelKey -> verifySig(jsonWebSignature, rbelKey.getKey(), rbelKey.getKeyName()))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .findAny()
-            .or(() -> tryToGetKeyFromX5cHeaderClaim(jsonWebSignature)
-                .map(key -> verifySig(jsonWebSignature, key, "x5c-header certificate"))
+            final RbelElement headerElement = converter.convertElement(
+                jsonWebSignature.getHeaders().getFullHeaderAsJsonString().getBytes(),
+                rbelElement);
+            final RbelElement bodyElement = converter
+                .convertElement(jsonWebSignature.getUnverifiedPayloadBytes(), rbelElement);
+            final RbelElement signatureElement = new RbelElement(
+                Base64.getUrlDecoder().decode(jsonWebSignature.getEncodedSignature()),
+                rbelElement);
+            signatureElement.addFacet(converter.getRbelKeyManager().getAllKeys()
+                .map(rbelKey -> verifySig(jsonWebSignature, rbelKey.getKey(), rbelKey.getKeyName(), signatureElement))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-            )
-            .orElseGet(() -> new RbelJwtSignature(false, null));
-
-        return new RbelJwtElement(headerElement, bodyElement, signature);
+                .findAny()
+                .or(() -> tryToGetKeyFromX5cHeaderClaim(jsonWebSignature)
+                    .map(key -> verifySig(jsonWebSignature, key, "x5c-header certificate", signatureElement))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                )
+                .orElseGet(() -> RbelJwtSignature.builder()
+                        .isValid(new RbelElement(null, signatureElement).addFacet(new RbelValueFacet(false)))
+                        .verifiedUsing(null)
+                        .build()
+                ));
+            final RbelJwtFacet rbelJwtFacet = new RbelJwtFacet(headerElement, bodyElement, signatureElement);
+            rbelElement.addFacet(rbelJwtFacet);
+            rbelElement.addFacet(new RbelRootFacet<>(rbelJwtFacet));
+        } catch (JoseException e) {
+            return;
+        }
     }
 
     @SneakyThrows
@@ -75,20 +82,25 @@ public class RbelJwtConverter implements RbelConverterPlugin {
             .map(X509Certificate::getPublicKey);
     }
 
-    @SneakyThrows
-    private JsonWebSignature initializeJws(RbelElement rbel) {
+    private JsonWebSignature initializeJws(RbelElement rbel) throws JoseException {
         final JsonWebSignature jsonWebSignature = new JsonWebSignature();
-        jsonWebSignature.setCompactSerialization(rbel.getContent());
+        jsonWebSignature.setCompactSerialization(rbel.getRawStringContent());
         return jsonWebSignature;
     }
 
     private Optional<RbelJwtSignature> verifySig(final JsonWebSignature jsonWebSignature, final Key key,
-        final String keyId) {
+        final String keyId, final RbelElement signatureElement) {
         try {
             jsonWebSignature.setKey(key);
             tryToGetKeyFromX5cHeaderClaim(jsonWebSignature);
             if (jsonWebSignature.verifySignature()) {
-                return Optional.of(new RbelJwtSignature(true, keyId));
+                return Optional.of(
+                    RbelJwtSignature.builder()
+                        .isValid(new RbelElement(null, signatureElement)
+                            .addFacet(new RbelValueFacet(true)))
+                        .verifiedUsing(new RbelElement(null, signatureElement)
+                            .addFacet(new RbelValueFacet(keyId)))
+                        .build());
             } else {
                 return Optional.empty();
             }

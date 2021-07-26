@@ -18,80 +18,83 @@ package de.gematik.rbellogger.converter;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import de.gematik.rbellogger.data.elements.*;
-import de.gematik.rbellogger.exceptions.RbelConversionException;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.stream.StreamSupport;
+import java.util.Map.Entry;
+import java.util.Optional;
 
 public class RbelJsonConverter implements RbelConverterPlugin {
 
-    @Override
-    public boolean canConvertElement(final RbelElement rbel, final RbelConverter context) {
-        final String content = rbel.getContent();
+    public Optional<JsonElement> convertToJson(final String content) {
         if ((content.contains("{") && content.contains("}"))
             || (content.contains("[") && content.contains("]"))) {
             try {
-                JsonParser.parseString(rbel.getContent());
-                return true;
+                return Optional.of(JsonParser.parseString(content));
             } catch (Exception e) {
-                return false;
+                return Optional.empty();
             }
         }
-        return false;
+        return Optional.empty();
     }
 
     @Override
-    public RbelElement convertElement(final RbelElement rbel, final RbelConverter context) {
-        try {
-            return jsonElementToRbelElement(JsonParser.parseString(rbel.getContent()), context, rbel);
-        } catch (Exception e) {
-            throw new RbelConversionException(e);
+    public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
+        final Optional<JsonElement> jsonOptional = convertToJson(rbelElement.getRawStringContent());
+        if (jsonOptional.isEmpty()) {
+            return;
+        }
+        if (jsonOptional.get().isJsonObject() || jsonOptional.get().isJsonArray()) {
+            augmentRbelElementWithJsonFacet(jsonOptional.get(), converter, rbelElement);
+            rbelElement.addFacet(new RbelRootFacet(rbelElement.getFacetOrFail(RbelJsonFacet.class)));
         }
     }
 
-    private RbelElement jsonElementToRbelElement(final JsonElement jsonElement, final RbelConverter context,
+    private void augmentRbelElementWithJsonFacet(final JsonElement jsonElement, final RbelConverter context,
         final RbelElement parentElement) {
+        parentElement.addFacet(RbelJsonFacet.builder()
+            .jsonElement(jsonElement)
+            .build());
         if (jsonElement.isJsonObject()) {
             final LinkedHashMap<String, RbelElement> elementMap = new LinkedHashMap<>();
-            final RbelMapElement rbelMapElement = new RbelMapElement(elementMap);
-            final RbelJsonElement rbelJsonElement = new RbelJsonElement(rbelMapElement, jsonElement.toString());
-            rbelMapElement.setParentNode(rbelJsonElement);
-            rbelJsonElement.setParentNode(parentElement);
-            jsonElement.getAsJsonObject().entrySet().stream()
-                .forEach(entry -> elementMap.put(entry.getKey(),
-                    jsonElementToRbelElement(entry.getValue(), context, rbelMapElement)));
-            rbelMapElement.getChildNodes()
-                .forEach(context::triggerPostConversionListenerFor);
-            return rbelJsonElement;
-        }
-        if (jsonElement.isJsonArray()) {
-            final ArrayList<RbelElement> elementList = new ArrayList<>();
-            final RbelListElement rbelListElement = new RbelListElement(elementList);
-            final RbelJsonElement rbelJsonElement = new RbelJsonElement(rbelListElement, jsonElement.toString());
-            rbelJsonElement.setParentNode(parentElement);
-            rbelListElement.setParentNode(rbelJsonElement);
-
-            StreamSupport.stream(jsonElement.getAsJsonArray()
-                .spliterator(), false)
-                .map(el -> jsonElementToRbelElement(el, context, rbelListElement))
-                .forEach(elementList::add);
-
-            rbelJsonElement.getJsonElement().getChildNodes()
-                .forEach(context::triggerPostConversionListenerFor);
-            return rbelJsonElement;
-        }
-        if (jsonElement.isJsonPrimitive()) {
-            final RbelStringElement stringElement = new RbelStringElement(jsonElement.getAsString());
-            stringElement.setParentNode(parentElement);
-            final RbelElement element = context.convertElement(stringElement);
-            if (jsonElement.getAsJsonPrimitive().isString()) {
-                element.setRawMessage("\"" + jsonElement.getAsString() + "\"");
-            } else {
-                element.setRawMessage(jsonElement.getAsString());
+            parentElement.addFacet(RbelMapFacet.builder().childNodes(elementMap).build());
+            for (Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
+                RbelElement newChild = new RbelElement(entry.getValue().toString().getBytes(), parentElement);
+                augmentRbelElementWithJsonFacet(entry.getValue(), context, newChild);
+                elementMap.put(entry.getKey(), newChild);
             }
-            return element;
+        } else if (jsonElement.isJsonArray()) {
+            final ArrayList<RbelElement> elementList = new ArrayList<>();
+
+            parentElement.addFacet(RbelListFacet.builder()
+                .childNodes(elementList)
+                .build());
+
+            for (JsonElement el : jsonElement.getAsJsonArray()) {
+                RbelElement newChild = new RbelElement(el.toString().getBytes(), parentElement);
+                augmentRbelElementWithJsonFacet(el, context, newChild);
+                elementList.add(newChild);
+            }
+        } else if (jsonElement.isJsonPrimitive()) {
+            context.convertElement(parentElement);
+            if (jsonElement.getAsJsonPrimitive().isString()) {
+                addFacetAndConvertNestedElement(parentElement, jsonElement.getAsString(), context);
+            } else if (jsonElement.getAsJsonPrimitive().isNumber()) {
+                addFacetAndConvertNestedElement(parentElement, jsonElement.getAsLong(), context);
+            } else if (jsonElement.getAsJsonPrimitive().isBoolean()) {
+                addFacetAndConvertNestedElement(parentElement, jsonElement.getAsBoolean(), context);
+            }
+        } else {
+            parentElement.addFacet(RbelValueFacet.builder()
+                .value(null)
+                .build());
         }
-        return new RbelNullElement();
+    }
+
+    private void addFacetAndConvertNestedElement(RbelElement parentElement, Object value, RbelConverter context) {
+        final RbelElement nestedElement = RbelElement.wrap(parentElement, value);
+        context.convertElement(nestedElement);
+        parentElement.addFacet(new RbelNestedFacet(nestedElement));
     }
 }

@@ -1,38 +1,43 @@
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.data.elements.RbelElement;
-import de.gematik.rbellogger.data.elements.RbelNestedJsonElement;
-import de.gematik.rbellogger.data.elements.RbelStringElement;
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelBase64Facet;
+import de.gematik.rbellogger.data.facet.RbelJsonFacet;
+import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import java.util.Base64;
 import java.util.Base64.Decoder;
+import java.util.Objects;
 import java.util.Optional;
 
 public class RbelBase64JsonConverter extends RbelJsonConverter {
 
     @Override
-    public boolean canConvertElement(RbelElement rbel, RbelConverter context) {
-        return safeConvertBase64Using(rbel.getContent(), Base64.getDecoder(), context)
-            .or(() -> safeConvertBase64Using(rbel.getContent(), Base64.getUrlDecoder(), context))
-            .or(() -> safeConvertBase64Using(rbel.getContent(), Base64.getMimeDecoder(), context))
-            .isPresent();
-    }
-
-    @Override
-    public RbelElement convertElement(RbelElement rbel, RbelConverter context) {
-        return safeConvertBase64Using(rbel.getContent(), Base64.getDecoder(), context)
-            .or(() -> safeConvertBase64Using(rbel.getContent(), Base64.getUrlDecoder(), context))
-            .or(() -> safeConvertBase64Using(rbel.getContent(), Base64.getMimeDecoder(), context))
-            .orElseThrow();
-    }
-
-    private Optional<RbelElement> safeConvertBase64Using(String input, Decoder decoder, RbelConverter context) {
-        try{
-            return Optional.ofNullable(decoder.decode(input))
-                .filter(json -> super.canConvertElement(new RbelStringElement(new String(json)), context))
-                .map(json -> super.convertElement(new RbelStringElement(new String(json)), context))
-                .map(rbelJsonElement -> new RbelNestedJsonElement(rbelJsonElement));
-        } catch (Exception e) {
-            return Optional.empty();
+    public void consumeElement(RbelElement rbel, RbelConverter context) {
+        if (rbel.getRawStringContent().isEmpty()) {
+            return;
         }
+        safeConvertBase64Using(rbel.getRawStringContent(), Base64.getDecoder(), context, rbel)
+            .or(() -> safeConvertBase64Using(rbel.getRawStringContent(), Base64.getUrlDecoder(), context, rbel))
+            .ifPresent(rbel::addFacet);
+    }
+
+    private Optional<RbelBase64Facet> safeConvertBase64Using(String input, Decoder decoder, RbelConverter context,
+        RbelElement parentNode) {
+        return Optional.ofNullable(input)
+            .map(i -> {
+                try{
+                    return decoder.decode(i);
+                } catch (IllegalArgumentException e) {
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
+            .map(data -> new RbelElement(data, parentNode))
+            .stream()
+            .peek(innerNode -> context.convertElement(innerNode))
+            .filter(innerNode -> innerNode.hasFacet(RbelRootFacet.class))
+            .filter(innerNode -> innerNode.getFacetOrFail(RbelRootFacet.class).getRootFacet() instanceof RbelJsonFacet)
+            .map(child -> new RbelBase64Facet(child))
+            .findAny();
     }
 }
