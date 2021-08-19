@@ -2,9 +2,10 @@ package de.gematik.rbellogger;
 
 import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.converter.RbelAsn1Converter;
-import de.gematik.rbellogger.converter.RbelConfiguration;
+import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
+import de.gematik.rbellogger.converter.listener.RbelFileAppenderPlugin;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.List;
@@ -56,13 +57,18 @@ public class RbelLogger {
         for (Consumer<RbelConverter> initializer : configuration.getInitializers()) {
             initializer.accept(rbelConverter);
         }
-        if (configuration.getCapturer() != null) {
-            configuration.getCapturer().setRbelConverter(rbelConverter);
-        }
 
         rbelConverter.getRbelKeyManager().addAll(configuration.getKeys());
         if (configuration.isActivateAsn1Parsing()) {
             rbelConverter.addConverter(new RbelAsn1Converter());
+        }
+
+        if (configuration.getFileSaveInfo() != null) {
+            rbelConverter.addPostConversionListener(new RbelFileAppenderPlugin(configuration.getFileSaveInfo()));
+        }
+
+        if (configuration.getCapturer() != null) {
+            configuration.getCapturer().setRbelConverter(rbelConverter);
         }
 
         return RbelLogger.builder()

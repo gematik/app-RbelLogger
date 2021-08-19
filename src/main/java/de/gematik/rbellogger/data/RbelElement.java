@@ -22,15 +22,16 @@ import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelValueFacet;
 import de.gematik.rbellogger.util.RbelException;
 import de.gematik.rbellogger.util.RbelPathExecutor;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Getter
@@ -113,6 +114,7 @@ public class RbelElement {
             .collect(Collectors.toList());
     }
 
+    // Yes, default-visibility (is called recursively)
     List<RbelElement> traverseAndReturnNestedMembersInternal() {
         log.trace("Traversing into {}: facets are {}", findNodePath(), getFacets().stream()
             .map(Object::getClass).map(Class::getSimpleName).collect(Collectors.toList()));
@@ -124,34 +126,6 @@ public class RbelElement {
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
         }
-
-        /*        return getChildNodes().stream()
-            .map(child -> {
-                if (child.getFacets().stream()
-                    .filter(facet -> identityElements.contains(facet.getClass()))
-                    .findAny().isPresent()) {
-                    return child.traverseAndReturnNestedMembers(identityElements);
-                } else {
-                    return List.of(child);
-                }
-            })
-            .flatMap(List::stream)
-            .collect(Collectors.toList());
-        */
-/*
-        if (getFacets().stream()
-            .filter(facet -> !identityElements.contains(facet.getClass()))
-            .findAny().isPresent()) {
-            return List.of(Pair.of("", this));
-        } else {
-            return getChildNodesWithKey().stream()
-                .flatMap(child -> child.getValue()
-                    .traverseAndReturnNestedMembers(identityElements).stream()
-                    .map(entry -> Pair
-                        .of(child.getKey() + (entry.getKey().isBlank() ? "" : ".") + entry.getKey(),
-                            entry.getValue())))
-                .collect(Collectors.toList());
-        }*/
     }
 
     public boolean isStructuralHelperElement() {
@@ -262,5 +236,23 @@ public class RbelElement {
             facets.remove(getFacet(facet.getClass()).get());
         }
         facets.add(facet);
+    }
+
+    public Optional<RbelElement> findElement(String rbelPath) {
+        final List<RbelElement> resultList = findRbelPathMembers(rbelPath);
+        if (resultList.isEmpty()) {
+            return Optional.empty();
+        }
+        if (resultList.size() == 1) {
+            return Optional.of(resultList.get(0));
+        }
+        throw new RbelPathNotUniqueException(
+            "RbelPath '" + rbelPath + "' is not unique! Found " + resultList.size() + " elements, expected only one!");
+    }
+
+    private class RbelPathNotUniqueException extends RuntimeException {
+        public RbelPathNotUniqueException(String s) {
+            super(s);
+        }
     }
 }

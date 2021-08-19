@@ -16,20 +16,24 @@
 
 package de.gematik.rbellogger.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+
+import java.io.*;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Enumeration;
 import java.util.Optional;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CryptoLoader {
@@ -74,7 +78,10 @@ public class CryptoLoader {
                 final String alias = e.nextElement();
                 final X509Certificate certificate = (X509Certificate) p12.getCertificate(alias);
                 final PrivateKey privateKey = (PrivateKey) p12.getKey(alias, p12Password.toCharArray());
-                return new RbelPkiIdentity(certificate, privateKey, Optional.empty());
+                if (privateKey == null) {
+                    continue;
+                }
+                return new RbelPkiIdentity(certificate, privateKey, Optional.of(alias));
             }
         } catch (final IOException | KeyStoreException | NoSuchAlgorithmException
             | UnrecoverableKeyException | CertificateException e) {
@@ -83,12 +90,38 @@ public class CryptoLoader {
         throw new RuntimeException("Could not find certificate in P12-File");
     }
 
-    public static PublicKey getEcPublicKeyFromBytes(final byte[] keyBytes) {
-        final X509EncodedKeySpec publicKeyEncoded = new X509EncodedKeySpec(keyBytes);
-        try {
-            final KeyFactory keyFactory = KeyFactory.getInstance("EC");
-            return keyFactory.generatePublic(publicKeyEncoded);
-        } catch (final NoSuchAlgorithmException | InvalidKeySpecException e) {
+    public static RbelPkiIdentity getIdentityFromPemAndPkcs8(final byte[] certificateData, final byte[] keyBytes) {
+        try (final ByteArrayInputStream in = new ByteArrayInputStream(keyBytes);
+             final InputStreamReader inputStreamReader = new InputStreamReader(in);
+             final PemReader pemReader = new PemReader(inputStreamReader);) {
+            X509Certificate certificate = getCertificateFromPem(certificateData);
+            KeyFactory factory = KeyFactory.getInstance(certificate.getPublicKey().getAlgorithm());
+            PemObject pemObject = pemReader.readPemObject();
+            byte[] content = pemObject.getContent();
+            PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(content);
+            return RbelPkiIdentity.builder()
+                .certificate(certificate)
+                .privateKey(factory.generatePrivate(privKeySpec))
+                .build();
+        } catch (final NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static RbelPkiIdentity getIdentityFromPemAndPkcs1(final byte[] certificateData, final byte[] keyBytes) {
+        try (final ByteArrayInputStream in = new ByteArrayInputStream(keyBytes);
+             final InputStreamReader inputStreamReader = new InputStreamReader(in);
+             final PEMParser pemParser = new PEMParser(inputStreamReader)) {
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(BOUNCY_CASTLE_PROVIDER);
+            Object object = pemParser.readObject();
+            KeyPair keyPair = converter.getKeyPair((PEMKeyPair) object);
+
+            X509Certificate certificate = getCertificateFromPem(certificateData);
+            return RbelPkiIdentity.builder()
+                .certificate(certificate)
+                .privateKey(keyPair.getPrivate())
+                .build();
+        } catch (final IOException e) {
             throw new RuntimeException(e);
         }
     }

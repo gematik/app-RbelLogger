@@ -88,7 +88,7 @@ public class RbelHttpMessageRenderer implements RbelFacetRenderer {
                         renderingToolkit.convert(messageFacet.getHeader(), Optional.empty())
                     ),
                     childBoxNotifTitle(CLS_BODY).with(
-                        requestFacet.map(f -> t2("REQ Body")).orElseGet(() -> t2("RES Headers")),
+                        requestFacet.map(f -> t2("REQ Body")).orElseGet(() -> t2("RES Body")),
                         addNote(messageFacet.getBody()),
                         renderingToolkit.convert(messageFacet.getBody(), Optional.empty())
                     )

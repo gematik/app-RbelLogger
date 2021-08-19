@@ -3,18 +3,16 @@
 
 # Content
 
-*  [Introduction] (#Introduction)
-*  [Traffic Sources] (#Traffic Sources)
-    * [PCaP-Capture] (#PCaP-Capture)
-    * [Wiremock-Capture] (#Wiremock-Capture)
-*  [RBeL-Path] (#RBeL-Path)
-    * [JEXL expressions] (#JEXL expressions)
-* [HTML-Rendering] (#HTML-Rendering)
-    * [Notes] (#Notes)
-    * [Value-Shading] (#Value-Shading)
-* [Using the RBeL Application] (#Using the RBeL Application)
-    * [Caveats] (#Caveats)
-
+*  [Introduction](#Introduction)
+*  [Traffic Sources](#Traffic Sources)
+    * [PCaP-Capture](#PCaP-Capture)
+    * [Wiremock-Capture](#Wiremock-Capture)
+*  [RBelElement](#RBelElement)
+*  [RBeL-Path](#RBeL-Path)
+    * [JEXL expressions](#JEXL expressions)
+* [HTML-Rendering](#HTML-Rendering)
+    * [Notes](#Notes)
+    * [Value-Shading](#Value-Shading)
 
 ## Introduction
 
@@ -47,7 +45,8 @@ pCapCapture.close();
 // pCapCapture.initialize();
 
 // If you want to read from a real device then you must first call
-// .initialize() and .close() to finalize the capture.
+// .initialize() to start the capture 
+// and .close() to finalize the capture.
 ```
 
 ### Wiremock-Capture
@@ -76,16 +75,51 @@ assertThat(request)
 assertThat(request.getPath().getOriginalUrl())
     .isEqualTo(MOCK_SERVER_ADDRESS + "/foobar");
 ```
+
+## RBelElement
+### (Structure of parsed content)
+
+The root-class for all content is RbelElement. The RbelElement is an immutable. A RbelElement contains
+* the raw content which the element contains (byte[])
+* the parent node of itself (is null if the element is the root element)
+* a note-reference (can be empty). This can be explanatory text which will be rendered in the HTML
+* a list of facets. Facets are ways to interpret the content (read on for an explanation)
+
+Every time an element is parsed it is presented to a list of Converters. These converters may 
+add facets to the element, but can not alter the data that is present (rawData and parent).
+To be able to add child-nodes the child nodes are bundled in the facets (which are stored in 
+a list in the RbelElement). You can always add to this list, thus adding facets (which 
+represents a possible interpretation of the data of the Element).
+
+If we abstract away from the facets we arrive at a tree-structure, with the HTTP-Message 
+being the root node. Since every node (every RbelElement) has its raw-data this data is 
+duplicated multiple times in-memory. The parsed Rbel-structure is thus not an efficient way
+of storing data (a thing that should be remembered when working with very large messages).
+
 ## RBeL-Path
 RBeL-Path is a XPath or JSON-Path inspired expression-language enabling the quick traversal 
-of captured RBeL-Traffic.
+of captured RBeL-Traffic (navigation of the RbelElement-tree).
 
 A simple example:
 ```java
 assertThat(convertedMessage.findRbelPathMembers("$.header"))
-    .containsExactly(convertedMessage.getHeader());
+    .containsExactly(convertedMessage.getFacetOrFail(RbelHttpMessageFacet.class).getHeader());
 ```
+or
+```java
+assertThat(convertedMessage.findElement("$.header"))
+    .get()
+    .isSameAs(convertedMessage.getFacetOrFail(RbelHttpMessageFacet.class).getHeader());
+```
+(The first example executes the RbelPath and returns a list of all matching element, the 
+second one returns an Optional containing a single result. If there are multiple matches an
+exception is given.)
+
 RBeL-Path provides seamless retrieval of nested members. 
+
+Here is an example of HTTP-Message containing a JSON-Body:
+
+# ![Logo](./doc/images/rbelPath1.jpg)
 
 The following message contains a JWT (Json Web Token, a structure which contains of a header, a body and a signature).
 In the body there is a claim (essentially a Key/Value pair represented in a JSON-structure)
@@ -96,10 +130,14 @@ the structure. This expression would also work if the HTTP-message contained a J
 with the corresponding path, or an XML-Document.
 ```java
 assertThat(convertedMessage.findRbelPathMembers("$.body.body.nbf"))
-    .containsExactly(convertedMessage.getFirst("body").get().
-        getFirst("body").get().
-        getFirst("nbf").get());
+    .containsExactly(convertedMessage.getFirst("body").get()
+    .getFirst("body").get()
+    .getFirst("nbf").get()
+    .getFirst("content").get());
 ```
+(The closing .getFirst("content") in the assertion is due to a fix to make RbelPath 
+in JSON-Context easier: If the RbelPath ends on a JSON-Value-Node the corresponding content is returned.)
+# ![Logo](./doc/images/rbelPath2.jpg)
 
 You can also use wildcards to retrieve all members of a certain level:
 

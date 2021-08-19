@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
-import de.gematik.rbellogger.converter.RbelConfiguration;
+import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelHostname;
@@ -122,14 +122,14 @@ public class PcapCaptureTest {
         final PCapCapture pCapCapture = PCapCapture.builder()
             .pcapFile("src/test/resources/deregisterPairing.pcap")
             .build();
-        final RbelLogger rbelLogger = RbelLogger.build(new RbelConfiguration()
+        final RbelLogger rbelLogger = new RbelConfiguration()
             .addKey("IDP symmetricEncryptionKey",
                 new SecretKeySpec(DigestUtils.sha256("geheimerSchluesselDerNochGehashtWird"), "AES"),
                 RbelKey.PRECEDENCE_KEY_FOLDER)
             .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
             .addPostConversionListener(RbelKeyManager.RBEL_IDP_TOKEN_KEY_LISTENER)
             .addCapturer(pCapCapture)
-        );
+            .constructRbelLogger();
 
         MASKING_FUNCTIONS.forEach((k, v) -> rbelLogger.getValueShader().addSimpleShadingCriterion(k, v));
         rbelLogger.getValueShader().addJexlNoteCriterion(

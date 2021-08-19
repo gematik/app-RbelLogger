@@ -1,3 +1,8 @@
+# Release 0.10.0
+* Updated Documentation
+* Smaller Bugfixes
+* Filewriter added
+
 # Release 0.9.0
 * Restructuring of parsing model
 * Introducing Facets

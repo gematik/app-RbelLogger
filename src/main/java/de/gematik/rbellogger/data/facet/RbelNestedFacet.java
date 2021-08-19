@@ -4,11 +4,14 @@ import de.gematik.rbellogger.data.RbelElement;
 import java.util.List;
 import java.util.Map.Entry;
 import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 
 @Builder
 @RequiredArgsConstructor
+@Data
 public class RbelNestedFacet implements RbelFacet {
 
     private final RbelElement nestedElement;

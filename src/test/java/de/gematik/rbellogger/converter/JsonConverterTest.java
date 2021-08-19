@@ -55,9 +55,6 @@ public class JsonConverterTest {
             .receiver(RbelElement.wrap(null, convertedMessage, new RbelHostname("recipient", 1)))
             .sender(RbelElement.wrap(null, convertedMessage, new RbelHostname("sender", 1)))
             .build());
-
-        FileUtils.writeStringToFile(new File("target/jsonNested.html"),
-            RbelHtmlRenderer.render(List.of(convertedMessage)));
     }
 
     @Test

@@ -1,11 +1,12 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.exceptions.RbelConversionException;
-import java.net.URI;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.net.URI;
 
 @Data
 @Builder
@@ -15,11 +16,20 @@ public class RbelHostname {
     private final String hostname;
     private final int port;
 
-    public String toString() {
-        if (port > 0) {
-            return hostname + ":" + port;
+    public static RbelHostname fromString(final String value) {
+        if (value.contains(":")) {
+            try {
+                return RbelHostname.builder()
+                    .hostname(value.split(":")[0])
+                    .port(Integer.parseInt(value.split(":")[1]))
+                    .build();
+            } catch (Exception e) {
+                throw new RbelHostnameFormatException("Unable to parse hostname: '" + value + "'", e);
+            }
         } else {
-            return hostname;
+            return RbelHostname.builder()
+                .hostname(value)
+                .build();
         }
     }
 
@@ -33,10 +43,24 @@ public class RbelHostname {
             } else if ("https".equals(uri.getScheme())) {
                 return new RbelHostname(uri.getHost(), 443);
             } else {
-                throw new RbelConversionException("Could not parse Hostname from '"+url+"'");
+                throw new RbelConversionException("Could not parse Hostname from '" + url + "'");
             }
         } catch (Exception e) {
-            throw new RbelConversionException("Could not parse Hostname from '"+url+"'");
+            throw new RbelConversionException("Could not parse Hostname from '" + url + "'");
+        }
+    }
+
+    public String toString() {
+        if (port > 0) {
+            return hostname + ":" + port;
+        } else {
+            return hostname;
+        }
+    }
+
+    private static class RbelHostnameFormatException extends RuntimeException {
+        public RbelHostnameFormatException(String s, Exception e) {
+            super(s, e);
         }
     }
 }

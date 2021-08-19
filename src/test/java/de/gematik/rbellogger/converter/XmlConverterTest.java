@@ -112,7 +112,7 @@ public class XmlConverterTest {
 
         assertThat(rbelPathResult).hasSize(1);
         assertThat(rbelPathResult.get(0).getRawStringContent().trim())
-            .isEqualTo("\"openid\"");
+            .isEqualTo("openid");
     }
 
     @Test

@@ -2,11 +2,14 @@ package de.gematik.rbellogger.util;
 
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelJsonFacet;
+import de.gematik.rbellogger.data.facet.RbelNestedFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
+import lombok.RequiredArgsConstructor;
+
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class RbelPathExecutor {
@@ -38,7 +41,21 @@ public class RbelPathExecutor {
                 .distinct()
                 .collect(Collectors.toList());
         }
-        return candidates;
+
+        return candidates.stream()
+            .map(this::descendToContentIfJsonChild)
+            .collect(Collectors.toList());
+    }
+
+    private RbelElement descendToContentIfJsonChild(RbelElement rbelElement) {
+        if (rbelElement.hasFacet(RbelJsonFacet.class)
+            && rbelElement.hasFacet(RbelNestedFacet.class)) {
+            return rbelElement.getFacet(RbelNestedFacet.class)
+                .map(RbelNestedFacet::getNestedElement)
+                .get();
+        } else {
+            return rbelElement;
+        }
     }
 
     private List<? extends RbelElement> resolveRbelPathElement(final String key, final RbelElement element) {

@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.converter;
 
+import de.gematik.rbellogger.converter.listener.RbelFileAppenderPlugin;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
@@ -152,7 +153,7 @@ public class RbelConverter {
         return parseMessage(rbelHttpMessage, sender, recipient);
     }
 
-    public RbelElement parseMessage(final RbelElement rbelElement, RbelHostname sender, RbelHostname recipient) {
+    public RbelElement parseMessage(final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isEmpty()
                 && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
             throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "
@@ -178,7 +179,7 @@ public class RbelConverter {
                             .build());
         }
         rbelElement.addFacet(RbelTcpIpMessageFacet.builder()
-                .receiver(RbelElement.wrap(null, rbelElement, recipient))
+                .receiver(RbelElement.wrap(null, rbelElement, receiver))
                 .sender(RbelElement.wrap(null, rbelElement, sender))
                 .sequenceNumber(messageSequenceNumber++)
                 .build());
@@ -186,5 +187,10 @@ public class RbelConverter {
         rbelElement.triggerPostConversionListener(this);
         messageHistory.add(rbelElement);
         return rbelElement;
+    }
+
+    public RbelConverter addPostConversionListener(RbelConverterPlugin postConversionListener) {
+        postConversionListeners.add(postConversionListener);
+        return this;
     }
 }
