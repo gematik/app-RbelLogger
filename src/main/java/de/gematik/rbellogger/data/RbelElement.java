@@ -71,7 +71,7 @@ public class RbelElement {
             .findFirst();
     }
 
-    public <T> boolean hasFacet(Class<T> clazz) {
+    public <T extends RbelFacet> boolean hasFacet(Class<T> clazz) {
         return getFacet(clazz).isPresent();
     }
 

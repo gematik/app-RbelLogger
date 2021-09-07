@@ -5,6 +5,7 @@ import de.gematik.rbellogger.converter.RbelAsn1Converter;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
+import de.gematik.rbellogger.converter.RbelX5cKeyReader;
 import de.gematik.rbellogger.converter.listener.RbelFileAppenderPlugin;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
@@ -36,14 +37,8 @@ public class RbelLogger {
         final RbelConverter rbelConverter = RbelConverter.builder()
             .rbelKeyManager(new RbelKeyManager())
             .build();
-/*TODO
-        rbelConverter.registerListener(RbelElement.class, (el, conv) -> {
-            if (el.getRbelMessage() == null && el.getParentNode() != null) {
-                el.setRbelMessage(el.getParentNode().getRbelMessage());
-            }
-        });
-        rbelConverter.registerListener(RbelMapElement.class, new RbelX5cKeyReader());
- */
+
+        rbelConverter.registerListener(new RbelX5cKeyReader());
         rbelConverter.getPostConversionListeners().addAll(configuration.getPostConversionListener());
         if (configuration.getPreConversionMappers() != null) {
             configuration.getPreConversionMappers().entrySet().stream()

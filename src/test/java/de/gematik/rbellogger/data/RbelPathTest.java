@@ -116,7 +116,7 @@ public class RbelPathTest {
     @Test
     public void findAllMembers() throws IOException {
         assertThat(convertedMessage.findRbelPathMembers("$..*"))
-            .hasSize(193);
+            .hasSize(168);
 
         FileUtils.writeStringToFile(new File("target/jsonNested.html"),
             RbelHtmlRenderer.render(List.of(convertedMessage)));
@@ -141,5 +141,17 @@ public class RbelPathTest {
     public void findSingleElementWithMultipleReturns_expectException() {
         assertThatThrownBy(() -> convertedMessage.findElement("$..*"))
             .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    public void eliminateContentInRbelPathResult() throws IOException {
+        final String challengeMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/getChallenge.curl");
+
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(challengeMessage.getBytes(), null, null);
+
+        assertThat(convertedMessage.findElement("$.body.challenge.signature").get())
+            .isSameAs(convertedMessage.findElement("$.body.challenge.content.signature").get());
     }
 }

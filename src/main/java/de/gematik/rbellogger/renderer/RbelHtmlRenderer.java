@@ -134,24 +134,14 @@ public class RbelHtmlRenderer {
         return performRendering(elements);
     }
 
-    private String performElementToTextConversion(final RbelElement el, final Optional<String> key) {
-        return key
-            .flatMap(keyValue -> rbelValueShader.shadeValue(el, key))
-            .or(() -> Optional.ofNullable(el)
-                .filter(Objects::nonNull)
-                .map(RbelElement::getRawStringContent)
-                .filter(Objects::nonNull)
-                .map(str -> str.replace("\n", "<br/>")))
-            .orElse("");
-    }
-
     @SneakyThrows
     private String performRendering(final List<RbelElement> elements) {
         RbelHtmlRenderingToolkit renderingToolkit = new RbelHtmlRenderingToolkit(this);
 
-        renderingToolkit.initializeElementIndexMap(elements);
+        final List effectiveElementList = new ArrayList(elements);
+        renderingToolkit.initializeElementIndexMap(effectiveElementList);
 
-        return renderingToolkit.renderDocument(elements);
+        return renderingToolkit.renderDocument(effectiveElementList);
     }
 
     public Optional<ContainerTag> convert(final RbelElement element, final Optional<String> key,

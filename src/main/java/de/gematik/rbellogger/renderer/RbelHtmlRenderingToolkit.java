@@ -158,9 +158,7 @@ public class RbelHtmlRenderingToolkit {
 
     public void initializeElementIndexMap(final List<RbelElement> messages) {
         IntStream.range(0, messages.size())
-            .forEach(i -> {
-                messageIndices.put(messages.get(i).getUuid(), String.valueOf(i + 1));
-            });
+            .forEach(i -> messageIndices.put(messages.get(i).getUuid(), String.valueOf(i + 1)));
     }
 
     public DomContent menuTab(final RbelElement rbelElement) {

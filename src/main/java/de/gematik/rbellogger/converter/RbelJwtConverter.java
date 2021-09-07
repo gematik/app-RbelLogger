@@ -42,6 +42,9 @@ public class RbelJwtConverter implements RbelConverterPlugin {
     @Override
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         try {
+//            if (rbelElement.getRawStringContent().startsWith("\"")) {
+//                return;
+//            }
             final JsonWebSignature jsonWebSignature = initializeJws(rbelElement);
 
             final RbelElement headerElement = converter.convertElement(

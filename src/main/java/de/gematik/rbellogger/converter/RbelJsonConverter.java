@@ -77,7 +77,6 @@ public class RbelJsonConverter implements RbelConverterPlugin {
                 elementList.add(newChild);
             }
         } else if (jsonElement.isJsonPrimitive()) {
-            context.convertElement(parentElement);
             if (jsonElement.getAsJsonPrimitive().isString()) {
                 addFacetAndConvertNestedElement(parentElement, jsonElement.getAsString(), context);
             } else if (jsonElement.getAsJsonPrimitive().isNumber()) {

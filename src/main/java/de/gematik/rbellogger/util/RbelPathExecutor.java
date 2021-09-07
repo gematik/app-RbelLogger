@@ -4,6 +4,7 @@ import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.data.facet.RbelNestedFacet;
+import de.gematik.rbellogger.data.facet.RbelValueFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import lombok.RequiredArgsConstructor;
 
@@ -38,23 +39,26 @@ public class RbelPathExecutor {
             candidates = candidates.stream()
                 .map(element -> resolveRbelPathElement(key, element))
                 .flatMap(List::stream)
+                .map(this::descendToContentIfJsonChild)
+                .flatMap(List::stream)
                 .distinct()
-                .collect(Collectors.toList());
+                .collect(Collectors.toUnmodifiableList());
         }
 
         return candidates.stream()
-            .map(this::descendToContentIfJsonChild)
-            .collect(Collectors.toList());
+            .filter(el -> !(el.hasFacet(RbelJsonFacet.class) && el.hasFacet(RbelNestedFacet.class)))
+            .collect(Collectors.toUnmodifiableList());
     }
 
-    private RbelElement descendToContentIfJsonChild(RbelElement rbelElement) {
+    private List<RbelElement> descendToContentIfJsonChild(RbelElement rbelElement) {
         if (rbelElement.hasFacet(RbelJsonFacet.class)
             && rbelElement.hasFacet(RbelNestedFacet.class)) {
-            return rbelElement.getFacet(RbelNestedFacet.class)
-                .map(RbelNestedFacet::getNestedElement)
-                .get();
+            return List.of(rbelElement.getFacet(RbelNestedFacet.class)
+                    .map(RbelNestedFacet::getNestedElement)
+                    .get(),
+                rbelElement);
         } else {
-            return rbelElement;
+            return List.of(rbelElement);
         }
     }
 
