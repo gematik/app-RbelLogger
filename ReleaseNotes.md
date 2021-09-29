@@ -1,3 +1,6 @@
+# Release 0.12.0
+* Clear converters added
+
 # Release 0.11.0
 * RbelPath descends more robustly into Value-Facets
 * ConcurrentModification-Bug in HTML Rendering fixed

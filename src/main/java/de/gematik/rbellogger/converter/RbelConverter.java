@@ -193,4 +193,8 @@ public class RbelConverter {
         postConversionListeners.add(postConversionListener);
         return this;
     }
+
+    public void removeAllConverterPlugins() {
+        converterPlugins.clear();
+    }
 }
