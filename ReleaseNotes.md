@@ -1,3 +1,6 @@
+# Release 0.13.0
+* Sequence-Numbers are now consistent
+
 # Release 0.12.0
 * Clear converters added
 

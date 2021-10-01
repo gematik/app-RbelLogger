@@ -16,7 +16,6 @@
 
 package de.gematik.rbellogger.converter;
 
-import de.gematik.rbellogger.converter.listener.RbelFileAppenderPlugin;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
@@ -51,22 +50,22 @@ public class RbelConverter {
     private final RbelValueShader rbelValueShader = new RbelValueShader();
     private final List<RbelConverterPlugin> postConversionListeners = new ArrayList<>();
     private final Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
-            = new HashMap<>();
+        = new HashMap<>();
     private final List<RbelConverterPlugin> converterPlugins = new ArrayList<>(List.of(
-            new RbelBase64JsonConverter(),
-            new RbelHttpResponseConverter(),
-            new RbelHttpRequestConverter(),
-            new RbelJwtConverter(),
-            new RbelHttpFormDataConverter(),
-            new RbelJweConverter(),
-            new RbelErpVauDecrpytionConverter(),
-            new RbelUriConverter(),
-            new RbelBearerTokenConverter(),
-            new RbelVauEpaConverter(),
-            new RbelXmlConverter(),
-            new RbelJsonConverter(),
-            new RbelVauKeyDeriver(),
-            new RbelMtomConverter()
+        new RbelBase64JsonConverter(),
+        new RbelHttpResponseConverter(),
+        new RbelHttpRequestConverter(),
+        new RbelJwtConverter(),
+        new RbelHttpFormDataConverter(),
+        new RbelJweConverter(),
+        new RbelErpVauDecrpytionConverter(),
+        new RbelUriConverter(),
+        new RbelBearerTokenConverter(),
+        new RbelVauEpaConverter(),
+        new RbelXmlConverter(),
+        new RbelJsonConverter(),
+        new RbelVauKeyDeriver(),
+        new RbelMtomConverter()
     ));
     @Builder.Default
     private long messageSequenceNumber = 0;
@@ -77,16 +76,16 @@ public class RbelConverter {
 
     public RbelElement convertElement(final byte[] input, RbelElement parentNode) {
         return convertElement(RbelElement.builder()
-                .parentNode(parentNode)
-                .rawContent(input)
-                .build());
+            .parentNode(parentNode)
+            .rawContent(input)
+            .build());
     }
 
     public RbelElement convertElement(final String input, RbelElement parentNode) {
         return convertElement(RbelElement.builder()
-                .parentNode(parentNode)
-                .rawContent(input.getBytes())
-                .build());
+            .parentNode(parentNode)
+            .rawContent(input.getBytes())
+            .build());
     }
 
     public RbelElement convertElement(final RbelElement rawInput) {
@@ -102,8 +101,8 @@ public class RbelConverter {
         final List<RbelElement> messageHistory = getMessageHistory();
         for (int i = messageHistory.size() - 1; i >= 0; i--) {
             if (this.messageHistory.get(i)
-                    .getFacet(RbelHttpRequestFacet.class)
-                    .isPresent()) {
+                .getFacet(RbelHttpRequestFacet.class)
+                .isPresent()) {
                 return this.messageHistory.get(i);
             }
         }
@@ -113,10 +112,10 @@ public class RbelConverter {
     public RbelElement filterInputThroughPreConversionMappers(final RbelElement input) {
         RbelElement value = input;
         for (BiFunction<RbelElement, RbelConverter, RbelElement> mapper : preConversionMappers.entrySet().stream()
-                .filter(entry -> input.getClass().isAssignableFrom(entry.getKey()))
-                .map(Entry::getValue)
-                .flatMap(List::stream)
-                .collect(Collectors.toList())) {
+            .filter(entry -> input.getClass().isAssignableFrom(entry.getKey()))
+            .map(Entry::getValue)
+            .flatMap(List::stream)
+            .collect(Collectors.toList())) {
             RbelElement newValue = mapper.apply(value, this);
             if (newValue != value) {
                 value = filterInputThroughPreConversionMappers(newValue);
@@ -140,8 +139,8 @@ public class RbelConverter {
     public void registerMapper(Class<? extends RbelElement> clazz,
                                BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
         preConversionMappers
-                .computeIfAbsent(clazz, key -> new ArrayList<>())
-                .add(mapper);
+            .computeIfAbsent(clazz, key -> new ArrayList<>())
+            .add(mapper);
     }
 
     public void addConverter(RbelConverterPlugin converter) {
@@ -155,34 +154,34 @@ public class RbelConverter {
 
     public RbelElement parseMessage(final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isEmpty()
-                && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
+            && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
             throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "
-                    + rbelElement.getFacets().stream().map(Object::getClass).map(Class::getSimpleName).collect(Collectors.toList())
-                    + ". Expected RbelHttpMessage (Rbel can only handle HTTP messages right now)");
+                + rbelElement.getFacets().stream().map(Object::getClass).map(Class::getSimpleName).collect(Collectors.toList())
+                + ". Expected RbelHttpMessage (Rbel can only handle HTTP messages right now)");
         }
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isPresent()) {
             final RbelElement lastRequest = findLastRequest();
             if (lastRequest != null) {
                 rbelElement.addOrReplaceFacet(
-                        rbelElement.getFacet(RbelHttpResponseFacet.class)
-                                .map(RbelHttpResponseFacet::toBuilder)
-                                .orElse(RbelHttpResponseFacet.builder())
-                                .request(lastRequest)
-                                .build());
+                    rbelElement.getFacet(RbelHttpResponseFacet.class)
+                        .map(RbelHttpResponseFacet::toBuilder)
+                        .orElse(RbelHttpResponseFacet.builder())
+                        .request(lastRequest)
+                        .build());
             }
 
             rbelElement.addOrReplaceFacet(
-                    rbelElement.getFacet(RbelHttpResponseFacet.class)
-                            .map(RbelHttpResponseFacet::toBuilder)
-                            .orElse(RbelHttpResponseFacet.builder())
-                            .request(lastRequest)
-                            .build());
+                rbelElement.getFacet(RbelHttpResponseFacet.class)
+                    .map(RbelHttpResponseFacet::toBuilder)
+                    .orElse(RbelHttpResponseFacet.builder())
+                    .request(lastRequest)
+                    .build());
         }
         rbelElement.addFacet(RbelTcpIpMessageFacet.builder()
-                .receiver(RbelElement.wrap(null, rbelElement, receiver))
-                .sender(RbelElement.wrap(null, rbelElement, sender))
-                .sequenceNumber(messageSequenceNumber++)
-                .build());
+            .receiver(RbelElement.wrap(null, rbelElement, receiver))
+            .sender(RbelElement.wrap(null, rbelElement, sender))
+            .sequenceNumber(messageSequenceNumber++)
+            .build());
 
         rbelElement.triggerPostConversionListener(this);
         messageHistory.add(rbelElement);

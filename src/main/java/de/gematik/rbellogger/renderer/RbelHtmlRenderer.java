@@ -138,10 +138,7 @@ public class RbelHtmlRenderer {
     private String performRendering(final List<RbelElement> elements) {
         RbelHtmlRenderingToolkit renderingToolkit = new RbelHtmlRenderingToolkit(this);
 
-        final List effectiveElementList = new ArrayList(elements);
-        renderingToolkit.initializeElementIndexMap(effectiveElementList);
-
-        return renderingToolkit.renderDocument(effectiveElementList);
+        return renderingToolkit.renderDocument(new ArrayList(elements));
     }
 
     public Optional<ContainerTag> convert(final RbelElement element, final Optional<String> key,
