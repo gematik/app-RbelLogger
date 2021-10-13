@@ -150,8 +150,12 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
             } catch (ParseException e) {
                 throw new RbelException("Error during time-conversion of " + asn1, e);
             }
+        } else if (asn1 instanceof ASN1Enumerated) {
+            parentNode.addFacet(RbelValueFacet.builder()
+                .value(((ASN1Enumerated) asn1).getValue())
+                .build());
         } else {
-            throw new RbelAsn1Exception("Unable to convert " + asn1.getClass().getSimpleName() + "!");
+            log.warn("Unable to convert " + asn1.getClass().getSimpleName() + "!");
         }
     }
 

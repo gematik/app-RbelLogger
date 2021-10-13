@@ -1,3 +1,6 @@
+# Release 0.14.0
+* ASN.1 Enumerated can now be parsed. More lenient error handling added.
+
 # Release 0.13.0
 * Sequence-Numbers are now consistent
 

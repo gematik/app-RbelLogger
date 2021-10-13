@@ -67,6 +67,16 @@ public class RbelAsn1ConverterTest {
     }
 
     @Test
+    public void asn1EnumeratedShouldBeParsed() {
+        final RbelElement convertMessage = rbelLogger.getRbelConverter().convertElement("MAMKAVU=", null);
+
+        assertThat(convertMessage.findRbelPathMembers("$.0").get(0).seekValue(BigInteger.class))
+            .get()
+            .extracting(BigInteger::intValueExact)
+            .isEqualTo(85);
+    }
+
+    @Test
     public void testVariousRbelPathInPcap() {
         parseRezepsCapture();
         // check OID
