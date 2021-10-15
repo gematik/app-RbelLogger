@@ -32,14 +32,33 @@ public class RbelHttpRequestConverterTest {
     }
 
     @Test
-    public void doubleHeaderValue() {
+    public void doubleHeaderValueRequest() {
         final RbelElement rbelElement = new RbelElement(("GET /auth/realms/idp/.well-known/openid-configuration HTTP/1.1\r\n"
                 + "User-Agent: Value1\r\n"
                 + "User-Agent: Value2\r\n\r\n").getBytes(StandardCharsets.UTF_8), null);
 
-        new RbelHttpRequestConverter().consumeElement(rbelElement, rbelConverter);
+        rbelConverter.convertElement(rbelElement);
 
-        assertThat(rbelElement.hasFacet(RbelHttpRequestFacet.class)).isTrue();
+        assertThat(rbelElement.findRbelPathMembers("$.header.User-Agent")).hasSize(2);
+        assertThat(rbelElement.findRbelPathMembers("$.header.*").get(0).getRawStringContent())
+            .isEqualTo("Value1");
+        assertThat(rbelElement.findRbelPathMembers("$.header.*").get(1).getRawStringContent())
+            .isEqualTo("Value2");
+    }
+
+    @Test
+    public void doubleHeaderValueResponse() {
+        final RbelElement rbelElement = new RbelElement(("HTTP/1.1 200\r\n"
+                + "User-Agent: Value1\r\n"
+                + "User-Agent: Value2\r\n\r\n").getBytes(StandardCharsets.UTF_8), null);
+
+        rbelConverter.convertElement(rbelElement);
+
+        assertThat(rbelElement.findRbelPathMembers("$.header.User-Agent")).hasSize(2);
+        assertThat(rbelElement.findRbelPathMembers("$.header.*").get(0).getRawStringContent())
+            .isEqualTo("Value1");
+        assertThat(rbelElement.findRbelPathMembers("$.header.*").get(1).getRawStringContent())
+            .isEqualTo("Value2");
     }
 
     @Test

@@ -12,6 +12,8 @@ import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+
+import de.gematik.rbellogger.modifier.RbelModifier;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +28,7 @@ public class RbelLogger {
     private final RbelCapturer rbelCapturer;
     private final RbelValueShader valueShader;
     private final RbelKeyManager rbelKeyManager;
+    private final RbelModifier rbelModifier;
 
     public static RbelLogger build() {
         return build(new RbelConfiguration());
@@ -70,6 +73,7 @@ public class RbelLogger {
             .rbelConverter(rbelConverter)
             .rbelCapturer(configuration.getCapturer())
             .rbelKeyManager(rbelConverter.getRbelKeyManager())
+            .rbelModifier(new RbelModifier(rbelConverter.getRbelKeyManager(), rbelConverter))
             .valueShader(rbelConverter.getRbelValueShader())
             .build();
     }

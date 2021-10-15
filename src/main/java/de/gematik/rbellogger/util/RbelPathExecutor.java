@@ -4,7 +4,6 @@ import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.data.facet.RbelNestedFacet;
-import de.gematik.rbellogger.data.facet.RbelValueFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import lombok.RequiredArgsConstructor;
 

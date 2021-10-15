@@ -191,8 +191,7 @@ public class RbelElement {
     }
 
     public <T extends RbelFacet> T getFacetOrFail(Class<T> facetClass) {
-        return getFacet(facetClass)
-            .orElseThrow();
+        return getFacet(facetClass).orElseThrow();
     }
 
     @Override

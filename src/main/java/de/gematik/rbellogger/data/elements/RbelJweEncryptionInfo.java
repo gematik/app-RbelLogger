@@ -22,7 +22,7 @@ import static j2html.TagCreator.p;
 
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelFacet;
-import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
@@ -40,7 +40,7 @@ import org.apache.commons.lang3.tuple.Pair;
 public class RbelJweEncryptionInfo implements RbelFacet {
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
             @Override
             public boolean checkForRendering(RbelElement element) {
                 return element.hasFacet(RbelJweEncryptionInfo.class);

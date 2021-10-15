@@ -1,7 +1,7 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import de.gematik.rbellogger.util.GenericPrettyPrinter;
@@ -33,7 +33,7 @@ public class RbelAsn1Facet implements RbelFacet {
     );
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
             @Override
             public boolean checkForRendering(RbelElement element) {
                 return element.hasFacet(RbelAsn1Facet.class);

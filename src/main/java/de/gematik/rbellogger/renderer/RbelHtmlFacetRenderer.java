@@ -4,7 +4,7 @@ import de.gematik.rbellogger.data.RbelElement;
 import j2html.tags.ContainerTag;
 import java.util.Optional;
 
-public interface RbelFacetRenderer {
+public interface RbelHtmlFacetRenderer {
 
     boolean checkForRendering(RbelElement element);
 

@@ -24,7 +24,7 @@ import static j2html.TagCreator.pre;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.JsonNoteEntry;
@@ -42,7 +42,7 @@ import lombok.Data;
 public class RbelJsonFacet implements RbelFacet {
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
             @Override
             public boolean checkForRendering(RbelElement element) {
                 return element.hasFacet(RbelJsonFacet.class)

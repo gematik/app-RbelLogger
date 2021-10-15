@@ -1,3 +1,6 @@
+# Release 0.15.0
+* Modifications added
+
 # Release 0.14.0
 * ASN.1 Enumerated can now be parsed. More lenient error handling added.
 

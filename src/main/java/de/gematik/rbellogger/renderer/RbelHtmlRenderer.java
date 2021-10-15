@@ -32,7 +32,6 @@ import org.bouncycastle.util.encoders.Hex;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static j2html.TagCreator.*;
@@ -41,7 +40,7 @@ import static j2html.TagCreator.*;
 @Getter
 public class RbelHtmlRenderer {
 
-    private static final List<RbelFacetRenderer> htmlRenderer = new ArrayList<>();
+    private static final List<RbelHtmlFacetRenderer> htmlRenderer = new ArrayList<>();
     private final RbelValueShader rbelValueShader;
     @Setter
     private boolean renderAsn1Objects = false;
@@ -126,7 +125,7 @@ public class RbelHtmlRenderer {
         );
     }
 
-    public static void registerFacetRenderer(RbelFacetRenderer rbelFacetRenderer) {
+    public static void registerFacetRenderer(RbelHtmlFacetRenderer rbelFacetRenderer) {
         htmlRenderer.add(rbelFacetRenderer);
     }
 

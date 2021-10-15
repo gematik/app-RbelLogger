@@ -7,7 +7,7 @@ Date: Fri, 13 Feb 2021 11:34:34 GMT
 <ns:RegistryResponse status="urn:oasis:names:tc:ebxml-regrep:ResponseStatusType:Failure" xmlns:ns="urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0" xmlns:ns2="urn:oasis:names:tc:ebxml-regrep:xsd:rs:3.0" xmlns:ns3="urn:oasis:names:tc:ebxml-regrep:xsd:query:3.0">
     <ns2:RegistryErrorList>
         foo
-        <ns2:RegistryError errorCode="XDSDuplicateUniqueIdInRegistry" severity="urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Error">
+        <ns2:RegistryError errorCode="XDSDuplicateUniqueIdInRegistry" severity="urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Warning">
             text in element
         </ns2:RegistryError>
         bar

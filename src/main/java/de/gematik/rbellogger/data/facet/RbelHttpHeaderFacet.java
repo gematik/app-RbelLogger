@@ -3,7 +3,7 @@ package de.gematik.rbellogger.data.facet;
 import static j2html.TagCreator.*;
 
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
@@ -15,7 +15,7 @@ import org.apache.commons.lang3.tuple.Pair;
 public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> {
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
             @Override
             public boolean checkForRendering(RbelElement element) {
                 return element.hasFacet(RbelHttpHeaderFacet.class);

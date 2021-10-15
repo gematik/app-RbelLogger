@@ -21,15 +21,15 @@ import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.jexl3.JexlBuilder;
 import org.apache.commons.jexl3.JexlExpression;
 import org.apache.commons.jexl3.MapContext;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Data
@@ -48,7 +48,7 @@ public class RbelJexlExecutor {
 
     public boolean matchesAsJexlExpression(Object element, String jexlExpression, Optional<String> key) {
         try {
-            final JexlExpression expression = buildExpression(jexlExpression);
+            final JexlExpression expression = buildExpression(evaluateRbelPathExpressions(jexlExpression, element));
             final MapContext mapContext = buildJexlMapContext(element, key);
 
             final Boolean result = Optional.of(expression.evaluate(mapContext))
@@ -74,6 +74,20 @@ public class RbelJexlExecutor {
         }
     }
 
+    private String evaluateRbelPathExpressions(String jexlExpression, Object element) {
+        if (!(element instanceof RbelElement)
+            || !jexlExpression.contains("$.")) {
+            return jexlExpression;
+        }
+        String rbelPath = Arrays.stream(jexlExpression.split(" "))
+            .filter(str -> str.startsWith("$.")
+                && str.length() > 2)
+            .findAny().orElseThrow();
+        return jexlExpression.replace(rbelPath, "\"" + ((RbelElement) element).findElement(rbelPath)
+            .map(RbelElement::getRawStringContent)
+            .orElse("") + "\"");
+    }
+
     private JexlExpression buildExpression(String jexlExpression) {
         final int hashCode = jexlExpression.hashCode();
         if (JEXL_EXPRESSION_CACHE.containsKey(hashCode)) {
@@ -94,9 +108,22 @@ public class RbelJexlExecutor {
         mapContext.set("message", message
             .map(this::convertToJexlMessage)
             .orElse(null));
-        mapContext.set("request", tryToFindRequestMessage(element)
-            .map(this::convertToJexlMessage)
-            .orElse(null));
+
+        final Optional<RbelElement> requestMessage = tryToFindRequestMessage(element);
+        if (requestMessage
+            .filter(msg -> message.isPresent())
+            .map(msg -> message.get() == msg)
+            .orElse(false)) {
+            mapContext.set("request", mapContext.get("message"));
+            mapContext.set("isRequest", true);
+            mapContext.set("isResponse", false);
+        } else {
+            mapContext.set("request", requestMessage
+                .map(this::convertToJexlMessage)
+                .orElse(null));
+            mapContext.set("isRequest", false);
+            mapContext.set("isResponse", true);
+        }
         mapContext.set("facets", Optional.ofNullable(element)
             .filter(RbelElement.class::isInstance)
             .map(RbelElement.class::cast)
@@ -162,7 +189,8 @@ public class RbelJexlExecutor {
                 .map(RbelHttpHeaderFacet::entrySet)
                 .stream()
                 .flatMap(Set::stream)
-                .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getRawStringContent())))
+                .collect(Collectors.groupingBy(e -> e.getKey(),
+                    Collectors.mapping(e -> e.getValue().getRawStringContent(), Collectors.toList()))))
             .build();
     }
 
@@ -210,7 +238,7 @@ public class RbelJexlExecutor {
         public final String url;
         public final boolean request;
         public final boolean response;
-        public final Map<String, String> headers;
+        public final Map<String, List<String>> headers;
         public final String bodyAsString;
         public final RbelElement body;
     }

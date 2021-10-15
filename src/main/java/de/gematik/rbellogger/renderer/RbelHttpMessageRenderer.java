@@ -15,7 +15,7 @@ import de.gematik.rbellogger.exceptions.RbelRenderingException;
 import j2html.tags.ContainerTag;
 import java.util.Optional;
 
-public class RbelHttpMessageRenderer implements RbelFacetRenderer {
+public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
 
     public static ContainerTag buildAddressInfo(final RbelElement element) {
         if (!element.hasFacet(RbelTcpIpMessageFacet.class)) {

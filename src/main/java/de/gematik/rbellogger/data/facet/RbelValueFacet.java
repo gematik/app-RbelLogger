@@ -19,7 +19,7 @@ package de.gematik.rbellogger.data.facet;
 import static j2html.TagCreator.p;
 
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.renderer.RbelFacetRenderer;
+import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
@@ -37,7 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class RbelValueFacet<T> implements RbelFacet {
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelFacetRenderer() {
+        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
             @Override
             public boolean checkForRendering(RbelElement element) {
                 return element.hasFacet(RbelValueFacet.class)
