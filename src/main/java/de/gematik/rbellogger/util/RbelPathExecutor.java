@@ -6,12 +6,17 @@ import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.data.facet.RbelNestedFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_RBEL_PATH_DEBUGGING;
+import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH;
+
 @RequiredArgsConstructor
+@Slf4j
 public class RbelPathExecutor {
 
     private final RbelElement rbelElement;
@@ -34,7 +39,19 @@ public class RbelPathExecutor {
         }
         final List<String> keys = List.of(rbelPath.substring(2).split("\\.(?![^\\(]*\\))"));
         List<RbelElement> candidates = List.of(rbelElement);
+        if (ACTIVATE_RBEL_PATH_DEBUGGING) {
+            log.info("Executing RBelPath {} into root-element (limited view to {} levels)\n{}",
+                rbelPath, Math.max(RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH, keys.size()),
+                rbelElement.printTreeStructure(Math.max(RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH, keys.size()), false));
+        }
         for (String key : keys) {
+            if (ACTIVATE_RBEL_PATH_DEBUGGING) {
+                log.info("Resolving key '{}' with candidates {}", key, candidates.stream()
+                    .flatMap(el -> el.getChildNodesWithKey().stream())
+                    .map(Entry::getKey)
+                    .collect(Collectors.toList()));
+            }
+            List<RbelElement> lastIterationCandidates = candidates;
             candidates = candidates.stream()
                 .map(element -> resolveRbelPathElement(key, element))
                 .flatMap(List::stream)
@@ -42,11 +59,22 @@ public class RbelPathExecutor {
                 .flatMap(List::stream)
                 .distinct()
                 .collect(Collectors.toUnmodifiableList());
+            if (candidates.isEmpty() && ACTIVATE_RBEL_PATH_DEBUGGING) {
+                log.warn("No more candidate-nodes in RbelPath execution! Last batch of candidates had {} elements: \n {}",
+                    lastIterationCandidates.size(),
+                    lastIterationCandidates.stream()
+                    .map(el -> el.printTreeStructure(Integer.MAX_VALUE, true))
+                    .collect(Collectors.joining("\n")));
+            }
         }
 
-        return candidates.stream()
+        final List<RbelElement> resultList = candidates.stream()
             .filter(el -> !(el.hasFacet(RbelJsonFacet.class) && el.hasFacet(RbelNestedFacet.class)))
             .collect(Collectors.toUnmodifiableList());
+        if (ACTIVATE_RBEL_PATH_DEBUGGING) {
+            log.info("Returning {} result elements for RbelPath {}", resultList.size(), rbelPath);
+        }
+        return resultList;
     }
 
     private List<RbelElement> descendToContentIfJsonChild(RbelElement rbelElement) {

@@ -7,7 +7,15 @@ import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJweFacet;
 import de.gematik.rbellogger.data.facet.RbelUriFacet;
 import de.gematik.rbellogger.data.facet.RbelUriParameterFacet;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.http.client.utils.URIUtils;
+import org.eclipse.jetty.util.URIUtil;
 import org.junit.jupiter.api.Test;
 
 public class RbelUriConverterTest {
@@ -57,14 +65,17 @@ public class RbelUriConverterTest {
     @Test
     public void urlEscapedParameterValues_shouldContainOriginalContent() {
         final RbelElement rbelElement = RbelLogger.build().getRbelConverter().convertElement(
-            "/sign_response?scope=pairing%20openid&response_type=code&code_challenge_method=S256&redirect_uri=http%3A%2F%2Fredirect.gematik.de%2Ferezept&state=Hl6TLS1LjhFs3AUy&nonce=np3RhlBn1Epw5fhRc9v6&client_id=eRezeptApp&code_challenge=aQswmTcEbHi6TDrSSq9MgfpqyixHcbe581MbaFlYkpU",
+            "/endpoint?scope=pairing%20openid&foo=bar+schmar",
             null);
 
-        final RbelElement scope = rbelElement.getFirst("scope").get();
-        assertThat(scope.getRawStringContent())
+        assertThat(rbelElement.findElement("$.scope").get().getRawStringContent())
             .isEqualTo("scope=pairing%20openid");
-        assertThat(scope.getFirst("value").get().getRawStringContent())
+        assertThat(rbelElement.findElement("$.scope.value").get().getRawStringContent())
             .isEqualTo("pairing openid");
+        assertThat(rbelElement.findElement("$.foo").get().getRawStringContent())
+            .isEqualTo("foo=bar+schmar");
+        assertThat(rbelElement.findElement("$.foo.value").get().getRawStringContent())
+            .isEqualTo("bar schmar");
     }
 
     @Test
@@ -78,5 +89,26 @@ public class RbelUriConverterTest {
             .isEqualTo("http://redirect.gematik.de/foo/bar");
         assertThat(rbelElement.getFacetOrFail(RbelUriFacet.class).getQueryParameters())
             .isEmpty();
+    }
+
+    @Test
+    public void longSpecialCaseParameter() throws UnsupportedEncodingException {
+        final String sourceParameter = RandomStringUtils.randomPrint(3000);
+        String specialCaseParameter = URLEncoder.encode(sourceParameter,
+            StandardCharsets.UTF_8.name());
+
+        final String basePath = "http://redirect.gematik.de/foo/bar";
+        final String url = basePath + "?foo=" + specialCaseParameter + "&blub=blab";
+        final RbelElement rbelElement = RbelLogger.build().getRbelConverter()
+            .convertElement(url, null);
+
+        assertThat(rbelElement.hasFacet(RbelUriFacet.class))
+            .isTrue();
+        assertThat(rbelElement.getFacetOrFail(RbelUriFacet.class).getBasicPath().getRawStringContent())
+            .isEqualTo(basePath);
+        assertThat(rbelElement.findElement("$.foo.value").get().getRawStringContent())
+            .isEqualTo(sourceParameter);
+        assertThat(rbelElement.findElement("$.blub.value").get().getRawStringContent())
+            .isEqualTo("blab");
     }
 }

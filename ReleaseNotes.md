@@ -1,3 +1,8 @@
+# Release 0.16.0
+* RbelPath-Debugging added
+* RbelOptions added (centralizes global configuration)
+* Query-Parameters are now parsed more resilient
+
 # Release 0.15.0
 * Modifications added
 

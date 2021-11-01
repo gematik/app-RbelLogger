@@ -179,6 +179,25 @@ If `message` is a request, then `message` will be returned.
 * `content` is a string describing the content of `element`. The actual representation 
 dependens heavily on the type of `element`.
 
+### Debugging Rbel-Expressions
+
+To help users create RbelPath-Expressions there is a Debug-Functionality which produces 
+log message designed to help. These can be activated by `RbelOptions.activateRbelPathDebugging();`.
+Please note that this is strictly intended for development purposes and will flood the log with quite 
+a lot of messages. Act accordingly!
+
+To get a better feel for a RbelElement (whether it being a complete message or just a part) you can print
+the tree with the `RbelElementTreePrinter`. It brings various options:
+```java
+RbelElementTreePrinter.builder()
+    .rootElement(this) //the target element
+    .printKeys(printKeys) // should the keys for every leaf be printed?
+    .maximumLevels(100) // only descend this far into the three
+    .printContent(true) // should the content of each element be printed?
+    .build()
+    .execute();
+```
+
 ## HTML-Rendering
 
 One of the main features of the RBeL-Logger is the ability to render a captured message flow
@@ -250,6 +269,6 @@ java -jar target/rbellogger-1.0-SNAPSHOT-jar-with-dependencies.jar -pcap src/tes
 
 ### Caveats
 
-Sometimes the nPCAP/Wireshark do not find any network interfaces. In that case see
+Sometimes the nPCAP/Wireshark does not find any network interfaces. In that case see
 https://www.outlookappins.com/windows-10/wireshark-no-interfaces-found/
 Perform the command prompt solution or run wireshark once as admin.

@@ -31,20 +31,13 @@ import org.apache.commons.jexl3.MapContext;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_JEXL_DEBUGGING;
+
 @Slf4j
 @Data
 public class RbelJexlExecutor {
 
     private static final Map<Integer, JexlExpression> JEXL_EXPRESSION_CACHE = new HashMap<>();
-    private static boolean ACTIVATE_JEXL_DEBUGGING = false;
-
-    public static void activateJexlDebugging() {
-        ACTIVATE_JEXL_DEBUGGING = true;
-    }
-
-    public static void deactivateJexlDebugging() {
-        ACTIVATE_JEXL_DEBUGGING = false;
-    }
 
     public boolean matchesAsJexlExpression(Object element, String jexlExpression, Optional<String> key) {
         try {

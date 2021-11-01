@@ -34,7 +34,7 @@ public class RbelX5cKeyReader implements RbelConverterPlugin {
     @Override
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         final List<RbelElement> elementList = rbelElement
-            .findRbelPathMembers("$.x5c").stream()
+            .getAll("x5c").stream()
             .filter(el -> el.hasFacet(RbelJsonFacet.class))
             .collect(Collectors.toList());
         for (RbelElement x5cElement : elementList) {
@@ -62,7 +62,8 @@ public class RbelX5cKeyReader implements RbelConverterPlugin {
     }
 
     private Optional<byte[]> getX509Certificate(RbelElement x5cElement) {
-        return x5cElement.findElement("$.0")
+        return x5cElement.getFirst("0")
+            .flatMap(el -> el.getFirst("content"))
             .map(RbelElement::getRawStringContent)
             .map(Base64.getDecoder()::decode);
     }

@@ -1,6 +1,7 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ public class RbelJexlTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        RbelJexlExecutor.activateJexlDebugging();
+        RbelOptions.activateJexlDebugging();
 
         response = RbelLogger.build().getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks

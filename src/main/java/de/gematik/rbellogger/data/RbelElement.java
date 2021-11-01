@@ -20,12 +20,14 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelValueFacet;
+import de.gematik.rbellogger.data.util.RbelElementTreePrinter;
 import de.gematik.rbellogger.util.RbelException;
 import de.gematik.rbellogger.util.RbelPathExecutor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.*;
@@ -247,6 +249,22 @@ public class RbelElement {
         }
         throw new RbelPathNotUniqueException(
             "RbelPath '" + rbelPath + "' is not unique! Found " + resultList.size() + " elements, expected only one!");
+    }
+
+    public String printTreeStructure() {
+        return RbelElementTreePrinter.builder()
+            .rootElement(this)
+            .build()
+            .execute();
+    }
+
+    public String printTreeStructure(int maximumLevels, boolean printKeys) {
+        return RbelElementTreePrinter.builder()
+            .rootElement(this)
+            .printKeys(printKeys)
+            .maximumLevels(maximumLevels)
+            .build()
+            .execute();
     }
 
     private class RbelPathNotUniqueException extends RuntimeException {

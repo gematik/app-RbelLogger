@@ -1,15 +1,21 @@
 package de.gematik.rbellogger.data;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import de.gematik.rbellogger.RbelLogger;
-import de.gematik.rbellogger.converter.RbelJexlExecutor;
+import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import de.gematik.rbellogger.util.RbelPathExecutor;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
@@ -22,7 +28,7 @@ public class RbelPathTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        RbelJexlExecutor.activateJexlDebugging();
+        RbelOptions.activateRbelPathDebugging();
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/rbelPath.curl");
 
@@ -153,5 +159,87 @@ public class RbelPathTest {
 
         assertThat(convertedMessage.findElement("$.body.challenge.signature").get())
             .isSameAs(convertedMessage.findElement("$.body.challenge.content.signature").get());
+    }
+
+    @Test
+    public void successfulRequest_expectOnlyInitialTree() {
+        final ListAppender<ILoggingEvent> listAppender = listFollowingLoggingEventsForClass(RbelPathExecutor.class);
+        convertedMessage.findRbelPathMembers("$.body.header.kid");
+
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getMessage)
+            .filter(str -> str.startsWith("Resolving key")))
+            .hasSize(3);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .filter(str -> str.startsWith("Returning 1 result elements")))
+            .hasSize(1);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .filter(str -> str.contains("discSig")))
+            .hasSize(1);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .filter(str -> str.contains("$.body.header.kid")))
+            .hasSize(2);
+    }
+
+    @Test
+    public void successfulLongerRequest_treeSizeShouldBeAccordingly() {
+        final ListAppender<ILoggingEvent> listAppender = listFollowingLoggingEventsForClass(RbelPathExecutor.class);
+        convertedMessage.findRbelPathMembers("$.body.body.acr_values_supported.0.content");
+
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .map(str -> str.split("http://localhost:8080/idpEnc/jwks.json").length - 1)
+            .sorted(Comparator.reverseOrder())
+            .findFirst().get())
+            .isEqualTo(3);
+    }
+
+    @Test
+    public void unsuccessfullyRequest_expectTreeOfLastSuccessfulPosition() {
+        final ListAppender<ILoggingEvent> listAppender = listFollowingLoggingEventsForClass(RbelPathExecutor.class);
+        convertedMessage.findRbelPathMembers("$.body.body.acr_values_supported.content");
+
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getMessage)
+            .filter(str -> str.startsWith("No more candidate-nodes in RbelPath execution!")))
+            .hasSize(1);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .filter(str -> str.contains("[$.body.body.acr_values_supported]")))
+            .hasSize(1);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .map(str -> str.split("\\[0m\\n\\n").length)
+            .sorted(Comparator.reverseOrder())
+            .findFirst().get())
+            .isEqualTo(1);
+    }
+
+    @Test
+    public void unsuccessfulRequestWithAmbiguousFinalPosition_expectTreeOfAllCandidates() {
+        final ListAppender<ILoggingEvent> listAppender = listFollowingLoggingEventsForClass(RbelPathExecutor.class);
+        convertedMessage.findRbelPathMembers("$.body.body.*.foobar");
+
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getMessage)
+            .filter(str -> str.startsWith("No more candidate-nodes in RbelPath execution!")))
+            .hasSize(1);
+        assertThat(listAppender.list.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .map(str -> str.split("\\n\\n").length)
+            .sorted(Comparator.reverseOrder())
+            .findFirst().get())
+            .isEqualTo(34);
+    }
+
+    private ListAppender<ILoggingEvent> listFollowingLoggingEventsForClass(Class<RbelPathExecutor> clazz) {
+        Logger fooLogger = (Logger) LoggerFactory.getLogger(clazz);
+        final ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        fooLogger.addAppender(listAppender);
+        return listAppender;
     }
 }

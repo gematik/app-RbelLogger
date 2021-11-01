@@ -3,6 +3,7 @@ package de.gematik.rbellogger.capture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
@@ -118,7 +119,7 @@ public class PcapCaptureTest {
     @SneakyThrows
     @Test
     public void readPcapFile_shouldParseMessages() {
-        RbelJexlExecutor.activateJexlDebugging();
+        RbelOptions.activateJexlDebugging();
         final PCapCapture pCapCapture = PCapCapture.builder()
             .pcapFile("src/test/resources/deregisterPairing.pcap")
             .build();

@@ -1,23 +1,21 @@
 package de.gematik.rbellogger.modifier;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.With;
+import lombok.*;
 
 @Data
-@RequiredArgsConstructor
-@Builder(toBuilder = true)
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class RbelModificationDescription {
 
     @With
-    private final String name;
+    private String name;
     @With
-    private final String condition;
+    private String condition;
     @With
-    private final String targetElement;
+    private String targetElement;
     @With
-    private final String replaceWith;
+    private String replaceWith;
     @With
-    private final String regexFilter;
+    private String regexFilter;
 }

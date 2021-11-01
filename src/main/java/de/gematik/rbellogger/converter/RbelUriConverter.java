@@ -4,39 +4,43 @@ import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelUriFacet;
 import de.gematik.rbellogger.data.facet.RbelUriFacet.RbelUriFacetBuilder;
 import de.gematik.rbellogger.data.facet.RbelUriParameterFacet;
+import org.apache.commons.lang3.StringUtils;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.StringUtils;
 
 public class RbelUriConverter implements RbelConverterPlugin {
 
     public List<RbelElement> extractParameterMap(final URI uri, final RbelConverter context,
-        String originalContent, RbelElement parentNode) {
+                                                 String originalContent, RbelElement parentNode) {
         if (uri.getQuery() == null) {
             return List.of();
         }
 
-        final Map<String, String> rawStringMap = Stream.of(originalContent.split("\\?")[1].split("\\&"))
+        return Stream.of(originalContent.split("\\?")[1].split("\\&"))
             .filter(StringUtils::isNotEmpty)
-            .collect(Collectors.toMap(param -> param.split("\\=")[0], Function.identity()));
-
-        return Stream.of(uri.getQuery().split("&"))
-            .filter(param -> param.contains("="))
-            .map(param -> param.split("=", 2))
-            .map(array -> {
-                    RbelElement paramPair = new RbelElement(rawStringMap.get(array[0]).getBytes(), parentNode);
+            .map(param -> {
+                RbelElement paramPair = new RbelElement(param.getBytes(), parentNode);
+                final String[] splitParams = param.split("\\=", 2);
+                if (splitParams.length == 1) {
                     paramPair.addFacet(RbelUriParameterFacet.builder()
-                        .key(RbelElement.wrap(paramPair, array[0]))
-                        .value(context.convertElement(array[1].getBytes(), paramPair))
+                        .key(RbelElement.wrap(paramPair, splitParams[0]))
+                        .value(context.convertElement("", paramPair))
                         .build());
-                    return paramPair;
+                } else {
+                    paramPair.addFacet(RbelUriParameterFacet.builder()
+                        .key(RbelElement.wrap(paramPair, splitParams[0]))
+                        .value(context.convertElement(
+                            URLDecoder.decode(splitParams[1], StandardCharsets.UTF_8).getBytes(), paramPair))
+                        .build());
                 }
-            )
+                return paramPair;
+            })
             .collect(Collectors.toList());
     }
 

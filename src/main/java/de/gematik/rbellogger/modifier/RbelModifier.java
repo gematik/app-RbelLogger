@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -21,7 +20,9 @@ public class RbelModifier {
     private final List<RbelElementWriter> elementWriterList = new ArrayList<>(List.of(
         new RbelHttpHeaderWriter(),
         new RbelHttpResponseWriter(),
-        new RbelJsonWriter()
+        new RbelJsonWriter(),
+        new RbelUriWriter(),
+        new RbelUriParameterWriter()
     ));
     private final Map<String, RbelModificationDescription> modificationsMap = new HashMap<>();
 
@@ -29,7 +30,12 @@ public class RbelModifier {
         RbelElement modifiedMessage = message;
         for (RbelModificationDescription modification : modificationsMap.values()) {
             if (shouldBeApplied(modification, message)) {
-                modifiedMessage = rbelConverter.convertElement(applyModification(modification, modifiedMessage), null);
+                final Optional<RbelElement> targetOptional = modifiedMessage.findElement(modification.getTargetElement());
+                if (targetOptional.isEmpty()) {
+                    continue;
+                }
+
+                modifiedMessage = rbelConverter.convertElement(applyModification(modification, targetOptional.get()), null);
             }
         }
         return modifiedMessage;
@@ -43,10 +49,7 @@ public class RbelModifier {
         return executor.matchesAsJexlExpression(message, modification.getCondition(), Optional.empty());
     }
 
-    private String applyModification(RbelModificationDescription modification, RbelElement message) {
-        RbelElement targetElement = message.findElement(modification.getTargetElement())
-            .orElseThrow(() -> new RbelModificationException("Could not find element " + modification.getTargetElement() + " in message!"));
-
+    private String applyModification(RbelModificationDescription modification, RbelElement targetElement) {
         RbelElement oldTargetElement = targetElement.getParentNode();
         RbelElement oldTargetModifiedChild = targetElement;
         String newContent = applyRegexAndReturnNewContent(targetElement, modification);
@@ -87,7 +90,11 @@ public class RbelModifier {
     }
 
     public void addModification(RbelModificationDescription modificationDescription) {
-        modificationsMap.put(modificationDescription.getName(), modificationDescription);
+        if (StringUtils.isEmpty(modificationDescription.getName())) {
+            modificationsMap.put(UUID.randomUUID().toString(), modificationDescription);
+        } else {
+            modificationsMap.put(modificationDescription.getName(), modificationDescription);
+        }
     }
 
     private class RbelModificationException extends RuntimeException {

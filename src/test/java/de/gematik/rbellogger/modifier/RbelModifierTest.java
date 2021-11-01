@@ -1,15 +1,20 @@
 package de.gematik.rbellogger.modifier;
 
 import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
@@ -21,7 +26,7 @@ public class RbelModifierTest {
 
     @BeforeEach
     public void initRbelLogger() {
-        RbelJexlExecutor.activateJexlDebugging();
+        RbelOptions.activateJexlDebugging();
         if (rbelLogger == null) {
             rbelLogger = RbelLogger.build();
         }
@@ -159,13 +164,87 @@ public class RbelModifierTest {
                 "urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Error");
     }
 
+    @Test
+    public void targetElementDoesNotExist_modificationShouldConcludeWithoutException() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/getRequest.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.foobar")
+            .replaceWith("novalue")
+            .build());
+
+        modifyMessageAndParseResponse(message);
+    }
+
+    @Test
+    public void multipleModifications_shouldApplyAll() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .name("blub")
+            .targetElement("$.header.Version")
+            .replaceWith("foobar")
+            .build());
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.body.keys.0.kid")
+            .replaceWith("anotherKeyId")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.findElement("$.header.Version")
+            .map(RbelElement::getRawStringContent).get())
+            .isEqualTo("foobar");
+        assertThat(modifiedMessage.findElement("$.body.keys.0.kid")
+
+            .get().getRawStringContent())
+            .isEqualTo("anotherKeyId");
+    }
+
+    @Test
+    public void modifyRequestPath() throws IOException {
+        String specialCaseParameter = RandomStringUtils.randomPrint(300);
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/getRequest.curl",
+            in -> in.replace("?", "?first=parameter&"));
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.path.with.value")
+            .replaceWith("anotherValue")
+            .build());
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$..[?(content=='bar2')]")
+            .replaceWith("bar3")
+            .build());
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+                .targetElement("$.path.noValueJustKey.value")
+                .replaceWith("keyAtLast")
+                .build());
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.path.first.value")
+            .replaceWith(specialCaseParameter)
+            .build());
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.findElement("$.path.with.value")
+            .map(RbelElement::getRawStringContent).get())
+            .isEqualTo("anotherValue");
+        assertThat(modifiedMessage.findElement("$.path")
+            .map(RbelElement::getRawStringContent).get())
+            .contains("foo=bar1")
+            .contains("foo=bar3")
+            .doesNotContain("foo=bar2");
+        assertThat(modifiedMessage.findElement("$.path.first.value")
+            .map(RbelElement::getRawStringContent).get())
+            .contains(specialCaseParameter);
+    }
+
     private RbelElement modifyMessageAndParseResponse(RbelElement message) {
         final RbelElement modifiedMessage = rbelLogger.getRbelModifier().applyModifications(message);
         return modifiedMessage;
     }
 
-    private RbelElement readAndConvertCurlMessage(String fileName) throws IOException {
-        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks(fileName);
+    private RbelElement readAndConvertCurlMessage(String fileName, Function<String, String>... messageMappers) throws IOException {
+        String curlMessage = readCurlFromFileWithCorrectedLineBreaks(fileName);
+        for (Function<String, String> mapper : messageMappers) {
+            curlMessage = mapper.apply(curlMessage);
+        }
         return rbelLogger.getRbelConverter()
             .convertElement(curlMessage, null);
     }
