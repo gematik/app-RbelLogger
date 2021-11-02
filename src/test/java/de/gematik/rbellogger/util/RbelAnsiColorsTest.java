@@ -15,7 +15,8 @@ public class RbelAnsiColorsTest {
         assertThat(WHITE)
             .isEqualTo(RbelAnsiColors.seekColor("wEiSs"))
             .isEqualTo(RbelAnsiColors.seekColor("Weiß"))
-            .isEqualTo(RbelAnsiColors.seekColor("weiss"));
+            .isEqualTo(RbelAnsiColors.seekColor("weiss"))
+            .isEqualTo(RbelAnsiColors.seekColor("white"));
     }
 
     @Test

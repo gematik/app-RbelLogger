@@ -1,3 +1,6 @@
+# Release 0.17.0
+* ANSI Colors Bugfix
+
 # Release 0.16.0
 * RbelPath-Debugging added
 * RbelOptions added (centralizes global configuration)
