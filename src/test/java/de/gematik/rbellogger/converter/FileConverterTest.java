@@ -22,6 +22,7 @@ import de.gematik.rbellogger.captures.RbelFileReaderCapturer;
 import de.gematik.rbellogger.configuration.RbelFileSaveInfo;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 
@@ -63,13 +64,14 @@ public class FileConverterTest {
             .hasSameSizeAs(initialRbelLogger.getMessageHistory());
 
         assertThat(rbelLogger.getMessageHistory().get(0)
-            .getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiverHostname())
+            .getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiver().getFacet(RbelHostnameFacet.class).get().getDomain().getRawStringContent())
             .isEqualTo(initialRbelLogger.getMessageHistory().get(0)
-                .getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiverHostname());
+                .getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiver().getFacet(RbelHostnameFacet.class).get().getDomain().getRawStringContent());
+
         assertThat(rbelLogger.getMessageHistory().get(0)
-            .getFacetOrFail(RbelTcpIpMessageFacet.class).getSenderHostname())
+            .getFacetOrFail(RbelTcpIpMessageFacet.class).getSender().getFacet(RbelHostnameFacet.class).get().getDomain().getRawStringContent())
             .isEqualTo(initialRbelLogger.getMessageHistory().get(0)
-                .getFacetOrFail(RbelTcpIpMessageFacet.class).getSenderHostname());
+                .getFacetOrFail(RbelTcpIpMessageFacet.class).getSender().getFacet(RbelHostnameFacet.class).get().getDomain().getRawStringContent());
         assertThat(rbelLogger.getMessageHistory().get(0)
             .getFacetOrFail(RbelTcpIpMessageFacet.class).getSequenceNumber())
             .isEqualTo(initialRbelLogger.getMessageHistory().get(0)

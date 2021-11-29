@@ -78,6 +78,13 @@ public class RbelKeyManager {
                 .sorted(Comparator.comparing(RbelKey::getPrecedence));
     }
 
+    public Optional<RbelKey> findCorrespondingPrivateKey(String rbelKey) {
+        return getAllKeys()
+            .filter(candidate -> candidate.getMatchingPublicKey().isPresent())
+            .filter(candidate -> Objects.equals(candidate.getMatchingPublicKey().get().getKeyName(), rbelKey))
+            .findFirst();
+    }
+
     public Optional<RbelKey> findKeyByName(String keyName) {
         return getAllKeys()
                 .filter(candidate -> candidate.getKeyName() != null)

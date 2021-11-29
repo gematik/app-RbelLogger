@@ -27,12 +27,12 @@ public class RbelJsonWriter implements RbelElementWriter {
             StringJoiner joiner = new StringJoiner(",");
             for (Map.Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
                 if (entry.getValue() == oldTargetModifiedChild.getFacetOrFail(RbelJsonFacet.class).getJsonElement()) {
-                    joiner.add(entry.getKey() + ": " + newContent);
+                    joiner.add("\"" + entry.getKey() + "\": " + newContent);
                 } else {
-                    joiner.add(entry.getKey() + ": " + entry.getValue().toString());
+                    joiner.add("\"" + entry.getKey() + "\": " + entry.getValue().toString());
                 }
             }
-            return "{" + joiner.toString() + "}";
+            return "{" + joiner + "}";
         } else if (jsonElement.isJsonArray()) {
             StringJoiner joiner = new StringJoiner(",");
             for (JsonElement entry : jsonElement.getAsJsonArray()) {
@@ -42,7 +42,7 @@ public class RbelJsonWriter implements RbelElementWriter {
                     joiner.add(entry.toString());
                 }
             }
-            return "[" + joiner.toString() + "]";
+            return "[" + joiner + "]";
         } else {
             throw new RuntimeException();
         }

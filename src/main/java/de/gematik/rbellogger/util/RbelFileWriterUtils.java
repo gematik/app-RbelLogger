@@ -4,6 +4,7 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.json.JSONObject;
@@ -28,14 +29,14 @@ public class RbelFileWriterUtils {
             SENDER_HOSTNAME, rbelElement.getFacet(RbelTcpIpMessageFacet.class)
                 .map(RbelTcpIpMessageFacet::getSender)
                 .filter(Objects::nonNull)
-                .flatMap(element -> element.seekValue(RbelHostname.class))
-                .map(RbelHostname::toString)
+                .flatMap(element -> element.getFacet(RbelHostnameFacet.class))
+                .map(RbelHostnameFacet::toString)
                 .orElse(""),
             RECEIVER_HOSTNAME, rbelElement.getFacet(RbelTcpIpMessageFacet.class)
                 .map(RbelTcpIpMessageFacet::getReceiver)
                 .filter(Objects::nonNull)
-                .flatMap(element -> element.seekValue(RbelHostname.class))
-                .map(RbelHostname::toString)
+                .flatMap(element -> element.getFacet(RbelHostnameFacet.class))
+                .map(RbelHostnameFacet::toString)
                 .orElse(""),
             SEQUENCE_NUMBER, rbelElement.getFacet(RbelTcpIpMessageFacet.class)
                 .map(RbelTcpIpMessageFacet::getSequenceNumber)

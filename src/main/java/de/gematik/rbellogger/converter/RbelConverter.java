@@ -19,6 +19,7 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.exceptions.RbelConversionException;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 public class RbelConverter {
 
     private final List<RbelElement> messageHistory = new ArrayList<>();
+    private final List<RbelBundleCriterion> bundleCriterionList = new ArrayList<>();
     private final RbelKeyManager rbelKeyManager;
     private final RbelValueShader rbelValueShader = new RbelValueShader();
     private final List<RbelConverterPlugin> postConversionListeners = new ArrayList<>();
@@ -137,7 +139,7 @@ public class RbelConverter {
     }
 
     public void registerMapper(Class<? extends RbelElement> clazz,
-                               BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
+        BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
         preConversionMappers
             .computeIfAbsent(clazz, key -> new ArrayList<>())
             .add(mapper);
@@ -156,7 +158,8 @@ public class RbelConverter {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isEmpty()
             && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
             throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "
-                + rbelElement.getFacets().stream().map(Object::getClass).map(Class::getSimpleName).collect(Collectors.toList())
+                + rbelElement.getFacets().stream().map(Object::getClass).map(Class::getSimpleName)
+                .collect(Collectors.toList())
                 + ". Expected RbelHttpMessage (Rbel can only handle HTTP messages right now)");
         }
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isPresent()) {
@@ -177,9 +180,10 @@ public class RbelConverter {
                     .request(lastRequest)
                     .build());
         }
+
         rbelElement.addFacet(RbelTcpIpMessageFacet.builder()
-            .receiver(RbelElement.wrap(null, rbelElement, receiver))
-            .sender(RbelElement.wrap(null, rbelElement, sender))
+            .receiver(RbelHostnameFacet.buildRbelHostnameFacet(rbelElement, receiver))
+            .sender(RbelHostnameFacet.buildRbelHostnameFacet(rbelElement, sender))
             .sequenceNumber(messageSequenceNumber++)
             .build());
 

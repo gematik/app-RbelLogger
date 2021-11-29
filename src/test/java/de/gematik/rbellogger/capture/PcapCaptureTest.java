@@ -1,31 +1,30 @@
 package de.gematik.rbellogger.capture;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
-import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
-import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
-import java.io.File;
-import java.nio.charset.Charset;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import javax.crypto.spec.SecretKeySpec;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.io.File;
+import java.nio.charset.Charset;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 public class PcapCaptureTest {
@@ -89,16 +88,6 @@ public class PcapCaptureTest {
     }
 
     @Test
-    public void pcapFileDump() {
-        RbelLogger.build(new RbelConfiguration()
-            .addCapturer(PCapCapture.builder()
-                .pcapFile("src/test/resources/discDoc.pcap")
-                .printMessageToSystemOut(false)
-                .build())
-            .addPostConversionListener((el, context) -> System.out.println(el)));
-    }
-
-    @Test
     public void pcapFile_checkMetadata() {
         final PCapCapture pCapCapture = PCapCapture.builder()
             .pcapFile("src/test/resources/discDoc.pcap")
@@ -110,10 +99,12 @@ public class PcapCaptureTest {
 
         pCapCapture.initialize();
 
-        assertThat(rbelLogger.getMessageHistory().get(0).getFacetOrFail(RbelTcpIpMessageFacet.class).getSenderHostname())
-            .isEqualTo(new RbelHostname("127.0.0.1", 51441));
-        assertThat(rbelLogger.getMessageHistory().get(0).getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiverHostname())
-            .isEqualTo(new RbelHostname("127.0.0.1",8080));
+        assertThat(rbelLogger.getMessageHistory().get(0)
+            .getFacetOrFail(RbelTcpIpMessageFacet.class).getSenderHostname().toString())
+            .isEqualTo("127.0.0.1:51441");
+        assertThat(rbelLogger.getMessageHistory().get(0)
+            .getFacetOrFail(RbelTcpIpMessageFacet.class).getReceiverHostname().toString())
+            .isEqualTo("127.0.0.1:8080");
     }
 
     @SneakyThrows

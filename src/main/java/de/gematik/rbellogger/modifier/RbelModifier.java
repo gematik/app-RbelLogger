@@ -4,27 +4,32 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
-import lombok.Builder;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.Builder;
+import org.apache.commons.lang3.StringUtils;
 
-@RequiredArgsConstructor
-@Builder
 public class RbelModifier {
 
     private final RbelKeyManager rbelKeyManager;
     private final RbelConverter rbelConverter;
-    private final List<RbelElementWriter> elementWriterList = new ArrayList<>(List.of(
-        new RbelHttpHeaderWriter(),
-        new RbelHttpResponseWriter(),
-        new RbelJsonWriter(),
-        new RbelUriWriter(),
-        new RbelUriParameterWriter()
-    ));
+    private final List<RbelElementWriter> elementWriterList;
     private final Map<String, RbelModificationDescription> modificationsMap = new HashMap<>();
+
+    @Builder
+    public RbelModifier(RbelKeyManager rbelKeyManager, RbelConverter rbelConverter) {
+        this.rbelKeyManager = rbelKeyManager;
+        this.rbelConverter = rbelConverter;
+        this.elementWriterList = new ArrayList<>(List.of(
+                new RbelHttpHeaderWriter(),
+                new RbelHttpResponseWriter(),
+                new RbelJsonWriter(),
+                new RbelUriWriter(),
+                new RbelUriParameterWriter(),
+                new RbelJwtWriter(this.rbelKeyManager),
+                new RbelJweWriter(this.rbelKeyManager)
+        ));
+    }
 
     public RbelElement applyModifications(final RbelElement message) {
         RbelElement modifiedMessage = message;
@@ -97,7 +102,7 @@ public class RbelModifier {
         }
     }
 
-    private class RbelModificationException extends RuntimeException {
+    public class RbelModificationException extends RuntimeException {
         public RbelModificationException(String s) {
             super(s);
         }

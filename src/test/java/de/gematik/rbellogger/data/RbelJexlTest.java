@@ -4,11 +4,13 @@ import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Optional;
 
+import static de.gematik.rbellogger.TestUtils.localhostWithPort;
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,6 +67,18 @@ public class RbelJexlTest {
 
         assertThat(jexlExecutor.matchesAsJexlExpression(
             doubleHeaderMessage, "isResponse", Optional.empty()))
+            .isTrue();
+    }
+
+    @Test
+    public void shouldFindReceiverPort() throws IOException {
+        RbelElement request = RbelLogger.build().getRbelConverter().parseMessage(
+            readCurlFromFileWithCorrectedLineBreaks("src/test/resources/sampleMessages/getRequest.curl").getBytes(),
+            localhostWithPort(44444),
+            localhostWithPort(5432));
+
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            request, "$.receiver.port == '5432'", Optional.empty()))
             .isTrue();
     }
 }

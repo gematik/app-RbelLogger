@@ -5,8 +5,11 @@ import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 
+import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 public class RbelHttpResponseWriter implements RbelElementWriter {
     @Override
@@ -22,26 +25,43 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
         final RbelHttpMessageFacet messageFacet = oldTargetElement.getFacetOrFail(RbelHttpMessageFacet.class);
         final StringJoiner joiner = new StringJoiner("\r\n");
 
-
         joiner.add(buildTitleLine(oldTargetModifiedChild, newContent, responseFacet, requestFacet));
 
+        String body = getBodyString(messageFacet, oldTargetModifiedChild, newContent);
         if (messageFacet.getHeader() == oldTargetModifiedChild) {
             joiner.add(newContent);
         } else {
-            joiner.add(messageFacet.getHeader().getRawStringContent());
+            joiner.add(
+                patchHeader(messageFacet.getHeader().getRawStringContent(), body.getBytes().length));
         }
         joiner.add("");
-        if (messageFacet.getBody() == oldTargetModifiedChild) {
-            joiner.add(newContent);
-        } else {
-            joiner.add(messageFacet.getBody().getRawStringContent());
-        }
+        joiner.add(body);
         return joiner.toString();
     }
 
+    private String patchHeader(String headerRaw, int length) {
+        return Arrays.stream(headerRaw.split("\r\n"))
+            .map(headerLine -> {
+                if (headerLine.toLowerCase(Locale.ROOT).startsWith("content-length")) {
+                    return "Content-Length: " + length;
+                } else {
+                    return headerLine;
+                }
+            })
+            .collect(Collectors.joining("\r\n"));
+    }
+
+    private String getBodyString(RbelHttpMessageFacet messageFacet, RbelElement oldTargetModifiedChild, String newContent) {
+        if (messageFacet.getBody() == oldTargetModifiedChild) {
+            return newContent;
+        } else {
+            return messageFacet.getBody().getRawStringContent();
+        }
+    }
+
     private String buildTitleLine(RbelElement oldTargetModifiedChild, String newContent,
-                                Optional<RbelHttpResponseFacet> responseFacet,
-                                Optional<RbelHttpRequestFacet> requestFacet) {
+                                  Optional<RbelHttpResponseFacet> responseFacet,
+                                  Optional<RbelHttpRequestFacet> requestFacet) {
         StringBuilder builder = new StringBuilder();
         if (requestFacet.isPresent()) {
             if (requestFacet.get().getMethod() == oldTargetModifiedChild) {

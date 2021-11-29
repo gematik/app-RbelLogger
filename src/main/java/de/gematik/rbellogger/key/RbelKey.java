@@ -1,16 +1,16 @@
 package de.gematik.rbellogger.key;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
 
 @Data
-@Builder
 @AllArgsConstructor
 public class RbelKey {
 
@@ -26,6 +26,7 @@ public class RbelKey {
     private final int precedence;
     private final Optional<RbelKey> matchingPublicKey;
 
+    @Builder
     public RbelKey(Key key, String keyName, int precedence, RbelKey matchingPublicKey) {
         this.key = key;
         this.keyName = keyName;

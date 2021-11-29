@@ -8,6 +8,7 @@ import static j2html.TagCreator.*;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
@@ -22,26 +23,30 @@ public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
             return span();
         }
         final RbelTcpIpMessageFacet messageFacet = element.getFacet(RbelTcpIpMessageFacet.class).get();
-        if (!messageFacet.getSender().seekValue().isPresent() &&
-            !messageFacet.getReceiver().seekValue().isPresent()) {
+        if (!messageFacet.getSender().getFacet(RbelHostnameFacet.class).isPresent() &&
+            !messageFacet.getReceiver().getFacet(RbelHostnameFacet.class).isPresent()) {
             return span();
         }
-        final RbelHostname left;
-        final RbelHostname right;
+        final String left;
+        final String right;
         final String icon;
         if (element.hasFacet(RbelHttpRequestFacet.class)) {
-            left = messageFacet.getSender().seekValue(RbelHostname.class).orElse(null);
-            right = messageFacet.getReceiver().seekValue(RbelHostname.class).orElse(null);
+            left = messageFacet.getSender().getFacet(RbelHostnameFacet.class).map(RbelHostnameFacet::toString)
+                .orElse(null);
+            right = messageFacet.getReceiver().getFacet(RbelHostnameFacet.class).map(RbelHostnameFacet::toString)
+                .orElse(null);
             icon = "fa-arrow-right";
         } else {
-            left = messageFacet.getReceiver().seekValue(RbelHostname.class).orElse(null);
-            right = messageFacet.getSender().seekValue(RbelHostname.class).orElse(null);
+            left = messageFacet.getReceiver().getFacet(RbelHostnameFacet.class).map(RbelHostnameFacet::toString)
+                .orElse(null);
+            right = messageFacet.getSender().getFacet(RbelHostnameFacet.class).map(RbelHostnameFacet::toString)
+                .orElse(null);
             icon = "fa-arrow-left";
         }
         return span()
-            .withText(left == null ? "" : left.toString())
+            .withText(left == null ? "" : left)
             .with(icon(icon))
-            .with(text(right == null ? "" : right.toString()))
+            .with(text(right == null ? "" : right))
             .withClass("is-size-6 ml-4");
     }
 
@@ -73,9 +78,9 @@ public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
                 addNote(element),
                 div().withClass("container is-widescreen").with(
                     requestFacet.map(f ->
-                        div(renderingToolkit.convert(requestFacet.get().getPath(), Optional.empty()))
-                            .withClass("is-family-monospace title is-size-4")
-                            .with(addNote(requestFacet.get().getPath())))
+                            div(renderingToolkit.convert(requestFacet.get().getPath(), Optional.empty()))
+                                .withClass("is-family-monospace title is-size-4")
+                                .with(addNote(requestFacet.get().getPath())))
                         .orElseGet(() -> t1ms(responseFacet.get().getResponseCode().getRawStringContent() + ""))
                 )
             ).withClass("full-width"),

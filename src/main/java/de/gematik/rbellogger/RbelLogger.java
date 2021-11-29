@@ -3,9 +3,11 @@ package de.gematik.rbellogger;
 import de.gematik.rbellogger.captures.RbelCapturer;
 import de.gematik.rbellogger.converter.RbelAsn1Converter;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
+import de.gematik.rbellogger.converter.RbelBundleCriterion;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.converter.RbelX5cKeyReader;
+import de.gematik.rbellogger.converter.listener.RbelBundledMessagesPlugin;
 import de.gematik.rbellogger.converter.listener.RbelFileAppenderPlugin;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
@@ -65,6 +67,8 @@ public class RbelLogger {
             rbelConverter.addPostConversionListener(new RbelFileAppenderPlugin(configuration.getFileSaveInfo()));
         }
 
+        rbelConverter.addPostConversionListener(new RbelBundledMessagesPlugin());
+
         if (configuration.getCapturer() != null) {
             configuration.getCapturer().setRbelConverter(rbelConverter);
         }
@@ -80,5 +84,9 @@ public class RbelLogger {
 
     public List<RbelElement> getMessageHistory() {
         return rbelConverter.getMessageHistory();
+    }
+
+    public void addBundleCriterion(RbelBundleCriterion rbelBundleCriterion) {
+        rbelConverter.getBundleCriterionList().add(rbelBundleCriterion);
     }
 }

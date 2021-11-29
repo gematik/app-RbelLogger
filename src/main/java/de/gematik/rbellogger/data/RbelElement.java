@@ -27,7 +27,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.*;
@@ -268,6 +267,7 @@ public class RbelElement {
     }
 
     private class RbelPathNotUniqueException extends RuntimeException {
+
         public RbelPathNotUniqueException(String s) {
             super(s);
         }

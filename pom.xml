@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.17.0</version>
+    <version>0.18.0</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -41,12 +41,24 @@
         </developer>
     </developers>
 
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <url>${releaseDeploymentRepository}</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>${snapshotDeploymentRepository}</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <version.junit-jupiter>5.6.2</version.junit-jupiter>
         <version.java>11</version.java>
+
 
         <!-- settings for upload to sonar server -->
         <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/index.xml
@@ -180,6 +192,12 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>4.0.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <repositories>

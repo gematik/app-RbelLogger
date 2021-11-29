@@ -18,8 +18,8 @@ package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.converter.brainpool.BrainpoolCurves;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.data.elements.RbelJwtSignature;
+import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelValueFacet;
 import java.security.Key;
@@ -66,9 +66,9 @@ public class RbelJwtConverter implements RbelConverterPlugin {
                     .map(Optional::get)
                 )
                 .orElseGet(() -> RbelJwtSignature.builder()
-                        .isValid(new RbelElement(null, signatureElement).addFacet(new RbelValueFacet(false)))
-                        .verifiedUsing(null)
-                        .build()
+                    .isValid(new RbelElement(null, signatureElement).addFacet(new RbelValueFacet(false)))
+                    .verifiedUsing(null)
+                    .build()
                 ));
             final RbelJwtFacet rbelJwtFacet = new RbelJwtFacet(headerElement, bodyElement, signatureElement);
             rbelElement.addFacet(rbelJwtFacet);

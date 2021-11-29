@@ -10,6 +10,7 @@ import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,27 +24,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Slf4j
 public class VauErpConverterTest {
 
-    private PCapCapture pCapCapture;
-    private RbelLogger rbelLogger;
+    private static PCapCapture pCapCapture;
+    private static RbelLogger rbelLogger;
 
-    @BeforeEach
-    public void setUp() {
-        if (pCapCapture == null) {
-            System.out.println("Initializing...");
-            pCapCapture = PCapCapture.builder()
-                .pcapFile("src/test/resources/rezepsFiltered.pcap")
-                .filter("")
-                .build();
-            rbelLogger = RbelLogger.build(new RbelConfiguration()
-                .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
-                .addCapturer(pCapCapture)
-            );
-            System.out.println("cont init...");
-            pCapCapture.close();
-            System.out.println("Initialized!");
-        } else {
-            System.out.println("Skipped Initialization!");
-        }
+    @BeforeAll
+    public static void setUp() {
+        System.out.println("Initializing...");
+        pCapCapture = PCapCapture.builder()
+            .pcapFile("src/test/resources/rezepsFiltered.pcap")
+            .filter("")
+            .build();
+        rbelLogger = RbelLogger.build(new RbelConfiguration()
+            .addInitializer(new RbelKeyFolderInitializer("src/test/resources"))
+            .addCapturer(pCapCapture)
+        );
+        System.out.println("cont init...");
+        pCapCapture.close();
+        System.out.println("Initialized!");
     }
 
     @SneakyThrows
