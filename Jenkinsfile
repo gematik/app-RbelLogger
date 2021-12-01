@@ -12,7 +12,7 @@ pipeline {
     options {
         disableConcurrentBuilds()
     }
-    agent { label 'Docker-TShark' }
+    agent { label 'k8-tshark' }
 
     tools {
         maven 'Default'

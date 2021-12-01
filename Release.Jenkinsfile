@@ -6,11 +6,12 @@ def BRANCH = 'master'
 def JIRA_PROJECT_ID = 'RBEL'
 def GITLAB_PROJECT_ID = '603'
 def TITLE_TEXT = 'Release'
-def GROUP_ID_PATH = "de/gematik/test"
-def GROUP_ID = "de.gematik.test"
+def GROUP_ID_PATH = "de/gematik"
+def GROUP_ID = "de.gematik"
 def ARTIFACT_ID = 'rbellogger'
 def ARTIFACT_IDs = 'rbellogger'
-def POM_PATH = 'pom.xml'	
+def POM_PATH = 'pom.xml'
+def PACKAGING = "jar"
 
 pipeline {
     options {
@@ -18,7 +19,7 @@ pipeline {
         buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')
     }
 	
-    agent { label 'Docker-Maven' }
+    agent { label 'k8-maven' }
 
     tools {
         maven 'Default'
@@ -45,7 +46,7 @@ pipeline {
 
         stage('Environment') {
             environment {
-                LATEST = nexusGetLatestVersionByGAVR(RELEASE_VERSION, ARTIFACT_ID, GROUP_ID).trim()
+                LATEST = nexusGetLatestVersionByGAVR(RELEASE_VERSION, ARTIFACT_ID, GROUP_ID, PACKAGING).trim()
                 TAG_NAME = 'Release/ReleaseBuild'
             }
             stages {

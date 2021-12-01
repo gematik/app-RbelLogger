@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+## Release 0.19.0
+
+### Changed
+
+* changed clojars repo in pom to HTTPS
+
 ## Release 0.18.0
 
 ### Bugfix
