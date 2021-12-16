@@ -31,10 +31,10 @@ public class RbelJwtWriter implements RbelElementWriter {
     }
 
     @Override
-    public String write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, String newContent) {
+    public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelJwtFacet jwtFacet = oldTargetElement.getFacetOrFail(RbelJwtFacet.class);
 
-        return createUpdatedJws(oldTargetModifiedChild, newContent, jwtFacet);
+        return createUpdatedJws(oldTargetModifiedChild, new String(newContent), jwtFacet).getBytes();
     }
 
     private String createUpdatedJws(RbelElement oldTargetModifiedChild, String newContent, RbelJwtFacet jwtFacet) {

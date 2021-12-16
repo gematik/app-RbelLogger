@@ -6,22 +6,26 @@ import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelVauErpFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.DecoderException;
+import org.bouncycastle.util.encoders.Hex;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.security.*;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.util.encoders.DecoderException;
-import org.bouncycastle.util.encoders.Hex;
 
 @Slf4j
 public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
@@ -46,7 +50,13 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
             byte[] aesKeyBytes = CryptoUtils.hkdf(sharedSecret, "ecies-vau-transport", 16);
             SecretKey aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-            return CryptoUtils.decrypt(Arrays.copyOfRange(encMessage, 1 + 32 + 32, encMessage.length), aesKey);
+            final byte[] ciphertext = Arrays.copyOfRange(encMessage, 1 + 32 + 32, encMessage.length);
+
+            log.info("Decrypting. AesKey '{}' and ciphertext {}",
+                Base64.getEncoder().encodeToString(aesKeyBytes),
+                Base64.getEncoder().encodeToString(ciphertext));
+
+            return CryptoUtils.decrypt(ciphertext, aesKey);
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -73,10 +83,10 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
                     log.trace("Succesfully deciphered VAU message! ({})", new String(decryptedBytes.get()));
                     if (isVauResponse(decryptedBytes)) {
                         return buildVauMessageFromCleartextResponse(converter, decryptedBytes.get(),
-                            element.getRawContent(), rbelKey.getKeyName(), element);
+                            element.getRawContent(), rbelKey, element);
                     } else {
                         return buildVauMessageFromCleartextRequest(converter, decryptedBytes.get(),
-                            element.getRawContent(), rbelKey.getKeyName(), element);
+                            element.getRawContent(), rbelKey, element);
                     }
                 } catch (RuntimeException e) {
                     log.error("Exception while deciphering VAU message:", e);
@@ -106,29 +116,33 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
     }
 
     private Optional<RbelVauErpFacet> buildVauMessageFromCleartextRequest(RbelConverter converter,
-        byte[] decryptedBytes, byte[] encryptedMessage, String keyName, RbelElement parentNode) {
+                                                                          byte[] decryptedBytes, byte[] encryptedMessage, RbelKey decryptionKey, RbelElement parentNode) {
         String[] vauMessageParts = new String(decryptedBytes).split(" ", 5);
         final SecretKeySpec responseKey = buildAesKeyFromHex(vauMessageParts[3]);
-        converter.getRbelKeyManager().addKey("VAU Response-Key", responseKey, 0);
+        final RbelKey rbelKey = converter.getRbelKeyManager().addKey("VAU Response-Key", responseKey, 0);
         return Optional.of(RbelVauErpFacet.builder()
             .message(converter.convertElement(vauMessageParts[4], parentNode))
-            .encryptedMessage(RbelElement.wrap(parentNode, encryptedMessage))
+            .encryptedMessage(RbelElement.wrap(encryptedMessage, parentNode, null))
             .requestId(RbelElement.wrap(parentNode, vauMessageParts[2]))
             .pVersionNumber(RbelElement.wrap(parentNode, Integer.parseInt(vauMessageParts[0])))
             .responseKey(RbelElement.wrap(parentNode, responseKey))
-            .keyIdUsed(RbelElement.wrap(parentNode, keyName))
+            .keyIdUsed(RbelElement.wrap(parentNode, decryptionKey.getKeyName()))
+            .decryptedPString(RbelElement.wrap(decryptedBytes, parentNode, new String(decryptedBytes)))
+            .keyUsed(Optional.of(decryptionKey))
             .build());
     }
 
-    private Optional<RbelVauErpFacet> buildVauMessageFromCleartextResponse(RbelConverter converter,
-        byte[] decryptedBytes, byte[] encryptedMessage, String keyName, RbelElement parentNode) {
+    private Optional<RbelVauErpFacet> buildVauMessageFromCleartextResponse(
+        RbelConverter converter, byte[] decryptedBytes, byte[] encryptedMessage, RbelKey keyUsed, RbelElement parentNode) {
         String[] vauMessageParts = new String(decryptedBytes).split(" ", 3);
         return Optional.of(RbelVauErpFacet.builder()
             .message(converter.convertElement(vauMessageParts[2], parentNode))
             .encryptedMessage(RbelElement.wrap(parentNode, encryptedMessage))
             .requestId(RbelElement.wrap(parentNode, vauMessageParts[1]))
             .pVersionNumber(RbelElement.wrap(parentNode, Integer.parseInt(vauMessageParts[0])))
-            .keyIdUsed(RbelElement.wrap(parentNode, keyName))
+            .keyIdUsed(RbelElement.wrap(parentNode, keyUsed.getKeyName()))
+            .keyUsed(Optional.of(keyUsed))
+            .decryptedPString(RbelElement.wrap(parentNode, new String(decryptedBytes)))
             .build());
     }
 
@@ -136,7 +150,7 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
         try {
             return new SecretKeySpec(Hex.decode(hexEncodedKey), "AES");
         } catch (DecoderException e) {
-            throw new RuntimeException("Error during Key decoding", e);
+            throw new RuntimeException("Error during Key decoding from '" + hexEncodedKey + "'", e);
         }
     }
 }

@@ -13,15 +13,15 @@ public class RbelHttpHeaderWriter implements RbelElementWriter {
     }
 
     @Override
-    public String write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, String newContent) {
+    public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         StringJoiner joiner = new StringJoiner("\r\n");
         for (Map.Entry<String, RbelElement> entry : oldTargetElement.getFacetOrFail(RbelHttpHeaderFacet.class).entrySet()) {
             if (entry.getValue() == oldTargetModifiedChild) {
-                joiner.add(entry.getKey() + ": " + newContent);
+                joiner.add(entry.getKey() + ": " + new String(newContent));
             } else {
                 joiner.add(entry.getKey() + ": " + entry.getValue().getRawStringContent());
             }
         }
-        return joiner.toString();
+        return joiner.toString().getBytes();
     }
 }

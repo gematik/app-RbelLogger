@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 public class TestUtils {
+
     public static String readCurlFromFileWithCorrectedLineBreaks(String fileName) throws IOException {
         return FileUtils.readFileToString(new File(fileName), Charset.defaultCharset())
             .replaceAll("(?<!\\r)\\n", "\r\n");
     }
-
 
     public static RbelHostname localhostWithPort(int tcpPort) {
         return RbelHostname.builder()

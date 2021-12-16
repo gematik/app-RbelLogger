@@ -178,9 +178,9 @@ public class RbelModifierTest extends AbstractModifierTest {
         assertThat(modifiedMessage.findElement("$.header.Version")
             .map(RbelElement::getRawStringContent).get())
             .isEqualTo("foobar");
-        assertThat(modifiedMessage.findElement("$.body.keys.0.kid")
 
-            .get().getRawStringContent())
+        assertThat(modifiedMessage.findElement("$.body.keys.0.kid"))
+            .get().extracting(RbelElement::getRawStringContent)
             .isEqualTo("anotherKeyId");
     }
 

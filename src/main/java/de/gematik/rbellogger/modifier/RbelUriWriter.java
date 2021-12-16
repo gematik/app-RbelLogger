@@ -13,7 +13,7 @@ public class RbelUriWriter implements RbelElementWriter {
     }
 
     @Override
-    public String write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, String newContent) {
+    public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelUriFacet uriFacet = oldTargetElement.getFacetOrFail(RbelUriFacet.class);
 
         StringBuilder resultBuilder = new StringBuilder();
@@ -26,7 +26,7 @@ public class RbelUriWriter implements RbelElementWriter {
             StringJoiner joiner = new StringJoiner("&");
             for (RbelElement queryParameter : uriFacet.getQueryParameters()) {
                 if (queryParameter == oldTargetModifiedChild) {
-                    joiner.add(newContent);
+                    joiner.add(new String(newContent));
                 } else {
                     joiner.add(queryParameter.getRawStringContent());
                 }
@@ -34,6 +34,6 @@ public class RbelUriWriter implements RbelElementWriter {
             resultBuilder.append("?");
             resultBuilder.append(joiner);
         }
-        return resultBuilder.toString();
+        return resultBuilder.toString().getBytes();
     }
 }

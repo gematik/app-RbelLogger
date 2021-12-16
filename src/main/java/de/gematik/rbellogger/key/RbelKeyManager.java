@@ -50,18 +50,22 @@ public class RbelKeyManager {
         keyList.add(rbelKey);
     }
 
-    public void addKey(String keyId, Key key, int precedence) {
+    public RbelKey addKey(String keyId, Key key, int precedence) {
         if (keyIsPresentInList(key)) {
             log.debug("Skipping adding key: Key is already known!");
         }
 
-        keyList.add(RbelKey.builder()
-                .keyName(keyId)
-                .key(key)
-                .precedence(precedence)
-                .build());
+        final RbelKey rbelKey = RbelKey.builder()
+            .keyName(keyId)
+            .key(key)
+            .precedence(precedence)
+            .build();
+
+        keyList.add(rbelKey);
 
         log.info("Added key {} (Now there are {} keys known)", keyId, keyList.size());
+
+        return rbelKey;
     }
 
     private boolean keyIsPresentInList(Key key) {

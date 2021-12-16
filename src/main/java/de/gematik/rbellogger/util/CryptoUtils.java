@@ -20,14 +20,12 @@ public class CryptoUtils {
     public static final int GCM_IV_LENGTH_IN_BYTES = 12;
     public static final int GCM_TAG_LENGTH_IN_BYTES = 16;
 
-    static {
-        Security.addProvider(new BouncyCastleProvider());
-    }
+    private static final BouncyCastleProvider BOUNCY_CASTLE_PROVIDER = new BouncyCastleProvider();
 
     public static byte[] ecka(PrivateKey prk, PublicKey puk)
         throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException {
         byte[] sharedSecret;
-        KeyAgreement ka = KeyAgreement.getInstance("ECDH", "BC");
+        KeyAgreement ka = KeyAgreement.getInstance("ECDH", BOUNCY_CASTLE_PROVIDER);
         ka.init(prk);
         ka.doPhase(puk, true);
         sharedSecret = ka.generateSecret();
@@ -57,7 +55,7 @@ public class CryptoUtils {
         try {
             byte[] iv = Arrays.copyOfRange(encMessage, 0, gcmIvLengthInBytes);
             byte[] cipherText = Arrays.copyOfRange(encMessage, GCM_IV_LENGTH_IN_BYTES, encMessage.length);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");//NOSONAR
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", BOUNCY_CASTLE_PROVIDER);//NOSONAR
 
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(gcmTagLengthInBytes * 8, iv));
 

@@ -8,6 +8,7 @@ import static j2html.TagCreator.p;
 import static j2html.TagCreator.span;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -21,6 +22,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+import org.checkerframework.checker.nullness.Opt;
 
 @RequiredArgsConstructor
 @Builder
@@ -82,6 +84,8 @@ public class RbelVauEpaFacet implements RbelFacet {
     private final RbelElement additionalHeaders;
     private final RbelElement pVersionNumber;
     private final RbelElement keyIdUsed;
+    @Builder.Default
+    private final Optional<RbelKey> keyUsed = Optional.empty();
 
     @Override
     public List<Entry<String, RbelElement>> getChildElements() {

@@ -30,10 +30,11 @@ public class RbelJweWriter implements RbelElementWriter {
     }
 
     @Override
-    public String write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, String newContent) {
+    public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelJweFacet rbelJweFacet = oldTargetElement.getFacetOrFail(RbelJweFacet.class);
 
-        return createUpdatedJwe(oldTargetModifiedChild, newContent, rbelJweFacet);
+        return createUpdatedJwe(oldTargetModifiedChild, new String(newContent), rbelJweFacet)
+            .getBytes();
     }
 
     private String createUpdatedJwe(RbelElement oldTargetModifiedChild, String newContent, RbelJweFacet rbelJweFacet) {

@@ -60,6 +60,7 @@ public class RbelVauEpaConverter implements RbelConverterPlugin {
             .filter(key -> key.getKeyName().startsWith(Hex.toHexString(splitVauMessage.getKey())))
             .filter(key -> key.getKey() instanceof SecretKey)
             .collect(Collectors.toList());
+
         for (RbelKey rbelKey : potentialVauKeys) {
             Optional<byte[]> decryptedBytes = decrypt(splitVauMessage.getValue(), rbelKey.getKey(),
                 CryptoUtils.GCM_IV_LENGTH_IN_BYTES, CryptoUtils.GCM_TAG_LENGTH_IN_BYTES);
@@ -67,7 +68,7 @@ public class RbelVauEpaConverter implements RbelConverterPlugin {
                 try {
                     log.trace("Succesfully deciphered VAU message! ({})", new String(decryptedBytes.get()));
                     return buildVauMessageFromCleartext(converter, splitVauMessage, decryptedBytes.get(),
-                        parentNode);
+                        parentNode, rbelKey);
                 } catch (RuntimeException e) {
                     log.error("Exception while building cleartext VAU message:", e);
                     throw new RbelConversionException("Exception while building cleartext VAU message", e);
@@ -79,22 +80,23 @@ public class RbelVauEpaConverter implements RbelConverterPlugin {
 
     private Optional<RbelVauEpaFacet> buildVauMessageFromCleartext(RbelConverter converter,
                                                                    Pair<byte[], byte[]> splitVauMessage,
-                                                                   byte[] decryptedBytes, RbelElement parentNode) {
+                                                                   byte[] decryptedBytes, RbelElement parentNode, RbelKey rbelKey) {
         final String cleartextString = new String(decryptedBytes);
         if (cleartextString.startsWith("VAUClientSigFin")
             || cleartextString.startsWith("VAUServerFin")) {
             return Optional.of(RbelVauEpaFacet.builder()
                 .message(converter.filterInputThroughPreConversionMappers(new RbelElement(decryptedBytes, parentNode)))
                 .encryptedMessage(RbelElement.wrap(parentNode, splitVauMessage.getValue()))
-                .keyIdUsed(RbelElement.wrap(parentNode, Hex.toHexString(splitVauMessage.getKey())))
+                .keyIdUsed(RbelElement.wrap(parentNode, rbelKey.getKeyName().split("_")[0]))
+                .keyUsed(Optional.of(rbelKey))
                 .build());
         } else {
-            return Optional.of(fromRaw(splitVauMessage, converter, decryptedBytes, parentNode));
+            return Optional.of(fromRaw(splitVauMessage, converter, decryptedBytes, parentNode, rbelKey));
         }
     }
 
     private RbelVauEpaFacet fromRaw(Pair<byte[], byte[]> payloadPair, RbelConverter converter,
-                                    byte[] decryptedBytes, RbelElement parentNode) {
+                                    byte[] decryptedBytes, RbelElement parentNode, RbelKey rbelKey) {
         byte[] raw = new byte[decryptedBytes.length - 8 - 1];
         System.arraycopy(decryptedBytes, 8 + 1, raw, 0, raw.length);
 
@@ -123,10 +125,11 @@ public class RbelVauEpaConverter implements RbelConverterPlugin {
         return RbelVauEpaFacet.builder()
             .message(converter.filterInputThroughPreConversionMappers(new RbelElement(body, parentNode)))
             .additionalHeaders(headerElement)
-            .encryptedMessage(RbelElement.wrap(parentNode, payloadPair.getValue()))
+            .encryptedMessage(RbelElement.wrap(payloadPair.getValue(), parentNode, null))
             .keyIdUsed(RbelElement.wrap(parentNode, Hex.toHexString(payloadPair.getKey())))
             .pVersionNumber(RbelElement.wrap(parentNode, (int) decryptedBytes[0]))
             .sequenceNumber(RbelElement.wrap(parentNode, (long) sequenceNumber))
+            .keyUsed(Optional.ofNullable(rbelKey))
             .build();
     }
 

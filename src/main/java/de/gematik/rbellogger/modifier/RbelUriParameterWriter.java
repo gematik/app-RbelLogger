@@ -15,21 +15,21 @@ public class RbelUriParameterWriter implements RbelElementWriter {
     }
 
     @Override
-    public String write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, String newContent) {
+    public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelUriParameterFacet uriFacet = oldTargetElement.getFacetOrFail(RbelUriParameterFacet.class);
         StringJoiner result = new StringJoiner("=");
         if (uriFacet.getKey() == oldTargetModifiedChild) {
-            result.add(URLEncoder.encode(newContent, StandardCharsets.UTF_8));
+            result.add(URLEncoder.encode(new String(newContent), StandardCharsets.UTF_8));
         } else {
             result.add(uriFacet.getKeyAsString());
         }
 
         if (uriFacet.getValue() == oldTargetModifiedChild) {
-            result.add(URLEncoder.encode(newContent, StandardCharsets.UTF_8));
+            result.add(URLEncoder.encode(new String(newContent), StandardCharsets.UTF_8));
         } else {
             result.add(uriFacet.getValue().getRawStringContent());
         }
 
-        return result.toString();
+        return result.toString().getBytes();
     }
 }

@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.net.URI;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 
 @Data
 @Builder
@@ -34,6 +36,10 @@ public class RbelHostname {
     }
 
     public static RbelHostname generateFromUrl(String url) {
+
+        checkIfUrlIsNotEmpty(url);
+        checkIfUrlIsValid(url);
+
         try {
             final URI uri = new URI(url);
             if (uri.getPort() > 0) {
@@ -50,6 +56,21 @@ public class RbelHostname {
         }
     }
 
+    private static void checkIfUrlIsNotEmpty(String url) {
+        if (StringUtils.isBlank(url)) {
+            throw new RbelConversionException(
+                "Could not parse Hostname, because there is none. Is there a configuration error?");
+        }
+    }
+
+    private static void checkIfUrlIsValid(String url) {
+        UrlValidator urlValidator = new UrlValidator(UrlValidator.ALLOW_LOCAL_URLS);
+        if (!urlValidator.isValid(url)) {
+            throw new RbelConversionException(
+                "The given URL is invalid. Please check your configuration.");
+        }
+    }
+
     public String toString() {
         if (port > 0) {
             return hostname + ":" + port;
@@ -59,6 +80,7 @@ public class RbelHostname {
     }
 
     private static class RbelHostnameFormatException extends RuntimeException {
+
         public RbelHostnameFormatException(String s, Exception e) {
             super(s, e);
         }

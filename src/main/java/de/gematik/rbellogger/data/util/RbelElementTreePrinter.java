@@ -9,7 +9,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_FACETS_PRINTING;
 import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH;
 import static de.gematik.rbellogger.util.RbelAnsiColors.*;
 
@@ -24,6 +26,8 @@ public class RbelElementTreePrinter {
     private final boolean printContent = true;
     @Builder.Default
     private final boolean printKeys = false;
+    @Builder.Default
+    private final boolean printFacets = true;
 
     public String execute() {
         String result = RED_BOLD + rootElement.getKey().orElse("") + RESET;
@@ -53,12 +57,32 @@ public class RbelElementTreePrinter {
             result += RbelAnsiColors.RED_BOLD + childNode.getKey() + RbelAnsiColors.RESET;
             // print content
             result += printContentOf(childNode.getValue());
+            // print facet
+            result += printFacets(childNode.getValue());
             result += "\n";
             if (!childNode.getValue().getChildNodes().isEmpty()) {
                 result += executeRecursive(childNode.getValue(), padding + padString, remainingLevels - 1);
             }
         }
         return result;
+    }
+
+    private String printFacets(RbelElement value) {
+        if (!ACTIVATE_FACETS_PRINTING) {
+            return "";
+        }
+        final String facetsString = value.getFacets().stream()
+            .map(Object::getClass)
+            .map(Class::getSimpleName)
+            .filter(s -> !"RbelRootFacet".equals(s))
+            .filter(s -> !"RbelListFacet".equals(s))
+            .filter(s -> !"RbelNestedFacet".equals(s))
+            .filter(s -> !"RbelMapFacet".equals(s))
+            .collect(Collectors.joining(","));
+        if (StringUtils.isEmpty(facetsString)) {
+            return "";
+        }
+        return CYAN + " (" + facetsString + ")" + RESET;
     }
 
     private String printKeyOf(RbelElement value) {

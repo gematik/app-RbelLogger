@@ -24,10 +24,7 @@ import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.exceptions.RbelConversionException;
 import de.gematik.rbellogger.key.RbelKeyManager;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -154,7 +151,7 @@ public class RbelConverter {
         return parseMessage(rbelHttpMessage, sender, recipient);
     }
 
-    public RbelElement parseMessage(final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
+    public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isEmpty()
             && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
             throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "

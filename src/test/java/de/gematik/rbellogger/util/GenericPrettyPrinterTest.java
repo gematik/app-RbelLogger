@@ -24,8 +24,7 @@ public class GenericPrettyPrinterTest {
             readData(
                 FileUtils.readFileToByteArray(
                     new File("src/test/resources/vau_cert.der")));
-        System.out.println(genericPrettyPrinter
-            .prettyPrint(rootNode));
+        System.out.println(genericPrettyPrinter.prettyPrint(rootNode));
     }
 
     private ASN1Encodable readData(byte[] data) {

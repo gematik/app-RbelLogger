@@ -5,6 +5,7 @@ import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import org.apache.commons.lang3.StringUtils;
@@ -21,13 +22,15 @@ public class RbelModifier {
         this.rbelKeyManager = rbelKeyManager;
         this.rbelConverter = rbelConverter;
         this.elementWriterList = new ArrayList<>(List.of(
-                new RbelHttpHeaderWriter(),
-                new RbelHttpResponseWriter(),
-                new RbelJsonWriter(),
-                new RbelUriWriter(),
-                new RbelUriParameterWriter(),
-                new RbelJwtWriter(this.rbelKeyManager),
-                new RbelJweWriter(this.rbelKeyManager)
+            new RbelHttpHeaderWriter(),
+            new RbelHttpResponseWriter(),
+            new RbelJsonWriter(),
+            new RbelUriWriter(),
+            new RbelUriParameterWriter(),
+            new RbelJwtWriter(this.rbelKeyManager),
+            new RbelJweWriter(this.rbelKeyManager),
+            new RbelVauErpWriter(),
+            new RbelVauEpaWriter()
         ));
     }
 
@@ -35,12 +38,18 @@ public class RbelModifier {
         RbelElement modifiedMessage = message;
         for (RbelModificationDescription modification : modificationsMap.values()) {
             if (shouldBeApplied(modification, message)) {
-                final Optional<RbelElement> targetOptional = modifiedMessage.findElement(modification.getTargetElement());
+                final Optional<RbelElement> targetOptional
+                    = modifiedMessage.findElement(modification.getTargetElement());
                 if (targetOptional.isEmpty()) {
                     continue;
                 }
 
-                modifiedMessage = rbelConverter.convertElement(applyModification(modification, targetOptional.get()), null);
+                final byte[] input = applyModification(modification, targetOptional.get());
+                try {
+                    modifiedMessage = rbelConverter.convertElement(input, null);
+                } catch (RuntimeException e) {
+                    throw e;
+                }
             }
         }
         return modifiedMessage;
@@ -54,16 +63,15 @@ public class RbelModifier {
         return executor.matchesAsJexlExpression(message, modification.getCondition(), Optional.empty());
     }
 
-    private String applyModification(RbelModificationDescription modification, RbelElement targetElement) {
+    private byte[] applyModification(RbelModificationDescription modification, RbelElement targetElement) {
         RbelElement oldTargetElement = targetElement.getParentNode();
         RbelElement oldTargetModifiedChild = targetElement;
-        String newContent = applyRegexAndReturnNewContent(targetElement, modification);
+        byte[] newContent = applyRegexAndReturnNewContent(targetElement, modification);
         while (oldTargetElement != null) {
-            Optional<String> found = Optional.empty();
+            Optional<byte[]> found = Optional.empty();
             for (RbelElementWriter writer : elementWriterList) {
                 if (writer.canWrite(oldTargetElement)) {
-                    String write = writer.write(oldTargetElement, oldTargetModifiedChild, newContent);
-                    found = Optional.of(write);
+                    found = Optional.of(writer.write(oldTargetElement, oldTargetModifiedChild, newContent));
                     break;
                 }
             }
@@ -81,12 +89,13 @@ public class RbelModifier {
         return newContent;
     }
 
-    private String applyRegexAndReturnNewContent(RbelElement targetElement, RbelModificationDescription modification) {
+    private byte[] applyRegexAndReturnNewContent(RbelElement targetElement, RbelModificationDescription modification) {
         if (StringUtils.isEmpty(modification.getRegexFilter())) {
-            return modification.getReplaceWith();
+            return modification.getReplaceWith().getBytes();
         } else {
             return targetElement.getRawStringContent()
-                .replaceAll(modification.getRegexFilter(), modification.getReplaceWith());
+                .replaceAll(modification.getRegexFilter(), modification.getReplaceWith())
+                .getBytes();
         }
     }
 
@@ -96,13 +105,24 @@ public class RbelModifier {
 
     public void addModification(RbelModificationDescription modificationDescription) {
         if (StringUtils.isEmpty(modificationDescription.getName())) {
-            modificationsMap.put(UUID.randomUUID().toString(), modificationDescription);
+            String uuid = UUID.randomUUID().toString();
+            modificationDescription.setName(uuid);
+            modificationsMap.put(uuid, modificationDescription);
         } else {
             modificationsMap.put(modificationDescription.getName(), modificationDescription);
         }
     }
 
+    public List<RbelModificationDescription> getModifications() {
+        return modificationsMap.entrySet().stream().map(Entry::getValue).collect(Collectors.toUnmodifiableList());
+    }
+
+    public void deleteModification(String modificationsId) {
+        modificationsMap.remove(modificationsId);
+    }
+
     public class RbelModificationException extends RuntimeException {
+
         public RbelModificationException(String s) {
             super(s);
         }

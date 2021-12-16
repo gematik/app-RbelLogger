@@ -8,6 +8,7 @@ import static j2html.TagCreator.p;
 import static j2html.TagCreator.span;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -74,6 +75,9 @@ public class RbelVauErpFacet implements RbelFacet {
     private final RbelElement pVersionNumber;
     private final RbelElement keyIdUsed;
     private final RbelElement responseKey;
+    private final RbelElement decryptedPString;
+    @Builder.Default
+    private final Optional<RbelKey> keyUsed = Optional.empty();
 
     @Override
     public List<Entry<String, RbelElement>> getChildElements() {
@@ -83,7 +87,8 @@ public class RbelVauErpFacet implements RbelFacet {
             Pair.of("requestId", requestId),
             Pair.of("pVersionNumber", pVersionNumber),
             Pair.of("keyId", keyIdUsed),
-            Pair.of("responseKey", responseKey)
+            Pair.of("responseKey", responseKey),
+            Pair.of("decryptedPString", decryptedPString)
         )
             .filter(pair -> pair.getValue() != null)
             .collect(Collectors.toList());
