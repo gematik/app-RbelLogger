@@ -17,23 +17,23 @@
 package de.gematik.rbellogger.data;
 
 import de.gematik.rbellogger.converter.RbelConverter;
-import de.gematik.rbellogger.data.facet.RbelFacet;
-import de.gematik.rbellogger.data.facet.RbelRootFacet;
-import de.gematik.rbellogger.data.facet.RbelValueFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.data.util.RbelElementTreePrinter;
 import de.gematik.rbellogger.util.RbelException;
 import de.gematik.rbellogger.util.RbelPathExecutor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+@AllArgsConstructor
 @RequiredArgsConstructor
 @Getter
 @Builder(toBuilder = true)
@@ -44,28 +44,20 @@ public class RbelElement {
     private final byte[] rawContent;
     private final transient RbelElement parentNode;
     private final List<RbelFacet> facets = new ArrayList<>();
-    private final AtomicReference<String> note = new AtomicReference<>();
+    @Builder.Default @Setter @Getter(AccessLevel.PRIVATE)
+    private Optional<Charset> charset = Optional.empty();
 
-    public static RbelElement wrap(byte[] rawValue, RbelElement parentNode, Object value) {
+    public static RbelElement wrap(byte[] rawValue, @NonNull RbelElement parentNode, Object value) {
         return new RbelElement(rawValue, parentNode)
             .addFacet(new RbelValueFacet<>(value));
     }
 
-    public static RbelElement wrap(RbelElement parentNode, Object value) {
-        return new RbelElement(value.toString().getBytes(), parentNode)
+    public static RbelElement wrap(@NonNull RbelElement parentNode, Object value) {
+        return new RbelElement(value.toString().getBytes(parentNode.getElementCharset()), parentNode)
             .addFacet(new RbelValueFacet<>(value));
     }
 
-    public Optional<String> getNote() {
-        return Optional.ofNullable(note.get());
-    }
-
-    public RbelElement setNote(String value) {
-        note.set(value);
-        return this;
-    }
-
-    public <T> Optional<T> getFacet(Class<T> clazz) {
+    public <T> Optional<T> getFacet(@NonNull Class<T> clazz) {
         return facets.stream()
             .filter(facet -> clazz.isAssignableFrom(facet.getClass()))
             .map(clazz::cast)
@@ -77,14 +69,11 @@ public class RbelElement {
     }
 
     public RbelElement addFacet(RbelFacet facet) {
-        if (hasFacet(facet.getClass())) {
-            throw new RbelException("Trying to re-add facet " + facet.getClass().getSimpleName() + "! (" + facet + ")");
-        }
         facets.add(facet);
         return this;
     }
 
-    public List<? extends RbelElement> getChildNodes() {
+    public List<RbelElement> getChildNodes() {
         return facets.stream()
             .map(RbelFacet::getChildElements)
             .flatMap(List::stream)
@@ -187,8 +176,16 @@ public class RbelElement {
         if (rawContent == null) {
             return null;
         } else {
-            return new String(rawContent);
+            return new String(rawContent, getElementCharset());
         }
+    }
+
+    public Charset getElementCharset() {
+        return charset
+            .or(() -> Optional.ofNullable(parentNode)
+                .filter(Objects::nonNull)
+                .map(RbelElement::getElementCharset))
+            .orElse(StandardCharsets.UTF_8);
     }
 
     public <T extends RbelFacet> T getFacetOrFail(Class<T> facetClass) {
@@ -200,7 +197,6 @@ public class RbelElement {
         return new ToStringBuilder(this)
             .append("uuid", uuid)
             .append("facets", facets)
-            .append("note", note)
             .append("path", findNodePath())
             .toString();
     }
@@ -264,6 +260,20 @@ public class RbelElement {
             .maximumLevels(maximumLevels)
             .build()
             .execute();
+    }
+
+    public List<RbelNoteFacet> getNotes() {
+        return facets.stream()
+            .flatMap(facet -> {
+                if (facet instanceof RbelNestedFacet) {
+                    return ((RbelNestedFacet) facet).getNestedElement().getFacets().stream();
+                } else {
+                    return Stream.of(facet);
+                }
+            })
+            .filter(RbelNoteFacet.class::isInstance)
+            .map(RbelNoteFacet.class::cast)
+            .collect(Collectors.toUnmodifiableList());
     }
 
     private class RbelPathNotUniqueException extends RuntimeException {

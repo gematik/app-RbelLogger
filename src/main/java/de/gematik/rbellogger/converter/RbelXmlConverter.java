@@ -20,15 +20,20 @@ import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelXmlFacet;
 import de.gematik.rbellogger.util.RbelException;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
+import org.dom4j.*;
+import org.dom4j.io.SAXReader;
+import org.dom4j.tree.AbstractBranch;
+import org.dom4j.tree.DefaultComment;
+import org.xml.sax.InputSource;
+
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-import org.dom4j.*;
-import org.dom4j.tree.AbstractBranch;
-import org.dom4j.tree.DefaultComment;
+import java.util.StringTokenizer;
 
 @Slf4j
 public class RbelXmlConverter implements RbelConverterPlugin {
@@ -40,12 +45,24 @@ public class RbelXmlConverter implements RbelConverterPlugin {
         final String content = rbel.getRawStringContent();
         if (content.contains("<") && content.contains(">")) {
             try {
-                buildXmlElementForNode(DocumentHelper.parseText(content.trim()), rbel, context);
+                buildXmlElementForNode(parseXml(content.trim(), rbel), rbel, context);
                 rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
             } catch (DocumentException e) {
                 log.trace("Exception while trying to parse XML. Skipping", e);
             }
         }
+    }
+
+    private Branch parseXml(String text, RbelElement parentElement) throws DocumentException {
+        SAXReader reader = new SAXReader();//NOSONAR
+        reader.setMergeAdjacentText(true);
+
+        InputSource source = new InputSource(new StringReader(text));
+
+        source.setEncoding(parentElement.getElementCharset().name());
+        // see https://www.ietf.org/rfc/rfc3023 8.5 and 8.20: We always use the http-encoding.
+
+        return reader.read(source);
     }
 
     private void buildXmlElementForNode(Branch branch, RbelElement parentElement, RbelConverter converter) {
@@ -60,7 +77,7 @@ public class RbelXmlConverter implements RbelConverterPlugin {
                     .add(Pair.of(XML_TEXT_KEY, converter.convertElement(((Text) child).getText(), parentElement)));
             } else if (child instanceof AbstractBranch) {
                 final RbelElement element = new RbelElement(
-                    ((AbstractBranch) child).asXML().getBytes(StandardCharsets.UTF_8),
+                    ((AbstractBranch) child).asXML().getBytes(parentElement.getElementCharset()),
                     parentElement);
                 buildXmlElementForNode((AbstractBranch) child, element, converter);
                 childElements.add(Pair.of(((AbstractBranch) child).getName(), element));

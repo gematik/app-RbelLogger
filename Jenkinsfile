@@ -12,7 +12,7 @@ pipeline {
     options {
         disableConcurrentBuilds()
     }
-    agent { label 'k8-tshark' }
+    agent { label 'k8-maven' }
 
     tools {
         maven 'Default'

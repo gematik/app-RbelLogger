@@ -7,12 +7,16 @@ import de.gematik.rbellogger.data.facet.RbelJweFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.util.JsonUtils;
+
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.lang.JoseException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @AllArgsConstructor
 public class RbelJweWriter implements RbelElementWriter {
@@ -33,8 +37,8 @@ public class RbelJweWriter implements RbelElementWriter {
     public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelJweFacet rbelJweFacet = oldTargetElement.getFacetOrFail(RbelJweFacet.class);
 
-        return createUpdatedJwe(oldTargetModifiedChild, new String(newContent), rbelJweFacet)
-            .getBytes();
+        return createUpdatedJwe(oldTargetModifiedChild, new String(newContent, UTF_8), rbelJweFacet)
+            .getBytes(UTF_8);
     }
 
     private String createUpdatedJwe(RbelElement oldTargetModifiedChild, String newContent, RbelJweFacet rbelJweFacet) {

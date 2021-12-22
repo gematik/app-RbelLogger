@@ -1,5 +1,17 @@
 # Changelog RBeL Logger
 
+# Release 0.21.0
+
+## Changed
+
+* TGR-37: Multiple notes are now supported on a single element
+* TGR-37: Exception in converters are now caught, logged and added as an error-note
+* RBEL-25: Charset-Support added. XML- and HTTP-Content are now parsed with correct charset.
+
+## Bugfix
+
+* RBEL-37: Long adjacent texts in XMLs are now merged
+
 # Release 0.20.0
 
 ## Changed 

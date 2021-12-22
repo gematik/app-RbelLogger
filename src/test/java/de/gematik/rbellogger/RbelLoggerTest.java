@@ -5,6 +5,7 @@ import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
@@ -34,9 +35,9 @@ public class RbelLoggerTest {
                 .parseMessage(curlMessage.getBytes(), null, null)
                 .getFacetOrFail(RbelHttpMessageFacet.class);
 
-        assertThat(convertedMessage.getHeader().getFirst("Version").get().getNote())
-                .get()
-                .isEqualTo("Extra note");
+        assertThat(convertedMessage.getHeader().getFirst("Version").get().getNotes())
+            .extracting(RbelNoteFacet::getValue)
+            .containsExactly("Extra note");
     }
 
     @Test
@@ -76,11 +77,11 @@ public class RbelLoggerTest {
                 .parseMessage(curlMessage.getBytes(), null, null)
                 .getFacetOrFail(RbelHttpMessageFacet.class);
 
-        assertThat(convertedMessage.getHeader().getNote())
-                .get()
-                .isEqualTo("Header note");
-        assertThat(convertedMessage.getBody().getNote())
-                .isEmpty();
+        assertThat(convertedMessage.getHeader().getNotes())
+            .extracting(RbelNoteFacet::getValue)
+            .containsExactly("Header note");
+        assertThat(convertedMessage.getBody().getNotes())
+            .isEmpty();
     }
 
     @SneakyThrows

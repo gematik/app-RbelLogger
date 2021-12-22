@@ -3,6 +3,8 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.key.RbelKey;
+
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -26,10 +28,10 @@ import org.bouncycastle.util.encoders.Hex;
 @Slf4j
 public class RbelVauKeyDeriver implements RbelConverterPlugin {
 
-    private static final String KeyID = "KeyID";
-    private static final String AES256GCMKey = "AES-256-GCM-Key";
-    private static final String AES256GCMKeyServer2Client = "AES-256-GCM-Key-Server-to-Client";
-    private static final String AES256GCMKeyClient2Server = "AES-256-GCM-Key-Client-to-Server";
+    private static final String KEY_ID = "KeyID";
+    private static final String AES_256_GCM_KEY = "AES-256-GCM-Key";
+    private static final String AES_256_GCM_KEY_SERVER_TO_CLIENT = "AES-256-GCM-Key-Server-to-Client";
+    private static final String AES_256_GCM_KEY_CLIENT_TO_SERVER = "AES-256-GCM-Key-Client-to-Server";
 
     @Override
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
@@ -101,12 +103,12 @@ public class RbelVauKeyDeriver implements RbelConverterPlugin {
                 Base64.getEncoder().encodeToString(otherSidePublicKey.getEncoded()));
             byte[] sharedSecret = ecka(privateKey, otherSidePublicKey);
             log.trace("shared secret: " + Hex.toHexString(sharedSecret));
-            byte[] keyId = hkdf(sharedSecret, KeyID, 256);
+            byte[] keyId = hkdf(sharedSecret, KEY_ID, 256);
             log.trace("keyID: " + Hex.toHexString(keyId));
             return List.of(
-                mapToRbelKey(AES256GCMKeyClient2Server, "_client", keyId, sharedSecret),
-                mapToRbelKey(AES256GCMKeyServer2Client, "_server", keyId, sharedSecret),
-                mapToRbelKey(AES256GCMKey, "_old", keyId, sharedSecret));
+                mapToRbelKey(AES_256_GCM_KEY_CLIENT_TO_SERVER, "_client", keyId, sharedSecret),
+                mapToRbelKey(AES_256_GCM_KEY_SERVER_TO_CLIENT, "_server", keyId, sharedSecret),
+                mapToRbelKey(AES_256_GCM_KEY, "_old", keyId, sharedSecret));
         } catch (Exception e) {
             return List.of();
         }
@@ -129,7 +131,7 @@ public class RbelVauKeyDeriver implements RbelConverterPlugin {
     }
 
     private byte[] hkdf(byte[] ikm, String info, int length) throws IllegalArgumentException, DataLengthException {
-        return hkdf(ikm, info.getBytes(), length);
+        return hkdf(ikm, info.getBytes(StandardCharsets.UTF_8), length);
     }
 
     private byte[] hkdf(byte[] ikm, byte[] info, int length) throws IllegalArgumentException, DataLengthException {

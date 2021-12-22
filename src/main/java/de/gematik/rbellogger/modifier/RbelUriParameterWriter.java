@@ -30,6 +30,6 @@ public class RbelUriParameterWriter implements RbelElementWriter {
             result.add(uriFacet.getValue().getRawStringContent());
         }
 
-        return result.toString().getBytes();
+        return result.toString().getBytes(oldTargetElement.getElementCharset());
     }
 }

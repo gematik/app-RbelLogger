@@ -33,9 +33,9 @@ public class RbelMtomFacet implements RbelFacet {
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 return div(
                     t1ms("XML XOP/MTOM Message")
-                        .with(showContentButtonAndDialog(element)),
-                    addNote(element, "mb-5"),
-                    ancestorTitle().with(
+                        .with(showContentButtonAndDialog(element)))
+                    .with(addNotes(element, "mb-5"))
+                    .with(ancestorTitle().with(
                         vertParentTitle().with(
                             childBoxNotifTitle(CLS_BODY).with(
                                 t2("Content Type"),
@@ -44,12 +44,11 @@ public class RbelMtomFacet implements RbelFacet {
                                     .map(headers -> renderingToolkit.convert(headers))
                                     .orElse(span())
                             ),
-                            childBoxNotifTitle(CLS_BODY).with(
-                                t2("Reconstructed Message"),
-                                addNote(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()),
-                                renderingToolkit
-                                    .convert(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage())
-                            )
+                            childBoxNotifTitle(CLS_BODY)
+                                .with(t2("Reconstructed Message"))
+                                .with(addNotes(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
+                                .with(renderingToolkit
+                                    .convert(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
                         )
                     )
                 );

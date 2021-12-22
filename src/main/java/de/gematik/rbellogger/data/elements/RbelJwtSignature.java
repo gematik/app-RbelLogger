@@ -16,23 +16,24 @@
 
 package de.gematik.rbellogger.data.elements;
 
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
-import static j2html.TagCreator.b;
-import static j2html.TagCreator.p;
-
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Optional;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
+import static j2html.TagCreator.b;
+import static j2html.TagCreator.p;
 
 @Data
 @RequiredArgsConstructor
@@ -48,15 +49,15 @@ public class RbelJwtSignature implements RbelFacet {
 
             @Override
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
-                RbelHtmlRenderingToolkit renderingToolkit) {
+                                                 RbelHtmlRenderingToolkit renderingToolkit) {
                 return
-                    childBoxNotifTitle((element.getFacetOrFail(RbelJwtSignature.class).isValid()) ? CLS_PKIOK : CLS_PKINOK).with(
-                        t2("Signature"),
-                        addNote(element),
-                        p()
+                    childBoxNotifTitle((element.getFacetOrFail(RbelJwtSignature.class).isValid()) ? CLS_PKIOK : CLS_PKINOK)
+                        .with(t2("Signature"))
+                        .with(addNotes(element))
+                        .with(p()
                             .withText("Was verified using Key ")
                             .with(b(element.getFacetOrFail(RbelJwtSignature.class).wasVerifiedUsing()))
-                    );
+                        );
             }
         });
     }
@@ -67,8 +68,8 @@ public class RbelJwtSignature implements RbelFacet {
     @Override
     public List<Entry<String, RbelElement>> getChildElements() {
         return List.of(
-            Pair.of("isValid",isValid),
-            Pair.of("verifiedUsing",verifiedUsing)
+            Pair.of("isValid", isValid),
+            Pair.of("verifiedUsing", verifiedUsing)
         );
     }
 

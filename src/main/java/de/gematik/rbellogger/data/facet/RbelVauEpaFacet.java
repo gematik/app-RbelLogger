@@ -39,11 +39,10 @@ public class RbelVauEpaFacet implements RbelFacet {
             @Override
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
                 RbelHtmlRenderingToolkit renderingToolkit) {
-                return div(
-                    t1ms("VAU Encrypted Message (EPA)")
-                        .with(showContentButtonAndDialog(element)),
-                    addNote(element, "mb-5"),
-                    ancestorTitle().with(
+                return div(t1ms("VAU Encrypted Message (EPA)")
+                        .with(showContentButtonAndDialog(element)))
+                    .with(addNotes(element, "mb-5"))
+                    .with(ancestorTitle().with(
                         vertParentTitle().with(
                             childBoxNotifTitle(CLS_BODY).with(
                                 t2("Header"),
@@ -58,20 +57,18 @@ public class RbelVauEpaFacet implements RbelFacet {
                                     .map(v -> p(b("Sequence Number: ")).withText(v.seekValue().get().toString()))
                                     .orElse(span())
                             ),
-                            childBoxNotifTitle(CLS_BODY).with(
-                                t2("Body"),
-                                addNote(element.getFacetOrFail(RbelVauEpaFacet.class).getMessage()),
-                                renderingToolkit
-                                    .convert(element.getFacetOrFail(RbelVauEpaFacet.class).getMessage())
-                            ),
+                            childBoxNotifTitle(CLS_BODY).with(t2("Body"))
+                                .with(addNotes(element.getFacetOrFail(RbelVauEpaFacet.class).getMessage()))
+                                .with(renderingToolkit
+                                    .convert(element.getFacetOrFail(RbelVauEpaFacet.class).getMessage())),
                             childBoxNotifTitle(CLS_PKIOK).with(
                                 p()
                                     .withClass(CLS_PKIOK)
                                     .withText("Was decrypted using Key ")
                                     .with(b(element.getFacetOrFail(RbelVauEpaFacet.class)
-                                        .getKeyIdUsed().getRawStringContent())),
-                                addNote(element)
-                            ))
+                                        .getKeyIdUsed().getRawStringContent())))
+                                .with(addNotes(element))
+                        )
                     )
                 );
             }

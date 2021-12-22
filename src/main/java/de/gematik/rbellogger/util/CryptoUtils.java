@@ -1,5 +1,6 @@
 package de.gematik.rbellogger.util;
 
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Arrays;
 import java.util.Optional;
@@ -34,7 +35,7 @@ public class CryptoUtils {
 
     public static byte[] hkdf(byte[] ikm, String info, int lengthInBytes)
         throws IllegalArgumentException, DataLengthException {
-        return hkdf(ikm, info.getBytes(), lengthInBytes);
+        return hkdf(ikm, info.getBytes(StandardCharsets.UTF_8), lengthInBytes);
     }
 
     public static byte[] hkdf(byte[] ikm, byte[] info, int lengthInBytes)

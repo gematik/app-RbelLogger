@@ -42,7 +42,7 @@ public class RbelHttpFormDataFacet implements RbelFacet {
                                                                 td(pre()
                                                                         .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
                                                                         .withClass("value"))
-                                                                        .with(renderingToolkit.addNote(entry.getValue()))
+                                                                        .with(renderingToolkit.addNotes(entry.getValue()))
                                                         )
                                                 )
                                                 .collect(Collectors.toList())

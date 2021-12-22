@@ -10,7 +10,11 @@ import java.nio.charset.Charset;
 public class TestUtils {
 
     public static String readCurlFromFileWithCorrectedLineBreaks(String fileName) throws IOException {
-        return FileUtils.readFileToString(new File(fileName), Charset.defaultCharset())
+        return readCurlFromFileWithCorrectedLineBreaks(fileName, Charset.defaultCharset());
+    }
+
+    public static String readCurlFromFileWithCorrectedLineBreaks(String fileName, Charset charset) throws IOException {
+        return FileUtils.readFileToString(new File(fileName), charset)
             .replaceAll("(?<!\\r)\\n", "\r\n");
     }
 

@@ -138,4 +138,16 @@ public class XmlConverterTest {
         assertThat(rbelPathResult.get(0).getRawStringContent())
             .isEqualTo("http://url.text.de");
     }
+
+    @Test
+    public void longNestedTextContent() throws IOException {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(readCurlFromFileWithCorrectedLineBreaks("src/test/resources/XmlWithLongTextNode.curl"), null);
+
+        final List<RbelElement> rbelPathResult = convertedMessage
+            .findRbelPathMembers("$.body.Envelope.Body.SignDocumentResponse.SignResponse.SignatureObject.Base64Signature.text");
+
+        assertThat(rbelPathResult).hasSize(1);
+        assertThat(rbelPathResult.get(0).getRawStringContent()).hasSize(40920);
+    }
 }

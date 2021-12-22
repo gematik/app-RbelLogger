@@ -25,7 +25,7 @@ public class RbelUriConverter implements RbelConverterPlugin {
         return Stream.of(originalContent.split("\\?")[1].split("\\&"))
             .filter(StringUtils::isNotEmpty)
             .map(param -> {
-                RbelElement paramPair = new RbelElement(param.getBytes(), parentNode);
+                RbelElement paramPair = new RbelElement(param.getBytes(parentNode.getElementCharset()), parentNode);
                 final String[] splitParams = param.split("\\=", 2);
                 if (splitParams.length == 1) {
                     paramPair.addFacet(RbelUriParameterFacet.builder()
@@ -36,7 +36,7 @@ public class RbelUriConverter implements RbelConverterPlugin {
                     paramPair.addFacet(RbelUriParameterFacet.builder()
                         .key(RbelElement.wrap(paramPair, splitParams[0]))
                         .value(context.convertElement(
-                            URLDecoder.decode(splitParams[1], StandardCharsets.UTF_8).getBytes(), paramPair))
+                            URLDecoder.decode(splitParams[1], StandardCharsets.UTF_8).getBytes(parentNode.getElementCharset()), paramPair))
                         .build());
                 }
                 return paramPair;

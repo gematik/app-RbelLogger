@@ -21,7 +21,8 @@ public class RbelJsonWriter implements RbelElementWriter {
         final JsonElement jsonElement = oldTargetElement.getFacetOrFail(RbelJsonFacet.class).getJsonElement();
         if (jsonElement.isJsonPrimitive()) {
             if (jsonElement.getAsJsonPrimitive().isString()) {
-                return ("\"" + new String(newContent) + "\"").getBytes();
+                return ("\"" + new String(newContent, oldTargetElement.getElementCharset()) + "\"")
+                    .getBytes(oldTargetElement.getElementCharset());
             } else {
                 return newContent;
             }
@@ -29,22 +30,22 @@ public class RbelJsonWriter implements RbelElementWriter {
             StringJoiner joiner = new StringJoiner(",");
             for (Map.Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
                 if (entry.getValue() == oldTargetModifiedChild.getFacetOrFail(RbelJsonFacet.class).getJsonElement()) {
-                    joiner.add("\"" + entry.getKey() + "\": " + new String(newContent));
+                    joiner.add("\"" + entry.getKey() + "\": " + new String(newContent, oldTargetElement.getElementCharset()));
                 } else {
                     joiner.add("\"" + entry.getKey() + "\": " + entry.getValue().toString());
                 }
             }
-            return ("{" + joiner + "}").getBytes();
+            return ("{" + joiner + "}").getBytes(oldTargetElement.getElementCharset());
         } else if (jsonElement.isJsonArray()) {
             StringJoiner joiner = new StringJoiner(",");
             for (JsonElement entry : jsonElement.getAsJsonArray()) {
                 if (entry == oldTargetModifiedChild.getFacetOrFail(RbelJsonFacet.class).getJsonElement()) {
-                    joiner.add(new String(newContent));
+                    joiner.add(new String(newContent, oldTargetElement.getElementCharset()));
                 } else {
                     joiner.add(entry.toString());
                 }
             }
-            return ("[" + joiner + "]").getBytes();
+            return ("[" + joiner + "]").getBytes(oldTargetElement.getElementCharset());
         } else {
             throw new RuntimeException();
         }

@@ -37,7 +37,7 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
                                         td(pre()
                                             .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
                                             .withClass("value"))
-                                            .with(renderingToolkit.addNote(entry.getValue()))
+                                            .with(renderingToolkit.addNotes(entry.getValue()))
                                     )
                                 )
                                 .collect(Collectors.toList())

@@ -75,26 +75,25 @@ public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
                     requestFacet.map(f -> text("Request")).orElse(text("Response")))
                     .with(buildAddressInfo(element))
                     .withClass(requestFacet.map(f -> "title has-text-link").orElse("title has-text-success")),
-                addNote(element),
                 div().withClass("container is-widescreen").with(
                     requestFacet.map(f ->
                             div(renderingToolkit.convert(requestFacet.get().getPath(), Optional.empty()))
                                 .withClass("is-family-monospace title is-size-4")
-                                .with(addNote(requestFacet.get().getPath())))
+                                .with(addNotes(requestFacet.get().getPath())))
                         .orElseGet(() -> t1ms(responseFacet.get().getResponseCode().getRawStringContent() + ""))
                 )
-            ).withClass("full-width"),
+            )
+                .with(addNotes(element))
+                .withClass("full-width"),
             //////////////////////////////// HEADER & BODY //////////////////////////////////////
             ancestorTitle().with(
                 div().withClass("tile is-parent is-vertical pr-3").with(
                     childBoxNotifTitle(CLS_HEADER).with(
                         requestFacet.map(f -> t2("REQ Headers")).orElseGet(() -> t2("RES Headers")),
-                        addNote(messageFacet.getHeader()),
                         renderingToolkit.convert(messageFacet.getHeader(), Optional.empty())
                     ),
                     childBoxNotifTitle(CLS_BODY).with(
                         requestFacet.map(f -> t2("REQ Body")).orElseGet(() -> t2("RES Body")),
-                        addNote(messageFacet.getBody()),
                         renderingToolkit.convert(messageFacet.getBody(), Optional.empty())
                     )
                 )

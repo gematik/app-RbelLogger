@@ -6,14 +6,13 @@ import de.gematik.rbellogger.exceptions.RbelAsn1Exception;
 import de.gematik.rbellogger.util.RbelException;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
 import java.util.Base64.Decoder;
-import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.*;
 
@@ -123,7 +122,8 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
                 .value(((ASN1String) asn1).getString())
                 .build());
             tryToParseEmbededContentAndAddFacetIfPresent(converter, parentNode,
-                ((ASN1String) asn1).getString().getBytes());
+                ((ASN1Primitive) asn1).getEncoded());
+            addCharsetInformation(parentNode, asn1);
         } else if (asn1 instanceof ASN1Boolean) {
             parentNode.addFacet(RbelValueFacet.builder()
                 .value(((ASN1Boolean) asn1).isTrue())
@@ -156,6 +156,14 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
                 .build());
         } else {
             log.warn("Unable to convert " + asn1.getClass().getSimpleName() + "!");
+        }
+    }
+
+    private void addCharsetInformation(RbelElement parentNode, ASN1Encodable asn1) {
+        if (asn1 instanceof DERPrintableString || asn1 instanceof DERIA5String) {
+            parentNode.setCharset(Optional.of(StandardCharsets.US_ASCII));
+        } else {
+            parentNode.setCharset(Optional.of(StandardCharsets.UTF_8));
         }
     }
 

@@ -13,8 +13,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Random;
+
+import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.Test;
 
 public class RbelHtmlRendererTest {
@@ -41,14 +45,22 @@ public class RbelHtmlRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RBEL_CONVERTER.convertElement(curlMessage, null);
-        convertedMessage.setNote("foobar Message");
-        convertedMessage.getFirst("header").get().setNote("foobar Header");
+        convertedMessage.addFacet(new RbelNoteFacet("foobar Message"));
+        convertedMessage.getFirst("header").get().addFacet(new RbelNoteFacet("foobar Header"));
         convertedMessage.getFirst("header").get().getChildNodes().stream()
-            .forEach(element -> element.setNote("some note " + RandomStringUtils.randomAlphanumeric(30)));
-        convertedMessage.getFirst("body").get().setNote("foobar Body");
-        convertedMessage.findRbelPathMembers("$.body.header").get(0).setNote("foobar JWT Header");
-        convertedMessage.findRbelPathMembers("$.body.body").get(0).setNote("foobar JWT Body");
-        convertedMessage.findRbelPathMembers("$.body.signature").get(0).setNote("foobar Signature");
+            .forEach(element -> {
+                for (int i = 0; i < RandomUtils.nextInt(0, 4); i++) {
+                    element.addFacet(new RbelNoteFacet("some note " + RandomStringUtils.randomAlphanumeric(30),
+                        RbelNoteFacet.NoteStyling.values()[RandomUtils.nextInt(0, 3)]));
+                }
+            });
+        convertedMessage.getFirst("body").get().addFacet(new RbelNoteFacet("foobar Body"));
+        convertedMessage.findElement("$.body.header").get().addFacet(new RbelNoteFacet("foobar JWT Header"));
+        convertedMessage.findElement("$.body.body").get().addFacet(new RbelNoteFacet("foobar JWT Body"));
+        convertedMessage.findElement("$.body.signature").get().addFacet(new RbelNoteFacet("foobar Signature"));
+        convertedMessage.findElement("$.body.body.jwks_uri").get().addFacet(new RbelNoteFacet("jwks_uri: note im JSON"));
+        convertedMessage.findElement("$.body.body.jwks_uri").get().addFacet(new RbelNoteFacet("warnung", RbelNoteFacet.NoteStyling.WARN));
+        convertedMessage.findElement("$.body.body.scopes_supported").get().addFacet(new RbelNoteFacet("scopes_supported: note an einem array"));
 
         final String convertedHtml = RENDERER.render(wrapHttpMessage(convertedMessage), new RbelValueShader()
             .addSimpleShadingCriterion("Date", "<halt ein date>")
@@ -65,7 +77,6 @@ public class RbelHtmlRendererTest {
 
             .contains("\"&quot;foobar&quot;\"")
             .contains("&amp;some&amp;more&quot;stuff&quot;");
-
     }
 
     @Test

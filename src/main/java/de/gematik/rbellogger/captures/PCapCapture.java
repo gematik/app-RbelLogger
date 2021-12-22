@@ -16,23 +16,15 @@
 
 package de.gematik.rbellogger.captures;
 
-import com.sun.jna.Platform;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.util.RbelException;
-import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
@@ -42,6 +34,15 @@ import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.Packet;
 import org.pcap4j.packet.TcpPacket;
+
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 @Slf4j
 public class PCapCapture extends RbelCapturer {
@@ -61,7 +62,7 @@ public class PCapCapture extends RbelCapturer {
 
     @Builder
     public PCapCapture(RbelConverter rbelConverter, String deviceName, String pcapFile, String filter,
-        boolean printMessageToSystemOut) {
+                       boolean printMessageToSystemOut) {
         super(rbelConverter);
         this.deviceName = deviceName;
         this.pcapFile = pcapFile;
@@ -84,7 +85,28 @@ public class PCapCapture extends RbelCapturer {
     @Override
     public RbelCapturer initialize() {
         setWindowsNpcapPath();
+        preparePcapHandle();
+        prepareFilter();
 
+        final RBelPacketListener packetListener = new RBelPacketListener(handle, dumper);
+
+        if (pcapFile != null) {
+            readPcapFile(packetListener);
+        } else {
+            startLiveCaptureThread(packetListener);
+        }
+
+        return this;
+    }
+
+    private void prepareFilter() {
+        if (filter == null) {
+            filter = "host 127.0.0.1 and tcp port 8080";
+        }
+        log.info("Applying filter '" + filter + "'");
+    }
+
+    private void preparePcapHandle() {
         if (pcapFile != null) {
             getOfflinePcapHandle();
         } else if (deviceName != null) {
@@ -96,47 +118,40 @@ public class PCapCapture extends RbelCapturer {
         if (!handle.isOpen()) {
             throw new RuntimeException("Source not open for reading!");
         }
+    }
 
-        if (filter == null) {
-            filter = "host 127.0.0.1 and tcp port 8080";
-        }
-        log.info("Applying filter '" + filter + "'");
-
-        final RBelPacketListener packetListener = new RBelPacketListener(handle, dumper);
-
-        if (pcapFile != null) {
-            while (handle.isOpen()) {
-                try {
-                    packetListener.gotPacket(handle.getNextPacketEx());
-                    log.trace(
-                        "Read-In loop. Currently there are {} request and {} response TCP-Packets in their respective buffers.",
-                        unhandledTcpRequests.size(), unhandledTcpResponses.size());
-                } catch (EOFException e) {
-                    log.info("Reached EOF");
-                    break;
-                } catch (TimeoutException | PcapNativeException | NotOpenException e) {
-                    throw new RuntimeException(e);
-                }
+    private void readPcapFile(RBelPacketListener packetListener) {
+        while (handle.isOpen()) {
+            try {
+                packetListener.gotPacket(handle.getNextPacketEx());
+                log.trace(
+                    "Read-In loop. Currently there are {} request and {} response TCP-Packets in their respective buffers.",
+                    unhandledTcpRequests.size(), unhandledTcpResponses.size());
+            } catch (EOFException e) {
+                log.info("Reached EOF");
+                break;
+            } catch (TimeoutException | PcapNativeException | NotOpenException e) {
+                throw new RuntimeException(e);
             }
-            log.info("After loop");
-        } else {
-            captureThread = new Thread(() -> {
-                try {
-                    handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
-
-                    final int maxPackets = -1;
-                    handle.loop(maxPackets, packetListener);
-                } catch (final InterruptedException e) {
-                    log.info("Packet capturing interrupted...");
-                    Thread.currentThread().interrupt();
-                } catch (PcapNativeException | NotOpenException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            captureThread.start();
         }
+        log.trace("After loop");
+    }
 
-        return this;
+    private void startLiveCaptureThread(RBelPacketListener packetListener) {
+        captureThread = new Thread(() -> {
+            try {
+                handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
+
+                final int maxPackets = -1;
+                handle.loop(maxPackets, packetListener);
+            } catch (final InterruptedException e) {
+                log.info("Packet capturing interrupted...");
+                Thread.currentThread().interrupt();
+            } catch (PcapNativeException | NotOpenException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        captureThread.start();
     }
 
     private void getOnlineHandle() {
@@ -182,7 +197,7 @@ public class PCapCapture extends RbelCapturer {
                 log.info("Packets dropped: " + stats.getNumPacketsDropped());
                 log.info("Packets dropped by interface: " + stats.getNumPacketsDroppedByIf());
                 // Supported by WinPcap only
-                if (Platform.isWindows()) {
+                if (SystemUtils.IS_OS_WINDOWS) {
                     log.info("Packets captured: " + stats.getNumPacketsCaptured());
                 }
             } catch (Exception e) {
@@ -307,7 +322,7 @@ public class PCapCapture extends RbelCapturer {
         }
 
         private void addToBufferAndExtractCompletedMessages(Optional<TcpPacket> tcpPacket, List<TcpPacket> buffer,
-            RbelHostname sender, RbelHostname recipient) {
+                                                            RbelHostname sender, RbelHostname recipient) {
             tcpPacket.ifPresent(buffer::add);
             Optional<byte[]> nextMessage = extractCompleteHttpMessage(getCurrentBuffer(buffer));
             if (nextMessage.isPresent()) {
@@ -339,7 +354,7 @@ public class PCapCapture extends RbelCapturer {
                         return Optional.empty();
                     }
                 } else if (messageParts[1].length() == messageLength.get()
-                || messageParts[1].length() == messageLength.get() + 1) {
+                    || messageParts[1].length() == messageLength.get() + 1) {
                     return Optional.of(currentBuffer);
                 } else if (messageParts[1].length() > messageLength.get()) {
                     throw new RuntimeException(

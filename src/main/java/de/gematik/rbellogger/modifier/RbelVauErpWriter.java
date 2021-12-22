@@ -15,6 +15,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.interfaces.ECPrivateKey;
@@ -32,10 +33,10 @@ public class RbelVauErpWriter implements RbelElementWriter {
     @SneakyThrows
     public static byte[] encrypt(byte[] input, byte[] key) {
         final byte[] iv = new byte[12];
-        ThreadLocalRandom.current().nextBytes(iv);
+        ThreadLocalRandom.current().nextBytes(iv);//NOSONAR
         SecretKey secretKey = new SecretKeySpec(key, "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");//NOSONAR
 
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(16 * 8, iv));
 
@@ -77,7 +78,7 @@ public class RbelVauErpWriter implements RbelElementWriter {
             .get().toString().split(" ");
 
         return encrypt(
-            ArrayUtils.addAll((pParts[0] + " " + pParts[1] + " ").getBytes(), newContent),
+            ArrayUtils.addAll((pParts[0] + " " + pParts[1] + " ").getBytes(StandardCharsets.UTF_8), newContent),
             decryptionKey.getKey().getEncoded());
     }
 
@@ -97,7 +98,7 @@ public class RbelVauErpWriter implements RbelElementWriter {
                 pParts[1] + " " +
                 pParts[2] + " " +
                 pParts[3] + " "
-            ).getBytes(), newContent), aesKeyBytes);
+            ).getBytes(StandardCharsets.UTF_8), newContent), aesKeyBytes);
 
         if (log.isTraceEnabled()) {
             log.trace("Encrypting. AesKey '{}' and ciphertext {}",

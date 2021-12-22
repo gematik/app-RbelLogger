@@ -26,7 +26,7 @@ public class RbelUriWriter implements RbelElementWriter {
             StringJoiner joiner = new StringJoiner("&");
             for (RbelElement queryParameter : uriFacet.getQueryParameters()) {
                 if (queryParameter == oldTargetModifiedChild) {
-                    joiner.add(new String(newContent));
+                    joiner.add(new String(newContent, oldTargetElement.getElementCharset()));
                 } else {
                     joiner.add(queryParameter.getRawStringContent());
                 }
@@ -34,6 +34,6 @@ public class RbelUriWriter implements RbelElementWriter {
             resultBuilder.append("?");
             resultBuilder.append(joiner);
         }
-        return resultBuilder.toString().getBytes();
+        return resultBuilder.toString().getBytes(oldTargetElement.getElementCharset());
     }
 }

@@ -22,6 +22,8 @@ import de.gematik.rbellogger.data.elements.RbelJwtSignature;
 import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelValueFacet;
+
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
@@ -42,13 +44,10 @@ public class RbelJwtConverter implements RbelConverterPlugin {
     @Override
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         try {
-//            if (rbelElement.getRawStringContent().startsWith("\"")) {
-//                return;
-//            }
             final JsonWebSignature jsonWebSignature = initializeJws(rbelElement);
 
             final RbelElement headerElement = converter.convertElement(
-                jsonWebSignature.getHeaders().getFullHeaderAsJsonString().getBytes(),
+                jsonWebSignature.getHeaders().getFullHeaderAsJsonString().getBytes(StandardCharsets.UTF_8),
                 rbelElement);
             final RbelElement bodyElement = converter
                 .convertElement(jsonWebSignature.getUnverifiedPayloadBytes(), rbelElement);

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 @Slf4j
 public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
 
@@ -80,7 +82,7 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
             final Optional<byte[]> decryptedBytes = decrypt(element.getRawContent(), rbelKey.getKey());
             if (decryptedBytes.isPresent()) {
                 try {
-                    log.trace("Succesfully deciphered VAU message! ({})", new String(decryptedBytes.get()));
+                    log.trace("Succesfully deciphered VAU message! ({})", new String(decryptedBytes.get(), UTF_8));
                     if (isVauResponse(decryptedBytes)) {
                         return buildVauMessageFromCleartextResponse(converter, decryptedBytes.get(),
                             element.getRawContent(), rbelKey, element);
@@ -99,7 +101,7 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
 
     private boolean isVauResponse(Optional<byte[]> decryptedBytes) {
         return decryptedBytes
-            .map(bytes -> new String(bytes, StandardCharsets.US_ASCII))
+            .map(bytes -> new String(bytes, UTF_8))
             .map(s -> s.split("1 [\\da-f]{32} ").length)
             .map(length -> length > 1)
             .orElse(false);
@@ -117,9 +119,9 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
 
     private Optional<RbelVauErpFacet> buildVauMessageFromCleartextRequest(RbelConverter converter,
                                                                           byte[] decryptedBytes, byte[] encryptedMessage, RbelKey decryptionKey, RbelElement parentNode) {
-        String[] vauMessageParts = new String(decryptedBytes).split(" ", 5);
+        String[] vauMessageParts = new String(decryptedBytes, UTF_8).split(" ", 5);
         final SecretKeySpec responseKey = buildAesKeyFromHex(vauMessageParts[3]);
-        final RbelKey rbelKey = converter.getRbelKeyManager().addKey("VAU Response-Key", responseKey, 0);
+        converter.getRbelKeyManager().addKey("VAU Response-Key", responseKey, 0);
         return Optional.of(RbelVauErpFacet.builder()
             .message(converter.convertElement(vauMessageParts[4], parentNode))
             .encryptedMessage(RbelElement.wrap(encryptedMessage, parentNode, null))
@@ -127,14 +129,14 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
             .pVersionNumber(RbelElement.wrap(parentNode, Integer.parseInt(vauMessageParts[0])))
             .responseKey(RbelElement.wrap(parentNode, responseKey))
             .keyIdUsed(RbelElement.wrap(parentNode, decryptionKey.getKeyName()))
-            .decryptedPString(RbelElement.wrap(decryptedBytes, parentNode, new String(decryptedBytes)))
+            .decryptedPString(RbelElement.wrap(decryptedBytes, parentNode, new String(decryptedBytes, UTF_8)))
             .keyUsed(Optional.of(decryptionKey))
             .build());
     }
 
     private Optional<RbelVauErpFacet> buildVauMessageFromCleartextResponse(
         RbelConverter converter, byte[] decryptedBytes, byte[] encryptedMessage, RbelKey keyUsed, RbelElement parentNode) {
-        String[] vauMessageParts = new String(decryptedBytes).split(" ", 3);
+        String[] vauMessageParts = new String(decryptedBytes, UTF_8).split(" ", 3);
         return Optional.of(RbelVauErpFacet.builder()
             .message(converter.convertElement(vauMessageParts[2], parentNode))
             .encryptedMessage(RbelElement.wrap(parentNode, encryptedMessage))
@@ -142,7 +144,7 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
             .pVersionNumber(RbelElement.wrap(parentNode, Integer.parseInt(vauMessageParts[0])))
             .keyIdUsed(RbelElement.wrap(parentNode, keyUsed.getKeyName()))
             .keyUsed(Optional.of(keyUsed))
-            .decryptedPString(RbelElement.wrap(parentNode, new String(decryptedBytes)))
+            .decryptedPString(RbelElement.wrap(parentNode, new String(decryptedBytes, UTF_8)))
             .build());
     }
 

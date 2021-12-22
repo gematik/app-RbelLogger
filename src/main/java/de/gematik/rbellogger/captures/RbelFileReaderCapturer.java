@@ -31,7 +31,7 @@ public class RbelFileReaderCapturer extends RbelCapturer {
 
     @Override
     public void close() throws Exception {
-
+        // no open handles
     }
 
     private class RbelFileIoException extends RuntimeException {

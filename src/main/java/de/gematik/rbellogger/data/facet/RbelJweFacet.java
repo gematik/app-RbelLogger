@@ -48,22 +48,18 @@ public class RbelJweFacet implements RbelFacet {
             @Override
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
                 RbelHtmlRenderingToolkit renderingToolkit) {
-                return div(
-                    t1ms("JWE")
-                        .with(showContentButtonAndDialog(element)),
-                    addNote(element, "mb-5"),
-                    ancestorTitle().with(
+                return div(t1ms("JWE").with(showContentButtonAndDialog(element)))
+                    .with(addNotes(element, "mb-5"))
+                    .with(ancestorTitle().with(
                         vertParentTitle().with(
-                            childBoxNotifTitle(CLS_HEADER).with(
-                                t2("Headers"),
-                                addNote(element.getFacetOrFail(RbelJweFacet.class).getHeader()),
-                                renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getHeader())
-                            ),
-                            childBoxNotifTitle(CLS_BODY).with(
-                                t2("Body"),
-                                addNote(element.getFacetOrFail(RbelJweFacet.class).getBody()),
-                                renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getBody())
-                            ),
+                            childBoxNotifTitle(CLS_HEADER)
+                                .with(t2("Headers"))
+                                .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getHeader()))
+                                .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getHeader())),
+                            childBoxNotifTitle(CLS_BODY)
+                                .with(t2("Body"))
+                                .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getBody()))
+                                .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getBody())),
                             renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getEncryptionInfo())
                         )
                     )

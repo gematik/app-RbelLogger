@@ -46,8 +46,8 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
 
     private UnaryOperator<byte[]> getChunkedMapper(RbelElement oldTargetElement) {
         if (isChunkedMessage(oldTargetElement)) {
-            return array -> ArrayUtils.addAll((array.length + "\r\n").getBytes(),
-                ArrayUtils.addAll(array, ("\r\n0\r\n").getBytes()));
+            return array -> ArrayUtils.addAll((array.length + "\r\n").getBytes(oldTargetElement.getElementCharset()),
+                ArrayUtils.addAll(array, ("\r\n0\r\n").getBytes(oldTargetElement.getElementCharset())));
         } else {
             return UnaryOperator.identity();
         }

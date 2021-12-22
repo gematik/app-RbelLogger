@@ -7,6 +7,8 @@ import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.util.JsonUtils;
+
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,8 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.lang.JoseException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @AllArgsConstructor
 public class RbelJwtWriter implements RbelElementWriter {
@@ -34,7 +38,7 @@ public class RbelJwtWriter implements RbelElementWriter {
     public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         final RbelJwtFacet jwtFacet = oldTargetElement.getFacetOrFail(RbelJwtFacet.class);
 
-        return createUpdatedJws(oldTargetModifiedChild, new String(newContent), jwtFacet).getBytes();
+        return createUpdatedJws(oldTargetModifiedChild, new String(newContent, UTF_8), jwtFacet).getBytes(UTF_8);
     }
 
     private String createUpdatedJws(RbelElement oldTargetModifiedChild, String newContent, RbelJwtFacet jwtFacet) {

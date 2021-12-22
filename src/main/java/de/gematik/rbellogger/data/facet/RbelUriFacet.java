@@ -38,15 +38,14 @@ public class RbelUriFacet implements RbelFacet {
                 final RbelUriFacet uriFacet = element.getFacetOrFail(RbelUriFacet.class);
                 final String originalUrl = element.getRawStringContent();
                 final ContainerTag urlContent = renderUrlContent(renderingToolkit, uriFacet, originalUrl);
-                final DomContent note = addNote(element);
                 if (element.traverseAndReturnNestedMembers().isEmpty()) {
-                    return div().with(urlContent).with(note);
+                    return div().with(urlContent).with(addNotes(element));
                 } else {
                     return ancestorTitle().with(
                             vertParentTitle().with(
                                     div().withClass("tile is-child pr-3")
                                             .with(urlContent)
-                                            .with(note)
+                                            .with(addNotes(element))
                                             .with(renderingToolkit.convertNested(element))));
                 }            }
 
@@ -65,7 +64,7 @@ public class RbelUriFacet implements RbelFacet {
                                 .orElse(queryElementEntry.getRawStringContent());
 
                         div.with(div((firstElement ? "" : "&") + shadedStringContent)
-                                .with(addNote(queryElementEntry, " ml-6")));
+                                .with(addNotes(queryElementEntry, " ml-6")));
                         firstElement = false;
                     }
                     return div;

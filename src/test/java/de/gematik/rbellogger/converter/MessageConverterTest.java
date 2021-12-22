@@ -55,6 +55,6 @@ public class MessageConverterTest {
         assertThat(elementMap)
             .hasSize(3);
         assertThat(elementMap.get("Content-Type").getRawStringContent())
-            .isEqualTo("application/json");
+            .isEqualTo("application/json; charset=latin1");
     }
 }

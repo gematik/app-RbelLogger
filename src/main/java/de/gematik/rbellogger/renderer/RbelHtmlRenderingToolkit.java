@@ -3,9 +3,7 @@ package de.gematik.rbellogger.renderer;
 import com.google.gson.*;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
-import de.gematik.rbellogger.data.facet.RbelListFacet;
+import de.gematik.rbellogger.data.facet.*;
 import j2html.TagCreator;
 import j2html.tags.*;
 import lombok.AllArgsConstructor;
@@ -15,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dom4j.DocumentHelper;
 import org.dom4j.io.OutputFormat;
@@ -69,15 +68,13 @@ public class RbelHtmlRenderingToolkit {
         }
     }
 
-    public static DomContent addNote(final RbelElement el, final String... extraClasses) {
-        if (el.getNote().isPresent()) {
-            final String className = extraClasses.length == 0 ? "" : " " + extraClasses[0];
-            return div(i().withText(el.getNote().get()))
-                .withClass("is-family-primary has-text-weight-light m-3 " + className)
-                .withStyle("word-break: normal;");
-        } else {
-            return text("");
-        }
+    public static List<DomContent> addNotes(final RbelElement el, final String... extraClasses) {
+        final String className = StringUtils.join(extraClasses, " ");
+        return el.getNotes().stream()
+            .map(note -> div(i().withText(note.getValue()))
+                .withClass("is-family-primary has-text-weight-light m-3 " + className + " " + note.getStyle().toCssClass())
+                .withStyle("word-break: normal;"))
+            .collect(Collectors.toUnmodifiableList());
     }
 
     public static EmptyTag link2CSS(final String url) {
@@ -246,12 +243,14 @@ public class RbelHtmlRenderingToolkit {
                 .map(shadedValue -> (JsonElement) new JsonPrimitive(StringEscapeUtils.escapeHtml4(shadedValue)))
                 .orElse(input);
 
-            if (originalElement.getNote().isPresent()) {
+            if (!originalElement.getNotes().isEmpty()) {
                 final UUID uuid = UUID.randomUUID();
                 noteTags.put(uuid, JsonNoteEntry.builder()
                     .stringToMatch("\"" + uuid + "\"")
                     .tagForKeyReplacement(span(jsonElement.toString()))
-                    .tagForValueReplacement(div(i(originalElement.getNote().get()))
+                    .tagForValueReplacement(span().with(originalElement.getNotes().stream()
+                            .map(note -> div(i(note.getValue())).withClass(note.getStyle().toCssClass()))
+                            .collect(Collectors.toList()))
                         .withClass("json-note"))
                     .build());
                 return new JsonPrimitive(uuid.toString());
@@ -260,14 +259,16 @@ public class RbelHtmlRenderingToolkit {
             }
         } else if (input.isJsonObject()) {
             final JsonObject output = new JsonObject();
-            if (originalElement.getNote().isPresent()) {
+            if (originalElement.hasFacet(RbelNoteFacet.class)) {
                 final UUID uuid = UUID.randomUUID();
 
                 noteTags.put(uuid, JsonNoteEntry.builder()
                     .stringToMatch("\"note\": \"" + uuid + "\""
                         + (input.getAsJsonObject().size() == 0 ? "" : ","))
                     .tagForKeyReplacement(span())
-                    .tagForValueReplacement(div(i(originalElement.getNote().get()))
+                    .tagForValueReplacement(span().with(originalElement.getNotes().stream()
+                            .map(note -> div(i(note.getValue())).withClass(note.getStyle().toCssClass()))
+                            .collect(Collectors.toList()))
                         .withClass("json-note"))
                     .build());
                 output.addProperty("note", uuid.toString());
@@ -282,12 +283,14 @@ public class RbelHtmlRenderingToolkit {
             return output;
         } else if (input.isJsonArray()) {
             final JsonArray output = new JsonArray();
-            if (originalElement.getNote().isPresent()) {
+            if (originalElement.hasFacet(RbelNoteFacet.class)) {
                 final UUID uuid = UUID.randomUUID();
                 noteTags.put(uuid, JsonNoteEntry.builder()
                     .stringToMatch("\"" + uuid + "\"")
                     .tagForKeyReplacement(span())
-                    .tagForValueReplacement(div(i(originalElement.getNote().get()))
+                    .tagForValueReplacement(span().with(originalElement.getNotes().stream()
+                            .map(note -> div(i(note.getValue())).withClass(note.getStyle().toCssClass()))
+                            .collect(Collectors.toList()))
                         .withClass("json-note"))
                     .build());
                 output.add(uuid.toString());
@@ -321,7 +324,7 @@ public class RbelHtmlRenderingToolkit {
                         div(h2(pair.getKey().findNodePath())
                             .withClass("title").withStyle("word-break: keep-all;"))
                             .withClass("message-header")
-                            .with(addNote(pair.getKey()))
+                            .with(addNotes(pair.getKey()))
                             .with(showContentButtonAndDialog(pair.getKey())),
                         div(div(pair.getValue().get()
                             .withClass("notification tile is-child box pr-3")

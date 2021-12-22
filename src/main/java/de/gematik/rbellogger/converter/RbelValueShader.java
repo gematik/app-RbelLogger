@@ -19,6 +19,8 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.data.RbelJexlShadingExpression;
 import de.gematik.rbellogger.data.RbelElement;
 import java.util.*;
+
+import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +46,8 @@ public class RbelValueShader {
             .filter(entry -> rbelJexlExecutor.matchesAsJexlExpression(element, entry.getJexlExpression(), element.findKeyInParentElement()))
             .peek(entry -> entry.getNumberOfMatches().incrementAndGet())
             .map(entry -> String.format(entry.getShadingValue(), toStringValue(element)))
-            .findFirst()
-            .ifPresent(element::setNote);
+            .map(note -> new RbelNoteFacet(note, RbelNoteFacet.NoteStyling.INFO))
+            .forEach(element::addFacet);
     }
 
     private String toStringValue(final Object value) {

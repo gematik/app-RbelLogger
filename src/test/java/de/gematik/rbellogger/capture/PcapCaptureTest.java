@@ -65,16 +65,10 @@ public class PcapCaptureTest {
             "[timestamp of authentication. Technically this is the time of authentication-token signing. Beispiel: %s]");
         MASKING_FUNCTIONS.put("snc",
             "[server-nonce. Used to introduce noise. Beispiel: %s]");
-//        MASKING_FUNCTIONS.put("cnf",
-//            "[confirmation. Authenticated certificate of the client. For details see rfc7800. Beispiel: " +
-//                v.toString(), " ".repeat(60)) + "]");
         MASKING_FUNCTIONS.put("sub",
             "[subject. Base64(sha256(audClaim + idNummerClaim + serverSubjectSalt)). Beispiel: %s]");
         MASKING_FUNCTIONS.put("at_hash",
             "[Erste 16 Bytes des Hash des Authentication Tokens Base64(subarray(Sha256(authentication_token), 0, 16)). Beispiel: %s]");
-        //       MASKING_FUNCTIONS.put("x5c",
-        //           "[Enthält das verwendete Signer-Zertifikat. Beispiel: " + prettyPrintJsonString(v.toString(),
-        //               " ".repeat(60)) + "]");
 
         MASKING_FUNCTIONS.put("authorization_endpoint", "[URL des Authorization Endpunkts.]");
         MASKING_FUNCTIONS.put("sso_endpoint", "[URL des Authorization Endpunkts.]");
@@ -158,12 +152,12 @@ public class PcapCaptureTest {
             .isTrue();
         assertThat(rbelLogger.getMessageHistory().get(1).hasFacet(RbelHttpResponseFacet.class))
             .isTrue();
-        assertThat(rbelLogger.getMessageHistory().get(0).getNote())
-            .isPresent().get()
-            .isEqualTo("Discovery Document anfragen");
-        assertThat(rbelLogger.getMessageHistory().get(1).getNote())
-            .isPresent().get()
-            .isEqualTo("Discovery Document Response");
+        assertThat(rbelLogger.getMessageHistory().get(0).getNotes())
+            .extracting("value")
+            .containsExactly("Discovery Document anfragen");
+        assertThat(rbelLogger.getMessageHistory().get(1).getNotes())
+            .extracting("value")
+            .containsExactly("Discovery Document Response");
         assertThat(render).contains("Hier gibts die pairings");
         assertThat(render).contains("some note about x5c");
         assertThat(render).contains("Note an einem Object");

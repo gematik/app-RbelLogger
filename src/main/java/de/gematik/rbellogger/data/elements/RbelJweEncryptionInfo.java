@@ -51,10 +51,9 @@ public class RbelJweEncryptionInfo implements RbelFacet {
                 RbelHtmlRenderingToolkit renderingToolkit) {
                 return childBoxNotifTitle(
                     (element.getFacetOrFail(RbelJweEncryptionInfo.class).wasDecryptable()) ? CLS_PKIOK : CLS_PKINOK)
-                    .with(
-                        t2("Encryption info"),
-                        addNote(element),
-                        p()
+                    .with(t2("Encryption info"))
+                        .with(addNotes(element))
+                        .with(p()
                             .withText("Was decrypted using Key ")
                             .with(b(element.getFacetOrFail(RbelJweEncryptionInfo.class).getDecryptedUsingKeyWithId()))
                     );

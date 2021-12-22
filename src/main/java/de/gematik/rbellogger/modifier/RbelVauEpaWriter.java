@@ -26,7 +26,7 @@ public class RbelVauEpaWriter implements RbelElementWriter {
     public static byte[] encrypt(byte[] input, byte[] key, byte[] iv) {
         SecretKey secretKey = new SecretKeySpec(key, "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");//NOSONAR
 
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(16 * 8, iv));
 

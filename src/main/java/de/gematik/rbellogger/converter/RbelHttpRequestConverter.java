@@ -16,20 +16,28 @@
 
 package de.gematik.rbellogger.converter;
 
+import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelUriFacet;
 import de.gematik.rbellogger.util.RbelArrayUtils;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Optional;
+
 import org.apache.commons.lang3.StringUtils;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
 
     @Override
-    public void consumeElement(final RbelElement rbel, final RbelConverter converter) {
-        final String content = rbel.getRawStringContent();
+    public void consumeElement(final RbelElement targetElement, final RbelConverter converter) {
+        final String content = targetElement.getRawStringContent();
         if (StringUtils.isEmpty(content)
                 || !content.contains("\n")) {
             return;
@@ -55,27 +63,38 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
         final String method = messageHeader.substring(0, space);
         final String path = messageHeader.substring(space + 1, space2);
 
-        final RbelElement headerElement = extractHeaderFromMessage(rbel, converter, eol);
+        final RbelElement headerElement = extractHeaderFromMessage(targetElement, converter, eol);
 
-        final RbelElement pathElement = converter.convertElement(path, rbel);
+        final RbelElement pathElement = converter.convertElement(path, targetElement);
         if (!pathElement.hasFacet(RbelUriFacet.class)) {
             throw new RuntimeException("Encountered ill-formatted path: " + path);
         }
 
-        final byte[] bodyData = extractBodyData(rbel.getRawContent(), messageHeader.length() + 4,
+        final byte[] bodyData = extractBodyData(targetElement.getRawContent(), messageHeader.length() + 4,
             headerElement.getFacetOrFail(RbelHttpHeaderFacet.class), eol);
-        final RbelElement bodyElement = new RbelElement(bodyData, rbel);
+        final RbelElement bodyElement = new RbelElement(bodyData, targetElement,
+            findCharsetInHeader(headerElement.getFacetOrFail(RbelHttpHeaderFacet.class)));
 
         final RbelHttpRequestFacet httpRequest = RbelHttpRequestFacet.builder()
-            .method(converter.convertElement(method, rbel))
+            .method(converter.convertElement(method, targetElement))
             .path(pathElement)
             .build();
-        rbel.addFacet(httpRequest);
-        rbel.addFacet(RbelHttpMessageFacet.builder()
+        targetElement.addFacet(httpRequest);
+        targetElement.addFacet(RbelHttpMessageFacet.builder()
             .header(headerElement)
             .body(bodyElement)
             .build());
         converter.convertElement(bodyElement);
+    }
+
+    private Optional<Charset> findCharsetInHeader(RbelHttpHeaderFacet headerMap) {
+        return headerMap.getCaseInsensitiveMatches("Content-Type")
+            .map(RbelElement::getRawStringContent)
+            .map(MediaType::parse)
+            .map(MediaType::charset)
+            .filter(o -> o.isPresent())
+            .map(o -> o.get())
+            .findFirst();
     }
 
     public static String findEolInHttpMessage(String content) {
@@ -91,7 +110,7 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
         if (headerMap.hasValueMatching("Transfer-Encoding", "chunked")) {
             separator = new String(inputData).indexOf(eol, separator) + eol.length();
             return Arrays.copyOfRange(inputData, separator, RbelArrayUtils
-                .indexOf(inputData, ("0" + eol).getBytes(), separator));
+                .indexOf(inputData, ("0" + eol).getBytes(US_ASCII), separator));
         } else {
             return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator), inputData.length);
         }

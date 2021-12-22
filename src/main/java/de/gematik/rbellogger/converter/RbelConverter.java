@@ -22,17 +22,16 @@ import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import de.gematik.rbellogger.exceptions.RbelConversionException;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Security;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -83,7 +82,9 @@ public class RbelConverter {
     public RbelElement convertElement(final String input, RbelElement parentNode) {
         return convertElement(RbelElement.builder()
             .parentNode(parentNode)
-            .rawContent(input.getBytes())
+            .rawContent(input.getBytes(Optional.ofNullable(parentNode)
+                .map(RbelElement::getElementCharset)
+                    .orElse(StandardCharsets.UTF_8)))
             .build());
     }
 
@@ -91,7 +92,14 @@ public class RbelConverter {
         log.trace("Converting {}...", rawInput);
         final RbelElement convertedInput = filterInputThroughPreConversionMappers(rawInput);
         for (RbelConverterPlugin plugin : converterPlugins) {
-            plugin.consumeElement(convertedInput, this);
+            try {
+                plugin.consumeElement(convertedInput, this);
+            } catch (RuntimeException e) {
+                final String msg = "Exception during conversion with plugin '" + plugin.getClass().getName()
+                    + "' (" + e.getMessage() + ")";
+                log.info(msg, e);
+                rawInput.addFacet(new RbelNoteFacet(msg, RbelNoteFacet.NoteStyling.ERROR));
+            }
         }
         return convertedInput;
     }
@@ -136,7 +144,7 @@ public class RbelConverter {
     }
 
     public void registerMapper(Class<? extends RbelElement> clazz,
-        BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
+                               BiFunction<RbelElement, RbelConverter, RbelElement> mapper) {
         preConversionMappers
             .computeIfAbsent(clazz, key -> new ArrayList<>())
             .add(mapper);

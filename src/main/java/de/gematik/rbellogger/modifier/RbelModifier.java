@@ -91,11 +91,11 @@ public class RbelModifier {
 
     private byte[] applyRegexAndReturnNewContent(RbelElement targetElement, RbelModificationDescription modification) {
         if (StringUtils.isEmpty(modification.getRegexFilter())) {
-            return modification.getReplaceWith().getBytes();
+            return modification.getReplaceWith().getBytes(targetElement.getElementCharset());
         } else {
             return targetElement.getRawStringContent()
                 .replaceAll(modification.getRegexFilter(), modification.getReplaceWith())
-                .getBytes();
+                .getBytes(targetElement.getElementCharset());
         }
     }
 

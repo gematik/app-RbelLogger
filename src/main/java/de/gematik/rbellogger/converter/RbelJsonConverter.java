@@ -18,6 +18,7 @@ package de.gematik.rbellogger.converter;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.*;
 import java.util.ArrayList;
@@ -60,7 +61,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
             final LinkedHashMap<String, RbelElement> elementMap = new LinkedHashMap<>();
             parentElement.addFacet(RbelMapFacet.builder().childNodes(elementMap).build());
             for (Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
-                RbelElement newChild = new RbelElement(entry.getValue().toString().getBytes(), parentElement);
+                RbelElement newChild = new RbelElement(entry.getValue().toString().getBytes(parentElement.getElementCharset()), parentElement);
                 augmentRbelElementWithJsonFacet(entry.getValue(), context, newChild);
                 elementMap.put(entry.getKey(), newChild);
             }
@@ -72,7 +73,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
                 .build());
 
             for (JsonElement el : jsonElement.getAsJsonArray()) {
-                RbelElement newChild = new RbelElement(el.toString().getBytes(), parentElement);
+                RbelElement newChild = new RbelElement(el.toString().getBytes(parentElement.getElementCharset()), parentElement);
                 augmentRbelElementWithJsonFacet(el, context, newChild);
                 elementList.add(newChild);
             }

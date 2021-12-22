@@ -101,6 +101,9 @@ public class RbelJexlExecutor {
         mapContext.set("message", message
             .map(this::convertToJexlMessage)
             .orElse(null));
+        if (element instanceof RbelElement) {
+            mapContext.set("charset", ((RbelElement) element).getElementCharset().displayName());
+        }
 
         final Optional<RbelElement> requestMessage = tryToFindRequestMessage(element);
         if (requestMessage
