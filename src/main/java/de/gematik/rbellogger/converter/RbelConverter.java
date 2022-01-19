@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 gematik GmbH
+ * Copyright (c) 2022 gematik GmbH
  * 
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ public class RbelConverter {
         converterPlugins.add(converter);
     }
 
-    public RbelElement parseMessage(byte[] content, RbelHostname sender, RbelHostname recipient) {
+    public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname recipient) {
         final RbelElement rbelHttpMessage = convertElement(content, null);
         return parseMessage(rbelHttpMessage, sender, recipient);
     }

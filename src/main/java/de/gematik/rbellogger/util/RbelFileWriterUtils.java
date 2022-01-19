@@ -55,8 +55,8 @@ public class RbelFileWriterUtils {
     private static RbelElement parseFileObject(RbelConverter rbelConverter, JSONObject messageObject) {
         try {
             return rbelConverter.parseMessage(Base64.getDecoder().decode(messageObject.getString(RAW_MESSAGE_CONTENT)),
-                RbelHostname.fromString(messageObject.getString(SENDER_HOSTNAME)),
-                RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)));
+                RbelHostname.fromString(messageObject.getString(SENDER_HOSTNAME)).orElse(null),
+                RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)).orElse(null));
         } catch (Exception e) {
             throw new RbelFileReadingException("Error while converting from object '" + messageObject.toString() + "'", e);
         }

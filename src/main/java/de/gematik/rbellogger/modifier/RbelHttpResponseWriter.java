@@ -5,8 +5,6 @@ import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
-import org.apache.commons.lang3.ArrayUtils;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Locale;
@@ -14,8 +12,10 @@ import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.ArrayUtils;
 
 public class RbelHttpResponseWriter implements RbelElementWriter {
+
     @Override
     public boolean canWrite(RbelElement oldTargetElement) {
         return oldTargetElement.hasFacet(RbelHttpResponseFacet.class)
@@ -29,7 +29,7 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
         final RbelHttpMessageFacet messageFacet = oldTargetElement.getFacetOrFail(RbelHttpMessageFacet.class);
         final StringJoiner joiner = new StringJoiner("\r\n");
 
-        joiner.add(buildTitleLine(oldTargetModifiedChild, new String(newContent), responseFacet, requestFacet));
+        joiner.add(buildTitleLine(oldTargetModifiedChild, newContent, responseFacet, requestFacet));
 
         byte[] body = getChunkedMapper(oldTargetElement)
             .apply(getBodyContent(messageFacet, oldTargetModifiedChild, newContent));
@@ -40,7 +40,7 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
         }
         joiner.add("");
         joiner.add("");
-        return ArrayUtils.addAll(joiner.toString().getBytes(StandardCharsets.UTF_8),
+        return ArrayUtils.addAll(joiner.toString().getBytes(oldTargetModifiedChild.getElementCharset()),
             body);
     }
 
@@ -76,7 +76,8 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
             .collect(Collectors.joining("\r\n"));
     }
 
-    private byte[] getBodyContent(RbelHttpMessageFacet messageFacet, RbelElement oldTargetModifiedChild, byte[] newContent) {
+    private byte[] getBodyContent(RbelHttpMessageFacet messageFacet, RbelElement oldTargetModifiedChild,
+        byte[] newContent) {
         if (messageFacet.getBody() == oldTargetModifiedChild) {
             return newContent;
         } else {
@@ -84,10 +85,51 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
         }
     }
 
-    private String buildTitleLine(RbelElement oldTargetModifiedChild, String newContent,
-                                  Optional<RbelHttpResponseFacet> responseFacet,
-                                  Optional<RbelHttpRequestFacet> requestFacet) {
+    private byte[] getResponseCode(Optional<RbelHttpResponseFacet> responseFacet, RbelElement oldTargetModifiedChild,
+        byte[] newContent) {
+        if (responseFacet.get().getResponseCode() == oldTargetModifiedChild) {
+            return newContent;
+        } else {
+            return responseFacet.get().getResponseCode().getRawContent();
+        }
+    }
+
+    private Optional<byte[]> getReasonPhrase(Optional<RbelHttpResponseFacet> responseFacet,
+        RbelElement oldTargetModifiedChild,
+        byte[] newContent) {
+        if (responseFacet.get().getReasonPhrase() == null) {
+            return Optional.empty();
+        }
+        if (responseFacet.get().getReasonPhrase() == oldTargetModifiedChild) {
+            return Optional.of(newContent);
+        } else {
+            return Optional.ofNullable(responseFacet.get().getReasonPhrase().getRawContent());
+        }
+    }
+
+    private String buildTitleLine(RbelElement oldTargetModifiedChild, byte[] newContent,
+        Optional<RbelHttpResponseFacet> responseFacet, Optional<RbelHttpRequestFacet> requestFacet) {
         StringBuilder builder = new StringBuilder();
+
+        String request = buildRequest(oldTargetModifiedChild, new String(newContent), requestFacet, builder);
+        if (request != null) {
+            return request;
+        }
+        String responseCodeContent = new String(getResponseCode(responseFacet, oldTargetModifiedChild, newContent));
+
+        if (getReasonPhrase(responseFacet, oldTargetModifiedChild, newContent).isPresent()
+            && new String(getReasonPhrase(responseFacet, oldTargetModifiedChild, newContent).get()).trim().length() > 0) {
+            String reasonPhraseContent =
+                " " + new String(getReasonPhrase(responseFacet, oldTargetModifiedChild, newContent).get(),
+                    StandardCharsets.UTF_8);
+            return "HTTP/1.1 " + responseCodeContent + reasonPhraseContent;
+        }
+
+        return "HTTP/1.1 " + responseCodeContent;
+    }
+
+    private String buildRequest(RbelElement oldTargetModifiedChild, String newContent,
+        Optional<RbelHttpRequestFacet> requestFacet, StringBuilder builder) {
         if (requestFacet.isPresent()) {
             if (requestFacet.get().getMethod() == oldTargetModifiedChild) {
                 builder.append(newContent);
@@ -103,11 +145,6 @@ public class RbelHttpResponseWriter implements RbelElementWriter {
             builder.append(" HTTP/1.1");
             return builder.toString();
         }
-
-        if (responseFacet.get().getResponseCode() == oldTargetModifiedChild) {
-            return "HTTP/1.1 " + newContent;
-        } else {
-            return "HTTP/1.1 " + responseFacet.get().getResponseCode().getRawStringContent();
-        }
+        return null;
     }
 }

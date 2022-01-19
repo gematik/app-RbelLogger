@@ -54,7 +54,7 @@ pipeline {
 		
         stage('Sonar') {
             steps {
-                mavenCheckWithSonarQube(POM_PATH, "", false)
+                mavenCheckWithSonarQube(POM_PATH)
             }
         }
 		

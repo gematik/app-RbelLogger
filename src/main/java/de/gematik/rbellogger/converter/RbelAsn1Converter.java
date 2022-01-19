@@ -46,7 +46,7 @@ public class RbelAsn1Converter implements RbelConverterPlugin {
             ASN1Primitive primitive;
             while ((primitive = input.readObject()) != null) {
                 if (parentNode.hasFacet(RbelAsn1Facet.class)) {
-                    //TODO hacky workaround
+                    // RBEL-38 TODO hacky workaround
                     if (Arrays.equals(primitive.getEncoded(), parentNode.getRawContent())) {
                         return true;
                     } else {

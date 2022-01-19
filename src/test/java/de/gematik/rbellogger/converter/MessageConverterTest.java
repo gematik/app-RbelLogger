@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 gematik GmbH
+ * Copyright (c) 2022 gematik GmbH
  * 
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package de.gematik.rbellogger.converter;
 
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
-
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
@@ -39,6 +38,17 @@ public class MessageConverterTest {
 
         assertThat(convertedMessage.getFacet(RbelHttpResponseFacet.class))
             .isPresent();
+    }
+
+    @Test
+    public void noReasonPhrase_shouldGiveEmptyOptional() throws IOException {
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl");
+
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage, null);
+
+        assertThat(convertedMessage.getFacet(RbelHttpResponseFacet.class).get().getReasonPhrase().getRawStringContent())
+            .isEqualTo(null);
     }
 
     @Test

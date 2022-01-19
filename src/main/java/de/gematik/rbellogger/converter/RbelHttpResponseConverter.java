@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 gematik GmbH
+ * Copyright (c) 2022 gematik GmbH
  * 
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.converter.RbelHttpRequestConverter.findEolInHttpMessage;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.util.RbelArrayUtils;
-
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
@@ -32,10 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static de.gematik.rbellogger.converter.RbelHttpRequestConverter.findEolInHttpMessage;
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
@@ -56,11 +52,13 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
         final RbelElement headerElement = extractHeaderFromMessage(targetElement, converter, eol);
 
-        final byte[] bodyData = extractBodyData(targetElement, separator, headerElement.getFacet(RbelHttpHeaderFacet.class).get(), eol);
+        final byte[] bodyData = extractBodyData(targetElement, separator,
+            headerElement.getFacet(RbelHttpHeaderFacet.class).get(), eol);
         final RbelElement bodyElement = new RbelElement(bodyData, targetElement,
             findCharsetInHeader(headerElement.getFacetOrFail(RbelHttpHeaderFacet.class)));
         final RbelHttpResponseFacet rbelHttpResponse = RbelHttpResponseFacet.builder()
             .responseCode(extractResponseCodeFromMessage(targetElement, content))
+            .reasonPhrase(extractReasonPhraseFromMessage(targetElement, content))
             .build();
 
         targetElement.addFacet(rbelHttpResponse);
@@ -77,6 +75,20 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             .parentNode(targetElement)
             .rawContent(content.split("\\s")[1].getBytes(UTF_8))
             .build();
+    }
+
+    private RbelElement extractReasonPhraseFromMessage(RbelElement targetElement, String content) {
+        String[] responseStatusLineSplit = content.split("\\r\\n")[0].trim().split("\\s", 3);
+        if (responseStatusLineSplit.length == 2) {
+            return RbelElement.builder()
+                .parentNode(targetElement)
+                .build();
+        } else {
+            return RbelElement.builder()
+                .parentNode(targetElement)
+                .rawContent(responseStatusLineSplit[2].trim().getBytes(targetElement.getElementCharset()))
+                .build();
+        }
     }
 
     public RbelElement extractHeaderFromMessage(RbelElement rbel, RbelConverter converter, String eol) {
@@ -96,7 +108,7 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             .collect(Collectors.toList());
 
         RbelElement headerElement = new RbelElement(
-            headerList.stream().collect(Collectors.joining(eol)).getBytes(UTF_8), rbel);
+            headerList.stream().collect(Collectors.joining(eol)).getBytes(rbel.getElementCharset()), rbel);
         final Map<String, List<RbelElement>> headerMap = headerList.stream()
             .map(line -> parseStringToKeyValuePair(line, converter, headerElement))
             .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
@@ -121,7 +133,7 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
         if (headerMap.hasValueMatching("Transfer-Encoding", "chunked")) {
             separator = rbel.getRawStringContent().indexOf(eol, separator) + eol.length();
             return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator),
-                RbelArrayUtils.indexOf(inputData, (eol + "0" + eol).getBytes(UTF_8), separator));
+                RbelArrayUtils.indexOf(inputData, (eol + "0" + eol).getBytes(rbel.getElementCharset()), separator));
         } else {
             return Arrays.copyOfRange(inputData, Math.min(inputData.length, separator), inputData.length);
         }
@@ -134,7 +146,8 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             throw new IllegalArgumentException("Header malformed: '" + line + "'");
         }
         final String key = line.substring(0, colon).trim();
-        final RbelElement el = new RbelElement(line.substring(colon + 1).trim().getBytes(UTF_8), headerElement);
+        final RbelElement el = new RbelElement(
+            line.substring(colon + 1).trim().getBytes(headerElement.getElementCharset()), headerElement);
 
         return new SimpleImmutableEntry<>(key, context.convertElement(el));
     }

@@ -91,6 +91,9 @@ public class RbelModifier {
 
     private byte[] applyRegexAndReturnNewContent(RbelElement targetElement, RbelModificationDescription modification) {
         if (StringUtils.isEmpty(modification.getRegexFilter())) {
+            if (modification.getReplaceWith() == null) {
+                return "".getBytes(targetElement.getElementCharset());
+            }
             return modification.getReplaceWith().getBytes(targetElement.getElementCharset());
         } else {
             return targetElement.getRawStringContent()

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 public class RbelModifierTest extends AbstractModifierTest {
 
-
     @Test
     public void simpleHeaderReplace() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
@@ -46,6 +45,121 @@ public class RbelModifierTest extends AbstractModifierTest {
         assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
             .getResponseCode().getRawStringContent())
             .isEqualTo("666");
+    }
+
+    @Test
+    public void reasonPhraseReplaceWithAnotherReasonPhrase() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage(
+            "src/test/resources/sampleMessages/reasonPhraseMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith("foobar bar bar barsss")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo("foobar bar bar barsss");
+    }
+
+    @Test
+    public void reasonPhraseReplaceWithEmptyString() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage(
+            "src/test/resources/sampleMessages/reasonPhraseMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith("")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo(null);
+
+        assertThat(modifiedMessage.getRawStringContent()).contains("HTTP/1.1 200\r\n"
+            + "Cache-Control: max-age=300");
+    }
+
+    @Test
+    public void reasonPhraseReplaceWithNull() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage(
+            "src/test/resources/sampleMessages/reasonPhraseMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith(null)
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo(null);
+
+        assertThat(modifiedMessage.getRawStringContent()).contains("HTTP/1.1 200\r\n"
+            + "Cache-Control: max-age=300");
+    }
+
+    @Test
+    public void reasonPhraseReplaceWithASpace() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage(
+            "src/test/resources/sampleMessages/reasonPhraseMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith(" ")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo(null);
+
+        assertThat(modifiedMessage.getRawStringContent()).contains("HTTP/1.1 200\r\n"
+            + "Cache-Control: max-age=300");
+    }
+
+    @Test
+    public void reasonPhraseAdd() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith("foobar bar bar barsss")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo("foobar bar bar barsss");
+        assertThat(modifiedMessage.getRawStringContent()).contains("HTTP/1.1 200 foobar bar bar barsss\r\n"
+            + "Version: 9.0.0");
+    }
+
+    @Test
+    public void responseCodeAndReasonPhraseReplace() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage(
+            "src/test/resources/sampleMessages/reasonPhraseMessage.curl");
+
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.responseCode")
+            .replaceWith("6666")
+            .build());
+
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.reasonPhrase")
+            .replaceWith("My favourite reasonphrase")
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getResponseCode().getRawStringContent())
+            .isEqualTo("6666");
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getReasonPhrase().getRawStringContent())
+            .isEqualTo("My favourite reasonphrase");
     }
 
     @Test

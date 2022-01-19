@@ -1,14 +1,52 @@
+# Changelog RBeL Logger
+
+# Release 0.22.0
+
+## Changed
+
+* TGR-264: add support for reason phrases in RBEL
+
 # Release 0.21.0
-Siehe Changelog
+
+## Changed
+
+* TGR-37: Multiple notes are now supported on a single element
+* TGR-37: Exception in converters are now caught, logged and added as an error-note
+* RBEL-25: Charset-Support added. XML- and HTTP-Content are now parsed with correct charset.
+
+## Bugfix
+
+* RBEL-37: Long adjacent texts in XMLs are now merged
 
 # Release 0.20.0
-Siehe Changelog
+
+## Changed 
+
+* RBEL-34: removed clojars repo from pom and moved it to settings.xml
+* TGR-167: Modification extended for Vau Messages (both ERP and EPA)
+
+## Bugfix
+
+* TGR-167: Modifications now also work with chunked-encoded messages
 
 # Release 0.19.0
-Siehe Changelog
+
+## Changed
+
+* changed clojars repo in pom to HTTPS
 
 # Release 0.18.0
-Siehe Changelog
+
+## Bugfix
+
+* Modifications produzieren jetzt valides JSON
+* Modifications passen ggf einen vorhandenen Content-Length-Header an
+
+## Features
+
+* RBEL-24: JWTs neu schreiben und signieren
+* TGR-136: Clustering von Requests/Responses via bundledMessages
+* RBEL-27: Modifications für JWE erweitern + symmetrische Schlüssel für JWT
 
 # Release 0.17.0
 * ANSI Colors Bugfix
@@ -34,7 +72,6 @@ Siehe Changelog
 * RbelPath descends more robustly into Value-Facets
 * ConcurrentModification-Bug in HTML Rendering fixed
 
-
 # Release 0.10.0
 * Updated Documentation
 * Smaller Bugfixes
@@ -48,7 +85,7 @@ Siehe Changelog
 * Removal of CLI-Application
 
 # Release 0.8.6
-internal fix release
+* internal fix release
 
 # Release 0.8.5
 * Binary classification of HTTP-Bodies improved
@@ -56,29 +93,29 @@ internal fix release
 * Vau-Message handling refined
 
 # Release 0.8.4
-- ASN.1 Parsing added
+* ASN.1 Parsing added
 
 # Release 0.8.3
-- VAU-Protocol Decryption added (ERP and ePA)
-- Binary-Data Support added
+* VAU-Protocol Decryption added (ERP and ePA)
+* Binary-Data Support added
 
 # Release 0.8.2
-- Support for TCP Segmentation
-- Reworked Read-In of PCAP-Files
-- Support for XML-Files
+* Support for TCP Segmentation
+* Reworked Read-In of PCAP-Files
+* Support for XML-Files
 
 # Release 0.8.1
-- NPEs in MultiValueMap fixed
-- RbelPath added (search for nested nodes with greater comfort)
+* NPEs in MultiValueMap fixed
+* RbelPath added (search for nested nodes with greater comfort)
 
 # Release 0.8.0
-- Configuration customizable
+* Configuration customizable
 
 # Release 0.7.4
-- Multi-Value Support
-- Rework Value Structure in RbelElement
-- Note-Support for JSON Elements
-- Proxy-Settings for Wiremock enabled
+* Multi-Value Support
+* Rework Value Structure in RbelElement
+* Note-Support for JSON Elements
+* Proxy-Settings for Wiremock enabled
 
 # Release 0.7.2
 * Bugfix
@@ -102,4 +139,3 @@ internal fix release
 
 # Release 0.6.0
 * Initial release
-

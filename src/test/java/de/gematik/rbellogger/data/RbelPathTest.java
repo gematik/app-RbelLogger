@@ -1,5 +1,8 @@
 package de.gematik.rbellogger.data;
 
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -8,19 +11,14 @@ import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.util.RbelPathExecutor;
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
-
-import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 public class RbelPathTest {
 
@@ -233,6 +231,13 @@ public class RbelPathTest {
             .sorted(Comparator.reverseOrder())
             .findFirst().get())
             .isEqualTo(34);
+    }
+
+    @Test
+    public void rbelPathWithReasonPhrase_shouldReturnTheValue() {
+        assertThat(convertedMessage.findRbelPathMembers("$.reasonPhrase")
+            .get(0).getRawStringContent())
+            .isEqualTo("OK");
     }
 
     private ListAppender<ILoggingEvent> listFollowingLoggingEventsForClass(Class<RbelPathExecutor> clazz) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 gematik GmbH
+ * Copyright (c) 2022 gematik GmbH
  * 
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,13 @@ import org.apache.commons.lang3.tuple.Pair;
 public class RbelHttpResponseFacet implements RbelFacet {
 
     private final RbelElement responseCode;
+    private final RbelElement reasonPhrase;
     private final RbelElement request;
 
     @Builder(toBuilder = true)
-    public RbelHttpResponseFacet(RbelElement responseCode, RbelElement request) {
+    public RbelHttpResponseFacet(RbelElement responseCode, RbelElement reasonPhrase, RbelElement request) {
         this.responseCode = responseCode;
+        this.reasonPhrase = reasonPhrase;
         this.request = request;
     }
 
@@ -42,6 +44,8 @@ public class RbelHttpResponseFacet implements RbelFacet {
     public List<Entry<String, RbelElement>> getChildElements() {
         final List<Entry<String, RbelElement>> result = new ArrayList<>();
         result.add(Pair.of("responseCode", responseCode));
+        result.add(Pair.of("reasonPhrase", reasonPhrase));
+
         return result;
     }
 }
