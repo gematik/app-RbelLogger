@@ -2,7 +2,8 @@
 target/
 *.iml
 /out.pcap
-Jenkinsfile-MR-CI-SNAPSHOT
-Jenkinsfile_DeployGitlab
-Jenkinsfile_InternalRelease
-Jenkinsfile_PublishToMavenCentral
+GitHub-Release.Jenkinsfile
+Internal-Release.Jenkinsfile
+Jenkinsfile
+Maven-Central-Release.Jenkinsfile
+Release.Jenkinsfile

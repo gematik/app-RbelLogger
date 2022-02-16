@@ -1,10 +1,17 @@
 # Changelog RBeL Logger
 
+# Release 0.22.1
+
+## Changed
+
+* RBEL-41: removed too restrictive URL-validation
+
 # Release 0.22.0
 
 ## Changed
 
 * TGR-264: add support for reason phrases in RBEL
+* RBEL-41: Removed strict RbelHostname validations
 
 # Release 0.21.0
 

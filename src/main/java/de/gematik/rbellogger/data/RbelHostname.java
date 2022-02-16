@@ -6,18 +6,19 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-
-import java.net.URI;
-import java.util.Optional;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.commons.validator.routines.UrlValidator;
 
+import java.net.URI;
+import java.util.Optional;
+
 @Data
 @Builder
 @RequiredArgsConstructor(access = AccessLevel.PUBLIC)
+@Slf4j
 public class RbelHostname {
 
     private final String hostname;
@@ -32,9 +33,6 @@ public class RbelHostname {
             String[] hostnameValues = value.split(":");
             int port = Integer.parseInt(hostnameValues[1]);
 
-            checkIfHostnameIsValid(hostnameValues[0]);
-            checkIfPortIsNegative(port);
-
             try {
                 return Optional.ofNullable(RbelHostname.builder()
                     .hostname(hostnameValues[0])
@@ -44,34 +42,9 @@ public class RbelHostname {
                 throw new RbelHostnameFormatException("Unable to parse hostname: '" + value + "'", e);
             }
         } else {
-            checkIfHostnameIsValid(value);
-
             return Optional.ofNullable(RbelHostname.builder()
                 .hostname(value)
                 .build());
-        }
-    }
-
-    private static void checkIfHostnameIsValid(String hostname) {
-        if (hostname.contains(".")) {
-            InetAddressValidator validator = InetAddressValidator.getInstance();
-            if (!validator.isValid(hostname)) {
-                throw new RbelHostnameFormatException(
-                    "The given IP address is invalid. Please check your configuration.");
-            }
-        } else {
-            DomainValidator validator = DomainValidator.getInstance(true);
-            if (!validator.isValid(hostname)) {
-                throw new RbelHostnameFormatException(
-                    "The given hostname is invalid. Please check your configuration.");
-            }
-        }
-    }
-
-    private static void checkIfPortIsNegative(int port) {
-        if (port < 0) {
-            throw new RbelHostnameFormatException(
-                "The given port '" + port + "' is invalid. Please check your configuration.");
         }
     }
 
@@ -80,10 +53,12 @@ public class RbelHostname {
             return Optional.empty();
         }
 
-        checkIfUrlIsValid(url);
-
         try {
             final URI uri = new URI(url);
+            if (StringUtils.isEmpty(uri.getHost())){
+                return Optional.empty();
+            }
+
             if (uri.getPort() > 0) {
                 return Optional.of(new RbelHostname(uri.getHost(), uri.getPort()));
             } else if ("http".equals(uri.getScheme())) {
@@ -91,10 +66,11 @@ public class RbelHostname {
             } else if ("https".equals(uri.getScheme())) {
                 return Optional.of(new RbelHostname(uri.getHost(), 443));
             } else {
-                throw new RbelConversionException("Could not parse Hostname from '" + url + "'");
+                return Optional.of(new RbelHostname(uri.getHost(), 0));
             }
         } catch (Exception e) {
-            throw new RbelConversionException("Could not parse Hostname from '" + url + "'");
+            log.debug("Error while trying to parse URL '{}'", url, e);
+            return Optional.empty();
         }
     }
 
@@ -102,7 +78,7 @@ public class RbelHostname {
         UrlValidator urlValidator = new UrlValidator(UrlValidator.ALLOW_LOCAL_URLS);
         if (!urlValidator.isValid(url)) {
             throw new RbelConversionException(
-                "The given URL is invalid. Please check your configuration.");
+                "The given URL '" + url + "' is invalid. Please check your configuration.");
         }
     }
 
