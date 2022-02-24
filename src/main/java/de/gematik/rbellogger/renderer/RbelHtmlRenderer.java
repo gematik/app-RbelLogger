@@ -1,5 +1,3 @@
-package de.gematik.rbellogger.renderer;
-
 /*
  * Copyright (c) 2022 gematik GmbH
  * 
@@ -15,6 +13,8 @@ package de.gematik.rbellogger.renderer;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package de.gematik.rbellogger.renderer;
 
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.RbelElement;

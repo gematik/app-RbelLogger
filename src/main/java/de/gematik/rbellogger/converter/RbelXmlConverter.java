@@ -31,6 +31,7 @@ import org.xml.sax.InputSource;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;

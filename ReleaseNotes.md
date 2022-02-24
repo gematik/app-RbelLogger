@@ -11,6 +11,7 @@
 ## Changed
 
 * TGR-264: add support for reason phrases in RBEL
+* RBEL-43: XML-Files encoded as Base64 are now parsed
 * RBEL-41: Removed strict RbelHostname validations
 
 # Release 0.21.0
