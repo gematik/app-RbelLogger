@@ -27,49 +27,59 @@ import org.dom4j.io.SAXReader;
 import org.dom4j.tree.AbstractBranch;
 import org.dom4j.tree.DefaultComment;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
+import java.io.IOException;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.StringTokenizer;
 
 @Slf4j
 public class RbelXmlConverter implements RbelConverterPlugin {
 
     private static final String XML_TEXT_KEY = "text";
+    private RbelHtmlConverter htmlConverter = new RbelHtmlConverter();
 
     @Override
     public void consumeElement(final RbelElement rbel, final RbelConverter context) {
         final String content = rbel.getRawStringContent();
         if (content.contains("<") && content.contains(">")) {
             try {
-                buildXmlElementForNode(parseXml(content.trim(), rbel), rbel, context);
+                InputSource source = buildInputSource(content.trim(), rbel);
+                buildXmlElementForNode(parseXml(source), rbel, context);
                 rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
             } catch (DocumentException e) {
-                log.trace("Exception while trying to parse XML. Skipping", e);
+                log.trace("Exception while trying to parse XML. Trying as HTML (more lenient SAX parsing)", e);
+                try {
+                    htmlConverter.parseHtml(content.trim())
+                            .ifPresent(document -> {
+                                htmlConverter.buildXmlElementForNode(document, rbel, context);
+                                rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
+                            });
+                } catch (IOException | SAXException e2) {
+                    log.trace("Exception while trying to parse XML. Skipping", e);
+                }
             }
         }
     }
 
-    private Branch parseXml(String text, RbelElement parentElement) throws DocumentException {
+    private Branch parseXml(InputSource source) throws DocumentException {
         SAXReader reader = new SAXReader();//NOSONAR
         reader.setMergeAdjacentText(true);
+        return reader.read(source);
+    }
 
+    private InputSource buildInputSource(String text, RbelElement parentElement) {
         InputSource source = new InputSource(new StringReader(text));
-
         source.setEncoding(parentElement.getElementCharset().name());
         // see https://www.ietf.org/rfc/rfc3023 8.5 and 8.20: We always use the http-encoding.
-
-        return reader.read(source);
+        return source;
     }
 
     private void buildXmlElementForNode(Branch branch, RbelElement parentElement, RbelConverter converter) {
         final List<Entry<String, RbelElement>> childElements = new ArrayList<>();
         parentElement.addFacet(RbelXmlFacet.builder()
-            .sourceElement(branch)
             .childElements(childElements)
             .build());
         for (Object child : branch.content()) {

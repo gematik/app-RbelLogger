@@ -39,12 +39,16 @@ public class RbelJexlExecutor {
 
     private static final Map<Integer, JexlExpression> JEXL_EXPRESSION_CACHE = new HashMap<>();
 
+    public boolean matchesAsJexlExpression(Object element, String jexlExpression) {
+        return matchesAsJexlExpression(element, jexlExpression, Optional.empty());
+    }
+
     public boolean matchesAsJexlExpression(Object element, String jexlExpression, Optional<String> key) {
         try {
             final JexlExpression expression = buildExpression(evaluateRbelPathExpressions(jexlExpression, element));
-            final MapContext mapContext = buildJexlMapContext(element, key);
+            final MapContext mapContext = new MapContext(buildJexlMapContext(element, key));
 
-            final Boolean result = Optional.of(expression.evaluate(mapContext))
+            final boolean result = Optional.of(expression.evaluate(mapContext))
                 .filter(Boolean.class::isInstance)
                 .map(Boolean.class::cast)
                 .orElse(false);
@@ -91,18 +95,18 @@ public class RbelJexlExecutor {
         return expression;
     }
 
-    private MapContext buildJexlMapContext(Object element, Optional<String> key) {
-        final MapContext mapContext = new MapContext();
+    public Map<String, Object> buildJexlMapContext(Object element, Optional<String> key) {
+        final Map<String, Object> mapContext = new HashMap<>();
         final Optional<RbelElement> parentElement = getParentElement(element);
 
-        mapContext.set("element", element);
-        mapContext.set("parent", parentElement.orElse(null));
+        mapContext.put("element", element);
+        mapContext.put("parent", parentElement.orElse(null));
         final Optional<RbelElement> message = findMessage(element);
-        mapContext.set("message", message
+        mapContext.put("message", message
             .map(this::convertToJexlMessage)
             .orElse(null));
         if (element instanceof RbelElement) {
-            mapContext.set("charset", ((RbelElement) element).getElementCharset().displayName());
+            mapContext.put("charset", ((RbelElement) element).getElementCharset().displayName());
         }
 
         final Optional<RbelElement> requestMessage = tryToFindRequestMessage(element);
@@ -110,17 +114,17 @@ public class RbelJexlExecutor {
             .filter(msg -> message.isPresent())
             .map(msg -> message.get() == msg)
             .orElse(false)) {
-            mapContext.set("request", mapContext.get("message"));
-            mapContext.set("isRequest", true);
-            mapContext.set("isResponse", false);
+            mapContext.put("request", mapContext.get("message"));
+            mapContext.put("isRequest", true);
+            mapContext.put("isResponse", false);
         } else {
-            mapContext.set("request", requestMessage
+            mapContext.put("request", requestMessage
                 .map(this::convertToJexlMessage)
                 .orElse(null));
-            mapContext.set("isRequest", false);
-            mapContext.set("isResponse", true);
+            mapContext.put("isRequest", false);
+            mapContext.put("isResponse", true);
         }
-        mapContext.set("facets", Optional.ofNullable(element)
+        mapContext.put("facets", Optional.ofNullable(element)
             .filter(RbelElement.class::isInstance)
             .map(RbelElement.class::cast)
             .map(RbelElement::getFacets)
@@ -129,19 +133,19 @@ public class RbelJexlExecutor {
             .map(Object::getClass)
             .map(Class::getSimpleName)
             .collect(Collectors.toSet()));
-        mapContext.set("key", key
+        mapContext.put("key", key
             .or(() -> tryToFindKeyFromParentMap(element, parentElement))
             .orElse(null));
-        mapContext.set("path", Optional.ofNullable(element)
+        mapContext.put("path", Optional.ofNullable(element)
             .filter(RbelElement.class::isInstance)
             .map(RbelElement.class::cast)
             .map(RbelElement::findNodePath)
             .orElse(null));
-        mapContext.set("type", element.getClass().getSimpleName());
+        mapContext.put("type", element.getClass().getSimpleName());
         if (element instanceof RbelElement) {
-            mapContext.set("content", ((RbelElement) element).getRawStringContent());
+            mapContext.put("content", ((RbelElement) element).getRawStringContent());
         } else {
-            mapContext.set("content", element.toString());
+            mapContext.put("content", element.toString());
         }
 
         return mapContext;

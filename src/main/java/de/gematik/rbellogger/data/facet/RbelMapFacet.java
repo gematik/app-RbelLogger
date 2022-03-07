@@ -16,62 +16,29 @@
 
 package de.gematik.rbellogger.data.facet;
 
-import static j2html.TagCreator.*;
-import static j2html.TagCreator.pre;
-import static j2html.TagCreator.td;
-import static j2html.TagCreator.tr;
-
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+import lombok.Builder;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import lombok.Builder;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
+import static j2html.TagCreator.*;
+
+@Slf4j
 @Data
 @RequiredArgsConstructor
 @Builder(toBuilder = true)
 public class RbelMapFacet implements RbelFacet {
-
-    static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelHtmlFacetRenderer() {
-            @Override
-            public boolean checkForRendering(RbelElement element) {
-                return element.hasFacet(RbelMapFacet.class);
-            }
-
-            @Override
-            public ContainerTag performRendering(RbelElement element, Optional<String> key,
-                RbelHtmlRenderingToolkit renderingToolkit) {
-                return table()
-                    .withClass("table").with(
-                        thead(
-                            tr(th("name"), th("value"))
-                        ),
-                        tbody().with(
-                            element.getFacetOrFail(RbelMapFacet.class).getChildElements().stream()
-                                .map(entry ->
-                                    tr(
-                                        td(pre(entry.getKey())),
-                                        td(pre()
-                                            .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
-                                            .withClass("value"))
-                                            .with(renderingToolkit.addNotes(entry.getValue()))
-                                    )
-                                )
-                                .collect(Collectors.toList())
-                        )
-                    );
-            }
-        });
-    }
 
     private final Map<String, RbelElement> childNodes;
 

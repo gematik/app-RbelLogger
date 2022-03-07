@@ -19,7 +19,17 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.key.RbelKey;
+import de.gematik.rbellogger.key.RbelVauKey;
+import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.crypto.DataLengthException;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator;
+import org.bouncycastle.crypto.params.HKDFParameters;
+import org.bouncycastle.jce.spec.ECNamedCurveSpec;
+import org.bouncycastle.util.encoders.Hex;
 
+import javax.crypto.KeyAgreement;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -31,15 +41,6 @@ import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import javax.crypto.KeyAgreement;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.crypto.DataLengthException;
-import org.bouncycastle.crypto.digests.SHA256Digest;
-import org.bouncycastle.crypto.generators.HKDFBytesGenerator;
-import org.bouncycastle.crypto.params.HKDFParameters;
-import org.bouncycastle.jce.spec.ECNamedCurveSpec;
-import org.bouncycastle.util.encoders.Hex;
 
 @Slf4j
 public class RbelVauKeyDeriver implements RbelConverterPlugin {
@@ -73,7 +74,7 @@ public class RbelVauKeyDeriver implements RbelConverterPlugin {
                 continue;
             }
             log.debug("Trying key derivation with {}...", rbelKey.getKeyName());
-            final List<RbelKey> derivedKeys = keyDerivation(otherSidePublicKey.get(), privateKey.get());
+            final List<RbelKey> derivedKeys = keyDerivation(otherSidePublicKey.get(), privateKey.get(), rbelKey);
             if (derivedKeys.isEmpty()) {
                 continue;
             }
@@ -104,7 +105,7 @@ public class RbelVauKeyDeriver implements RbelConverterPlugin {
             .replace("\"", ""));
     }
 
-    private List<RbelKey> keyDerivation(PublicKey otherSidePublicKey, PrivateKey privateKey) {
+    private List<RbelKey> keyDerivation(PublicKey otherSidePublicKey, PrivateKey privateKey, RbelKey parentKey) {
         try {
             if (!(otherSidePublicKey instanceof ECPublicKey)) {
                 return List.of();
@@ -122,19 +123,19 @@ public class RbelVauKeyDeriver implements RbelConverterPlugin {
             byte[] keyId = hkdf(sharedSecret, KEY_ID, 256);
             log.trace("keyID: " + Hex.toHexString(keyId));
             return List.of(
-                mapToRbelKey(AES_256_GCM_KEY_CLIENT_TO_SERVER, "_client", keyId, sharedSecret),
-                mapToRbelKey(AES_256_GCM_KEY_SERVER_TO_CLIENT, "_server", keyId, sharedSecret),
-                mapToRbelKey(AES_256_GCM_KEY, "_old", keyId, sharedSecret));
+                mapToRbelKey(AES_256_GCM_KEY_CLIENT_TO_SERVER, "_client", keyId, sharedSecret, parentKey),
+                mapToRbelKey(AES_256_GCM_KEY_SERVER_TO_CLIENT, "_server", keyId, sharedSecret, parentKey),
+                mapToRbelKey(AES_256_GCM_KEY, "_old", keyId, sharedSecret, parentKey));
         } catch (Exception e) {
             return List.of();
         }
     }
 
-    private RbelKey mapToRbelKey(String deriver, String suffix, byte[] keyId, byte[] sharedSecret) {
+    private RbelKey mapToRbelKey(String deriver, String suffix, byte[] keyId, byte[] sharedSecret, RbelKey parentKey) {
         var keyRawBytes = hkdf(sharedSecret, deriver, 256);
         log.trace("symKey: " + Hex.toHexString(keyRawBytes));
-        return new RbelKey(new SecretKeySpec(keyRawBytes, "AES"),
-            Hex.toHexString(keyId) + suffix, 0);
+        return new RbelVauKey(new SecretKeySpec(keyRawBytes, "AES"),
+            Hex.toHexString(keyId) + suffix, 0, parentKey);
     }
 
     private byte[] ecka(PrivateKey prk, PublicKey puk) throws Exception {

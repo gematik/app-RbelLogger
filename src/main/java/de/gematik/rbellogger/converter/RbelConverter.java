@@ -42,6 +42,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RbelConverter {
 
+    @Builder.Default
+    private int rbelBufferSizeInMb = 1024;
+    @Builder.Default
+    private boolean manageBuffer = false;
     private final List<RbelElement> messageHistory = new ArrayList<>();
     private final List<RbelBundleCriterion> bundleCriterionList = new ArrayList<>();
     private final RbelKeyManager rbelKeyManager;
@@ -68,7 +72,7 @@ public class RbelConverter {
     @Builder.Default
     private long messageSequenceNumber = 0;
 
-    {
+    static {
         Security.addProvider(new BouncyCastleProvider());
     }
 
@@ -126,8 +130,6 @@ public class RbelConverter {
             RbelElement newValue = mapper.apply(value, this);
             if (newValue != value) {
                 value = filterInputThroughPreConversionMappers(newValue);
-            } else {
-                value = newValue;
             }
         }
         return value;
@@ -193,7 +195,10 @@ public class RbelConverter {
             .build());
 
         rbelElement.triggerPostConversionListener(this);
-        messageHistory.add(rbelElement);
+        synchronized (messageHistory) {
+            messageHistory.add(rbelElement);
+        }
+        manageRbelBufferSize();
         return rbelElement;
     }
 
@@ -204,5 +209,30 @@ public class RbelConverter {
 
     public void removeAllConverterPlugins() {
         converterPlugins.clear();
+    }
+
+    public void manageRbelBufferSize() {
+        if (manageBuffer) {
+            synchronized (messageHistory) {
+                while (rbelBufferIsExceedingMaxSize()) {
+                    log.info("Exceeded buffer size, dropping oldest message in history");
+                    getMessageHistory().remove(0);
+                }
+            }
+        }
+    }
+
+    private boolean rbelBufferIsExceedingMaxSize() {
+        final long bufferSize = getMessageHistory().stream()
+            .map(RbelElement::getRawContent)
+            .mapToLong(ar -> ar.length)
+            .sum();
+        final boolean exceedingLimit =
+            bufferSize > ((long) getRbelBufferSizeInMb() * 1024 * 1024);
+        if (exceedingLimit) {
+            log.info("Buffersize is {} Mb which exceeds the limit of {} Mb",
+                bufferSize / (1024 ^ 2), getRbelBufferSizeInMb());
+        }
+        return exceedingLimit;
     }
 }

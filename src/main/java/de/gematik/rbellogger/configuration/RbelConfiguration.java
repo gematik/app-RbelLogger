@@ -30,22 +30,33 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class RbelConfiguration {
 
+    @Builder.Default
     private List<RbelConverterPlugin> postConversionListener = new ArrayList<>();
+    @Builder.Default
     private Map<Class<? extends RbelElement>, List<BiFunction<RbelElement, RbelConverter, RbelElement>>> preConversionMappers
         = new HashMap<>();
+    @Builder.Default
     private List<Consumer<RbelConverter>> initializers = new ArrayList<>();
+    @Builder.Default
     private Map<String, RbelKey> keys = new HashMap<>();
     private RbelCapturer capturer;
+    @Builder.Default
     private boolean activateAsn1Parsing = true;
     private RbelFileSaveInfo fileSaveInfo;
+    @Builder.Default
+    private int rbelBufferSizeInMb = 1024;
+    @Builder.Default
+    private boolean manageBuffer = false;
 
     public RbelConfiguration addPostConversionListener(RbelConverterPlugin listener) {
         postConversionListener.add(listener);

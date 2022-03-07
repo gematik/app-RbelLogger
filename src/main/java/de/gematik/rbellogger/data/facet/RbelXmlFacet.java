@@ -78,7 +78,6 @@ public class RbelXmlFacet implements RbelFacet {
         });
     }
 
-    private final Branch sourceElement;
     @Builder.Default
     private final List<Entry<String, RbelElement>> childElements = List.of();
 

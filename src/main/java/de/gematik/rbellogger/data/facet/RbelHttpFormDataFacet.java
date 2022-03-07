@@ -24,6 +24,7 @@ import j2html.tags.ContainerTag;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -46,24 +47,24 @@ public class RbelHttpFormDataFacet implements RbelFacet {
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 return table()
-                        .withClass("table").with(
-                                thead(
-                                        tr(th("name"), th("value"))
-                                ),
-                                tbody().with(
-                                        element.getFacetOrFail(RbelHttpFormDataFacet.class).getChildElements().stream()
-                                                .map(entry ->
-                                                        tr(
-                                                                td(pre(entry.getKey())),
-                                                                td(pre()
-                                                                        .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
-                                                                        .withClass("value"))
-                                                                        .with(renderingToolkit.addNotes(entry.getValue()))
-                                                        )
-                                                )
-                                                .collect(Collectors.toList())
+                    .withClass("table").with(
+                        thead(
+                            tr(th("name"), th("value"))
+                        ),
+                        tbody().with(
+                            element.getFacetOrFail(RbelHttpFormDataFacet.class).getChildElements().stream()
+                                .map(entry ->
+                                    tr(
+                                        td(pre(entry.getKey())),
+                                        td(pre()
+                                            .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
+                                            .withClass("value"))
+                                            .with(renderingToolkit.addNotes(entry.getValue()))
+                                    )
                                 )
-                        );
+                                .collect(Collectors.toList())
+                        )
+                    );
             }
         });
     }
@@ -72,7 +73,6 @@ public class RbelHttpFormDataFacet implements RbelFacet {
 
     @Override
     public List<Entry<String, RbelElement>> getChildElements() {
-        return formDataMap.entrySet().stream()
-                .collect(Collectors.toList());
+        return new ArrayList<>(formDataMap.entrySet());
     }
 }

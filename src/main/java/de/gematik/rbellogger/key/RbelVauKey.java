@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.renderer;
+package de.gematik.rbellogger.key;
 
-import de.gematik.rbellogger.data.RbelElement;
-import j2html.tags.ContainerTag;
-import java.util.Optional;
+import lombok.Getter;
 
-public interface RbelHtmlFacetRenderer {
+import java.security.Key;
+import java.util.List;
 
-    boolean checkForRendering(RbelElement element);
+@Getter
+public class RbelVauKey extends RbelKey {
 
-    ContainerTag performRendering(RbelElement element, Optional<String> key, RbelHtmlRenderingToolkit renderingToolkit);
+    private final RbelKey parentKey;
 
-    default int order() {
-        return 0;
+    public RbelVauKey(Key key, String keyName, int precedence, RbelKey parentKey) {
+        super(key, keyName, precedence);
+        this.parentKey = parentKey;
     }
 }

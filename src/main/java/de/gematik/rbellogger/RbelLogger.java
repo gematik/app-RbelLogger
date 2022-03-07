@@ -57,6 +57,8 @@ public class RbelLogger {
 
         final RbelConverter rbelConverter = RbelConverter.builder()
             .rbelKeyManager(new RbelKeyManager())
+            .manageBuffer(configuration.isManageBuffer())
+            .rbelBufferSizeInMb(configuration.getRbelBufferSizeInMb())
             .build();
 
         rbelConverter.registerListener(new RbelX5cKeyReader());

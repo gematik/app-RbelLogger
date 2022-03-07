@@ -18,7 +18,6 @@ package de.gematik.rbellogger.converter;
 
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
-
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
@@ -35,11 +34,14 @@ import org.junit.jupiter.api.Test;
 public class XmlConverterTest {
 
     private String curlMessage;
+    private String curlMessageHtml;
 
     @BeforeEach
     public void setUp() throws IOException {
         curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/xmlMessage.curl");
+        curlMessageHtml = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/htmlMessage.curl");
     }
 
     @Test
@@ -53,6 +55,22 @@ public class XmlConverterTest {
 
         FileUtils.writeStringToFile(new File("target/xmlNested.html"),
             RbelHtmlRenderer.render(List.of(convertedMessage)));
+    }
+
+    @Test
+    public void convertMessage_shouldGiveHtmlBody() {
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessageHtml, null);
+
+        assertThat(convertedMessage.findElement("$.body")
+            .get()
+            .hasFacet(RbelXmlFacet.class))
+            .isTrue();
+
+        assertThat(convertedMessage.findElement("$.body.html.head.link.href"))
+            .get()
+            .extracting(RbelElement::getRawStringContent)
+            .isEqualTo("jetty-dir.css");
     }
 
     @Test
@@ -142,10 +160,12 @@ public class XmlConverterTest {
     @Test
     public void longNestedTextContent() throws IOException {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .convertElement(readCurlFromFileWithCorrectedLineBreaks("src/test/resources/XmlWithLongTextNode.curl"), null);
+            .convertElement(readCurlFromFileWithCorrectedLineBreaks("src/test/resources/XmlWithLongTextNode.curl"),
+                null);
 
         final List<RbelElement> rbelPathResult = convertedMessage
-            .findRbelPathMembers("$.body.Envelope.Body.SignDocumentResponse.SignResponse.SignatureObject.Base64Signature.text");
+            .findRbelPathMembers(
+                "$.body.Envelope.Body.SignDocumentResponse.SignResponse.SignatureObject.Base64Signature.text");
 
         assertThat(rbelPathResult).hasSize(1);
         assertThat(rbelPathResult.get(0).getRawStringContent()).hasSize(40920);

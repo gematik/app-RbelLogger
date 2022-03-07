@@ -112,7 +112,7 @@ public class RbelElement {
             return List.of(this);
         } else {
             return getChildNodes().stream()
-                .map(child -> child.traverseAndReturnNestedMembersInternal())
+                .map(RbelElement::traverseAndReturnNestedMembersInternal)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
         }

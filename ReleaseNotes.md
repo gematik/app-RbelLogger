@@ -1,5 +1,15 @@
 # Changelog RBeL Logger
 
+# Release 0.22.3
+
+## Changed
+
+* TGR-389: Derived VAU-Keys now show the name of the originating parent-key
+* TGR-358: Multiple facets can now be rendered in the same element
+* RBEL-47: HTML-Documents can now be parsed even if not correct XML
+* TGR-418: Rbel now manages its own buffer (if activated)
+* TGR-419: Cleaned up API of RbelJexlExecutor
+
 # Release 0.22.1
 
 ## Changed

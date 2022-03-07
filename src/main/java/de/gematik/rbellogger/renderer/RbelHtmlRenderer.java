@@ -30,9 +30,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.bouncycastle.util.encoders.Hex;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static j2html.TagCreator.*;
 
@@ -145,11 +144,20 @@ public class RbelHtmlRenderer {
         if (element.getFacets().isEmpty() && ArrayUtils.isEmpty(element.getRawContent())) {
             return Optional.empty();
         }
-        return htmlRenderer.stream()
+        final List<ContainerTag> renderedFacets = htmlRenderer.stream()
             .filter(renderer -> renderAsn1Objects || !(renderer.getClass().getName().startsWith(RbelAsn1Facet.class.getName())))
             .filter(renderer -> renderer.checkForRendering(element))
+            .sorted(Comparator.comparing(RbelHtmlFacetRenderer::order))
             .map(renderer -> renderer.performRendering(element, key, renderingToolkit))
-            .findAny();
+            .collect(Collectors.toList());
+        if (renderedFacets.isEmpty()) {
+            return Optional.empty();
+        } else if (renderedFacets.size() == 1) {
+            return Optional.of(renderedFacets.get(0));
+        } else {
+            return Optional.of(
+                div().with(renderedFacets));
+        }
     }
 
     public String getEmptyPage() {
