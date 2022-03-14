@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.23.0
+
+## Bugfixes
+
+* RBEL-48: Multiple JKS-Elements can now be parsed correctly
+
 # Release 0.22.3
 
 ## Changed

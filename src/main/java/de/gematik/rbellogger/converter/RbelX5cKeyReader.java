@@ -46,8 +46,9 @@ public class RbelX5cKeyReader implements RbelConverterPlugin {
                         .getCertificateFromPem(certificateData.get());
                     converter.getRbelKeyManager()
                         .addKey(keyId.get(), certificate.getPublicKey(), RbelKey.PRECEDENCE_X5C_HEADER_VALUE);
+                    log.info("Added new key from JKS ({})", keyId.get());
                 } catch (Exception e) {
-                    log.warn("Exception while extracting X5C: {}", e);
+                    log.warn("Exception while extracting X5C", e);
                 }
             }
         }
@@ -55,9 +56,8 @@ public class RbelX5cKeyReader implements RbelConverterPlugin {
 
     private Optional<String> getKeyId(RbelElement x5cElement) {
         return Optional.ofNullable(x5cElement.getParentNode())
-            .map(RbelElement::getParentNode)
-            .filter(Objects::nonNull)
-            .flatMap(el -> el.findElement("$..kid"))
+            .flatMap(el -> el.getFirst("kid"))
+            .flatMap(el -> el.getFirst("content"))
             .map(RbelElement::getRawStringContent);
     }
 
