@@ -17,23 +17,21 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelXmlFacet;
 import de.gematik.rbellogger.util.RbelException;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
 import org.dom4j.*;
 import org.dom4j.io.SAXReader;
 import org.dom4j.tree.AbstractBranch;
 import org.dom4j.tree.DefaultComment;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
 
 @Slf4j
 public class RbelXmlConverter implements RbelConverterPlugin {
@@ -78,24 +76,24 @@ public class RbelXmlConverter implements RbelConverterPlugin {
     }
 
     private void buildXmlElementForNode(Branch branch, RbelElement parentElement, RbelConverter converter) {
-        final List<Entry<String, RbelElement>> childElements = new ArrayList<>();
+        final List<RbelMultiMap> childElements = new ArrayList<>();
         parentElement.addFacet(RbelXmlFacet.builder()
             .childElements(childElements)
             .build());
         for (Object child : branch.content()) {
             if (child instanceof Text) {
                 childElements
-                    .add(Pair.of(XML_TEXT_KEY, converter.convertElement(((Text) child).getText(), parentElement)));
+                    .add(RbelMultiMap.builder().key(XML_TEXT_KEY).rbelElement(converter.convertElement(((Text) child).getText(), parentElement)).build());
             } else if (child instanceof AbstractBranch) {
                 final RbelElement element = new RbelElement(
                     ((AbstractBranch) child).asXML().getBytes(parentElement.getElementCharset()),
                     parentElement);
                 buildXmlElementForNode((AbstractBranch) child, element, converter);
-                childElements.add(Pair.of(((AbstractBranch) child).getName(), element));
+                childElements.add(RbelMultiMap.builder().key(((AbstractBranch) child).getName()).rbelElement(element).build());
             } else if (child instanceof Namespace) {
                 final String childXmlName = ((Namespace) child).getPrefix();
                 childElements
-                    .add(Pair.of(childXmlName, converter.convertElement(((Namespace) child).getText(), parentElement)));
+                    .add(RbelMultiMap.builder().key(childXmlName).rbelElement(converter.convertElement(((Namespace) child).getText(), parentElement)).build());
             } else if (child instanceof DefaultComment) {
                 // do nothing
             } else {
@@ -104,9 +102,9 @@ public class RbelXmlConverter implements RbelConverterPlugin {
         }
 
         if (childElements.stream()
-            .map(Entry::getKey)
+            .map(RbelMultiMap::getKey)
             .noneMatch(key -> key.equals(XML_TEXT_KEY))) {
-            childElements.add(Pair.of(XML_TEXT_KEY, new RbelElement(new byte[]{}, parentElement)));
+            childElements.add(RbelMultiMap.builder().key(XML_TEXT_KEY).rbelElement(new RbelElement(new byte[]{}, parentElement)).build());
         }
 
         if (branch instanceof Element) {
@@ -115,9 +113,7 @@ public class RbelXmlConverter implements RbelConverterPlugin {
                     throw new RbelException(
                         "Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
                 }
-                childElements.add(Pair.of(
-                    ((Attribute) attribute).getName(),
-                    converter.convertElement(((Attribute) attribute).getText(), parentElement)));
+                childElements.add(RbelMultiMap.builder().key( ((Attribute) attribute).getName()).rbelElement(converter.convertElement(((Attribute) attribute).getText(), parentElement)).build());
             }
         }
     }

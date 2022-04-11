@@ -14,26 +14,15 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.data.facet;
+package de.gematik.rbellogger.data;
 
-import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelMultiMap;
-import java.util.List;
 import lombok.Builder;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 
 @Builder
-@RequiredArgsConstructor
-@Data
-public class RbelNestedFacet implements RbelFacet {
+@Getter
+public class RbelMultiMap {
 
-    private final RbelElement nestedElement;
-
-    @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("content").rbelElement(nestedElement).build()
-        );
-    }
+    private String key;
+    private RbelElement rbelElement;
 }

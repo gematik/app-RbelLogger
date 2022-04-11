@@ -17,8 +17,8 @@
 package de.gematik.rbellogger.data.facet;
 
 import static j2html.TagCreator.*;
-
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -51,9 +51,9 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
                                     tr(
                                         td(pre(entry.getKey())),
                                         td(pre()
-                                            .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
+                                            .with(renderingToolkit.convert(entry.getRbelElement(), Optional.ofNullable(entry.getKey())))
                                             .withClass("value"))
-                                            .with(renderingToolkit.addNotes(entry.getValue()))
+                                            .with(renderingToolkit.addNotes(entry.getRbelElement()))
                                     )
                                 )
                                 .collect(Collectors.toList())
@@ -147,19 +147,20 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
     @Override
     public Set<Entry<String, RbelElement>> entrySet() {
         final HashSet<Entry<String, RbelElement>> result = new HashSet<>();
-        result.addAll(getChildElements());
+        result.addAll(getChildElements().stream().map(el -> Pair.of(el.getKey(), el.getRbelElement())).collect(
+            Collectors.toList()));
         return result;
     }
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return values.entrySet().stream()
             .flatMap(entry -> {
                 if (entry.getValue().isEmpty()) {
                     return Stream.of();
                 } else {
                     return entry.getValue().stream()
-                        .map(value -> Pair.of(entry.getKey(), value));
+                        .map(value -> RbelMultiMap.builder().key(entry.getKey()).rbelElement(value).build());
                 }
             })
             .collect(Collectors.toList());

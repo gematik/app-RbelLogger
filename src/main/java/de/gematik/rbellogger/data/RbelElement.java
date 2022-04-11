@@ -21,17 +21,15 @@ import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.data.util.RbelElementTreePrinter;
 import de.gematik.rbellogger.util.RbelException;
 import de.gematik.rbellogger.util.RbelPathExecutor;
-import lombok.*;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 @AllArgsConstructor
 @RequiredArgsConstructor
@@ -77,16 +75,16 @@ public class RbelElement {
         return facets.stream()
             .map(RbelFacet::getChildElements)
             .flatMap(List::stream)
-            .map(Entry::getValue)
+            .map(RbelMultiMap::getRbelElement)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
 
-    public List<Entry<String, RbelElement>> getChildNodesWithKey() {
+    public List<RbelMultiMap> getChildNodesWithKey() {
         return facets.stream()
             .map(RbelFacet::getChildElements)
             .flatMap(List::stream)
-            .filter(el -> el.getValue() != null)
+            .filter(el -> el.getRbelElement() != null)
             .collect(Collectors.toList());
     }
 
@@ -128,8 +126,8 @@ public class RbelElement {
         while (!(ptr.get().getParentNode() == null)) {
             keyList.addFirst(
                 ptr.get().getParentNode().getChildNodesWithKey().stream()
-                    .filter(entry -> entry.getValue() == ptr.get())
-                    .map(Entry::getKey).findFirst());
+                    .filter(entry -> entry.getRbelElement() == ptr.get())
+                    .map(RbelMultiMap::getKey).findFirst());
             ptr.set(ptr.get().getParentNode());
         }
         return keyList.stream()
@@ -141,14 +139,14 @@ public class RbelElement {
     public Optional<RbelElement> getFirst(String key) {
         return getChildNodesWithKey().stream()
             .filter(entry -> entry.getKey().equals(key))
-            .map(Entry::getValue)
+            .map(RbelMultiMap::getRbelElement)
             .findFirst();
     }
 
     public List<RbelElement> getAll(String key) {
         return getChildNodesWithKey().stream()
             .filter(entry -> entry.getKey().equals(key))
-            .map(Entry::getValue)
+            .map(RbelMultiMap::getRbelElement)
             .collect(Collectors.toList());
     }
 
@@ -158,8 +156,8 @@ public class RbelElement {
             .filter(Objects::nonNull)
             .stream()
             .flatMap(parent -> parent.getChildNodesWithKey().stream())
-            .filter(e -> e.getValue() == this)
-            .map(Entry::getKey)
+            .filter(e -> e.getRbelElement() == this)
+            .map(RbelMultiMap::getKey)
             .findFirst();
     }
 
@@ -219,8 +217,8 @@ public class RbelElement {
         if (parentNode == null) {
             return Optional.empty();
         }
-        for (Entry<String, RbelElement> ptr : parentNode.getChildNodesWithKey()) {
-            if (ptr.getValue() == this) {
+        for (RbelMultiMap ptr : parentNode.getChildNodesWithKey()) {
+            if (ptr.getRbelElement() == this) {
                 return Optional.ofNullable(ptr.getKey());
             }
         }
@@ -244,6 +242,14 @@ public class RbelElement {
         }
         throw new RbelPathNotUniqueException(
             "RbelPath '" + rbelPath + "' is not unique! Found " + resultList.size() + " elements, expected only one!");
+    }
+
+    public String printTreeStructureWithoutColors() {
+        return RbelElementTreePrinter.builder()
+            .rootElement(this)
+            .printColors(false)
+            .build()
+            .execute();
     }
 
     public String printTreeStructure() {

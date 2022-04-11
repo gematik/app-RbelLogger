@@ -18,6 +18,8 @@ package de.gematik.rbellogger.modifier;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.elements.RbelJweEncryptionInfo;
@@ -184,17 +186,14 @@ public class JweModifierTest extends AbstractModifierTest {
     @Test
     public void jweCantBeEncrypted() throws IOException, IllegalAccessException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jweMessage.curl");
+        var rbelLoggerWithoutKeys = RbelLogger.build();
 
-        setKeyManagerAvailableKeys(rbelLogger.getRbelKeyManager().getAllKeys()
-            .filter(key -> key.getKey() instanceof PublicKey)
-            .collect(Collectors.toList()));
-
-        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+        rbelLoggerWithoutKeys.getRbelModifier().addModification(RbelModificationDescription.builder()
             .targetElement("$.body.body.token_key")
             .replaceWith("not the token key")
             .build());
 
-        assertThatThrownBy(() -> modifyMessageAndParseResponse(message))
+        assertThatThrownBy(() -> rbelLoggerWithoutKeys.getRbelModifier().applyModifications(message))
             .isInstanceOf(InvalidEncryptionInfo.class)
             .hasMessageContaining("public key");
     }

@@ -119,7 +119,7 @@ public class RbelMtomConverter implements RbelConverterPlugin {
             return List.of();
         }
         return Stream.of(rbelElement.getRawStringContent()
-            .split("\r\n--" + boundary.get(0)))
+            .split("(\r\n|\n)--" + boundary.get(0)))
             .map(MtomPart::new)
             .filter(mtomPart -> mtomPart.getMessageHeader().size() > 0)
             .collect(Collectors.toList());
@@ -130,7 +130,8 @@ public class RbelMtomConverter implements RbelConverterPlugin {
     }
 
     private Optional<MediaType> getVauContentType(RbelElement rbelElement) {
-        return rbelElement.getParentNode().getFirst("additionalHeaders")
+        return Optional.ofNullable(rbelElement.getParentNode())
+            .flatMap(el -> el.getFirst("additionalHeaders"))
             .flatMap(el -> el.getFacet(RbelHttpHeaderFacet.class))
             .stream()
             .flatMap(header -> header.getCaseInsensitiveMatches("content-type"))

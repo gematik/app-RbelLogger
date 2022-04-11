@@ -1,5 +1,13 @@
 # Changelog RBeL Logger
 
+# Release 0.23.1
+
+## Changed
+
+* RBEL-49: Defunct HTTP-charset will now be guessed and/or ignored
+* RBEL-49: MTOM-parsing now also works on \\n-only messages (instead of \\r\\n)
+* PKITS-143: Rbel can now modify JWT-Signatures
+
 # Release 0.23.0
 
 ## Bugfixes

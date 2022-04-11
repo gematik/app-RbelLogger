@@ -16,26 +16,25 @@
 
 package de.gematik.rbellogger.data.facet;
 
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.addNotes;
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.ancestorTitle;
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.vertParentTitle;
+import static j2html.TagCreator.br;
+import static j2html.TagCreator.div;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
-import j2html.tags.DomContent;
 import j2html.tags.UnescapedText;
-import lombok.Builder;
-import lombok.Data;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
-import static j2html.TagCreator.*;
+import lombok.Builder;
+import lombok.Data;
 
 @Builder
 @Data
@@ -93,13 +92,13 @@ public class RbelUriFacet implements RbelFacet {
     private final List<RbelElement> queryParameters;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
-        List<Entry<String, RbelElement>> result = new ArrayList();
+    public List<RbelMultiMap> getChildElements() {
+        List<RbelMultiMap> result = new ArrayList<>();
         result.addAll(queryParameters.stream()
-            .map(el -> Pair.of(el.getFacetOrFail(RbelUriParameterFacet.class).getKeyAsString(), el))
-            .collect(Collectors.toList())
+              .map(el -> RbelMultiMap.builder().key(el.getFacetOrFail(RbelUriParameterFacet.class).getKeyAsString()).rbelElement(el).build())
+             .collect(Collectors.toList())
         );
-        result.add(Pair.of("basicPath", basicPath));
+        result.add(RbelMultiMap.builder().key("basicPath").rbelElement(basicPath).build());
         return result;
     }
 

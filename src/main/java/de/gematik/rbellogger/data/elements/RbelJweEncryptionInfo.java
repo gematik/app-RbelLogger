@@ -19,20 +19,18 @@ package de.gematik.rbellogger.data.elements;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
 import static j2html.TagCreator.b;
 import static j2html.TagCreator.p;
-
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
 
 @RequiredArgsConstructor
 @Data
@@ -65,10 +63,10 @@ public class RbelJweEncryptionInfo implements RbelFacet {
     private final RbelElement decryptedUsingKeyWithId;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of(
-            Pair.of("wasDecryptable", wasDecryptable),
-            Pair.of("decryptedUsingKeyWithId", decryptedUsingKeyWithId)
+            RbelMultiMap.builder().key("wasDecryptable").rbelElement(wasDecryptable).build(),
+            RbelMultiMap.builder().key("decryptedUsingKeyWithId").rbelElement(decryptedUsingKeyWithId).build()
         );
     }
 

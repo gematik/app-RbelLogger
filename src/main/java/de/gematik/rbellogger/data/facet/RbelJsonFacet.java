@@ -20,10 +20,10 @@ import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.ancestorTi
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.vertParentTitle;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.pre;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -34,8 +34,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-
 import lombok.Builder;
 import lombok.Data;
 
@@ -89,7 +87,7 @@ public class RbelJsonFacet implements RbelFacet {
     private final JsonElement jsonElement;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of();
     }
 }

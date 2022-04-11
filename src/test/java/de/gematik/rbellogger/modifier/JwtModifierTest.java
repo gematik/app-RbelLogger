@@ -16,8 +16,7 @@
 
 package de.gematik.rbellogger.modifier;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.elements.RbelJwtSignature;
@@ -25,14 +24,19 @@ import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.modifier.RbelJwtWriter.InvalidJwtSignatureException;
 import de.gematik.rbellogger.modifier.RbelJwtWriter.JwtUpdateException;
-import de.gematik.rbellogger.modifier.RbelModifier.RbelModificationException;
-import java.io.IOException;
-import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import javax.crypto.spec.SecretKeySpec;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.junit.jupiter.api.Test;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class JwtModifierTest extends AbstractModifierTest {
 
@@ -135,33 +139,80 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void jwtSignature_cantBeRewritten() throws IOException {
+    public void jwtSignature_changeVerifiedUsingToPuk() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
             .targetElement("$.body.signature.verifiedUsing")
-            .replaceWith("false verifiedUsing")
+            .replaceWith("puk_idpEnc")
+            .build());
+
+        assertThat(message
+            .findElement("$..verifiedUsing").get())
+            .extracting(el -> el.seekValue(String.class).get())
+            .isNotNull()
+            .isNotEqualTo("puk_idpEnc");
+        assertThat(modifyMessageAndParseResponse(message)
+            .findElement("$..verifiedUsing"))
+            .get()
+            .extracting(el -> el.seekValue(String.class).get())
+            .isEqualTo("puk_idpEnc");
+    }
+
+    @Test
+    public void jwtSignature_changeVerifiedUsingToPrk() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.body.signature.verifiedUsing")
+            .replaceWith("prk_idpEnc")
+            .build());
+
+        assertThat(modifyMessageAndParseResponse(message)
+            .findElement("$..verifiedUsing").get())
+            .extracting(el -> el.seekValue(String.class).get())
+            .isEqualTo("puk_idpEnc");
+    }
+
+    @Test
+    public void jwtSignature_changeVerifiedUsingToUnkownKey() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.body.signature.verifiedUsing")
+            .replaceWith("unknown key")
             .build());
 
         assertThatThrownBy(() -> modifyMessageAndParseResponse(message))
-            .isInstanceOf(RbelModificationException.class)
-            .hasMessageContaining("Could not rewrite element with facets [RbelJwtSignature]");
+            .hasMessageContaining("Could not find key 'unknown key'");
+    }
+
+    @Test
+    public void jwtSignature_changeSignatureItself() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .targetElement("$.body.signature")
+            .replaceWith(Base64.getUrlEncoder().encodeToString("hullabulla, but not a signature".getBytes(StandardCharsets.UTF_8)))
+            .build());
+
+        assertThat(modifyMessageAndParseResponse(message)
+            .findElement("$.body.signature").get())
+            .extracting(RbelElement::getRawStringContent)
+            .isEqualTo("hullabulla, but not a signature");
     }
 
     @Test
     public void modifyJwt_noMatchingPrivateKeyFound() throws IOException, IllegalAccessException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
+        var rbelLoggerWithoutKeys = RbelLogger.build();
 
-        setKeyManagerAvailableKeys(rbelLogger.getRbelKeyManager().getAllKeys()
-            .filter(key -> key.getKey() instanceof PublicKey)
-            .collect(Collectors.toList()));
-
-        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+        rbelLoggerWithoutKeys.getRbelModifier().addModification(RbelModificationDescription.builder()
             .targetElement("$.body.header.kid")
             .replaceWith("not the original kid")
             .build());
 
-        assertThatThrownBy(() -> modifyMessageAndParseResponse(message))
+        assertThatThrownBy(() -> rbelLoggerWithoutKeys.getRbelModifier().applyModifications(message))
             .isInstanceOf(InvalidJwtSignatureException.class)
             .hasMessageContaining("Could not find the key matching signature");
     }
@@ -169,14 +220,14 @@ public class JwtModifierTest extends AbstractModifierTest {
     @Test
     public void modifyJwt_noPublicAndPrivateKeysFound() throws Exception {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
-        setKeyManagerAvailableKeys(new ArrayList<>());
+        var rbelLoggerWithoutKeys = RbelLogger.build();
 
-        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+        rbelLoggerWithoutKeys.getRbelModifier().addModification(RbelModificationDescription.builder()
             .targetElement("$.body.header.kid")
             .replaceWith("not the original kid")
             .build());
 
-        assertThatThrownBy(() -> modifyMessageAndParseResponse(message))
+        assertThatThrownBy(() -> rbelLoggerWithoutKeys.getRbelModifier().applyModifications(message))
             .isInstanceOf(InvalidJwtSignatureException.class)
             .hasMessageContaining("Could not find the key matching signature");
     }

@@ -17,22 +17,14 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
-import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
-import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
-import j2html.tags.ContainerTag;
+import de.gematik.rbellogger.data.RbelMultiMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static j2html.TagCreator.*;
 
 @Slf4j
 @Data
@@ -43,8 +35,9 @@ public class RbelMapFacet implements RbelFacet {
     private final Map<String, RbelElement> childNodes;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return childNodes.entrySet().stream()
+            .map(el -> RbelMultiMap.builder().key(el.getKey()).rbelElement(el.getValue()).build())
             .collect(Collectors.toList());
     }
 

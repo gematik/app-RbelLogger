@@ -29,10 +29,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
+@Slf4j
 public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
 
     @Override
@@ -85,16 +87,6 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
             .body(bodyElement)
             .build());
         converter.convertElement(bodyElement);
-    }
-
-    private Optional<Charset> findCharsetInHeader(RbelHttpHeaderFacet headerMap) {
-        return headerMap.getCaseInsensitiveMatches("Content-Type")
-            .map(RbelElement::getRawStringContent)
-            .map(MediaType::parse)
-            .map(MediaType::charset)
-            .filter(o -> o.isPresent())
-            .map(o -> o.get())
-            .findFirst();
     }
 
     public static String findEolInHttpMessage(String content) {

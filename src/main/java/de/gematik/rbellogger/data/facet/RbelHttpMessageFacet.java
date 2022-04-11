@@ -17,13 +17,12 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import org.apache.commons.lang3.tuple.Pair;
 
 @Getter
 @EqualsAndHashCode
@@ -39,10 +38,10 @@ public class RbelHttpMessageFacet implements RbelFacet {
     }
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
-        final List<Entry<String, RbelElement>> result = new ArrayList<>();
-        result.add(Pair.of("body", body));
-        result.add(Pair.of("header", header));
+    public List<RbelMultiMap> getChildElements() {
+        final List<RbelMultiMap> result = new ArrayList<>();
+        result.add(RbelMultiMap.builder().key("body").rbelElement(body).build());
+        result.add(RbelMultiMap.builder().key("header").rbelElement(header).build());
         return result;
     }
 }

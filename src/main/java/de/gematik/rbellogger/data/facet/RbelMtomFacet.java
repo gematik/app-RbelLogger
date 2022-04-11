@@ -16,23 +16,20 @@
 
 package de.gematik.rbellogger.data.facet;
 
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
+import static j2html.TagCreator.div;
+import static j2html.TagCreator.span;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.util.MtomPart;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
-import lombok.Data;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
-import static j2html.TagCreator.*;
-import static j2html.TagCreator.b;
+import lombok.Data;
 
 @Data
 public class RbelMtomFacet implements RbelFacet {
@@ -78,10 +75,10 @@ public class RbelMtomFacet implements RbelFacet {
     private final List<MtomPart> mtomParts;
 
     @Override
-    public List<Map.Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of(
-            Pair.of("contentType", contentType),
-            Pair.of("reconstructedMessage", reconstructedMessage)
+            RbelMultiMap.builder().key("contentType").rbelElement(contentType).build(),
+            RbelMultiMap.builder().key("reconstructedMessage").rbelElement(reconstructedMessage).build()
         );
     }
 }

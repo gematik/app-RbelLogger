@@ -17,22 +17,21 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelXmlFacet;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.*;
-import org.xml.sax.SAXException;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map.Entry;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.*;
+import org.xml.sax.SAXException;
 
 @Slf4j
 class RbelHtmlConverter {
+
     private static final String XML_TEXT_KEY = "text";
 
     Optional<Document> parseHtml(String text) throws IOException, SAXException {
@@ -47,18 +46,20 @@ class RbelHtmlConverter {
     }
 
     void buildXmlElementForNode(Node branch, RbelElement parentElement, RbelConverter converter) {
-        final List<Entry<String, RbelElement>> childElements = new ArrayList<>();
+        final List<RbelMultiMap> childElements = new ArrayList<>();
         parentElement.addFacet(RbelXmlFacet.builder()
             .childElements(childElements)
             .build());
         for (Node childNode : branch.childNodes()) {
             if (childNode instanceof TextNode) {
                 childElements
-                    .add(Pair.of(XML_TEXT_KEY,
-                        converter.convertElement(((TextNode) childNode).getWholeText(), parentElement)));
+                    .add(RbelMultiMap.builder().key(XML_TEXT_KEY)
+                        .rbelElement(converter.convertElement(((TextNode) childNode).getWholeText(), parentElement))
+                        .build());
             } else {
                 var rbelChildElement = new RbelElement(childNode.toString().getBytes(), parentElement);
-                childElements.add(Pair.of(childNode.nodeName(), rbelChildElement));
+                childElements.add(
+                    RbelMultiMap.builder().key(childNode.nodeName()).rbelElement(rbelChildElement).build());
                 buildXmlElementForNode(childNode, rbelChildElement, converter);
             }
 /*else if (child instanceof AbstractBranch) {
@@ -79,9 +80,8 @@ class RbelHtmlConverter {
         }
         if (branch instanceof Element) {
             for (Attribute attribute : branch.attributes()) {
-                childElements.add(Pair.of(
-                    attribute.getKey(),
-                    converter.convertElement(attribute.getValue(), parentElement)));
+                childElements.add(RbelMultiMap.builder().key(attribute.getKey())
+                    .rbelElement(converter.convertElement(attribute.getValue(), parentElement)).build());
             }
         }
     }

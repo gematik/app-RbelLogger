@@ -17,11 +17,9 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
+import de.gematik.rbellogger.data.RbelMultiMap;
 import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class RbelBearerTokenFacet implements RbelFacet {
@@ -29,9 +27,9 @@ public class RbelBearerTokenFacet implements RbelFacet {
     private final RbelElement bearerToken;
 
     @Override
-    public List<Map.Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of(
-                Pair.of("BearerToken", bearerToken)
+            RbelMultiMap.builder().key("BearerToken").rbelElement(bearerToken).build()
         );
     }
 }

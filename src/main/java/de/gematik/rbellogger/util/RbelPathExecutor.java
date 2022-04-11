@@ -16,21 +16,18 @@
 
 package de.gematik.rbellogger.util;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_RBEL_PATH_DEBUGGING;
+import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.data.facet.RbelNestedFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-
-import static de.gematik.rbellogger.RbelOptions.ACTIVATE_RBEL_PATH_DEBUGGING;
-import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -65,7 +62,7 @@ public class RbelPathExecutor {
             if (ACTIVATE_RBEL_PATH_DEBUGGING) {
                 log.info("Resolving key '{}' with candidates {}", key, candidates.stream()
                     .flatMap(el -> el.getChildNodesWithKey().stream())
-                    .map(Entry::getKey)
+                    .map(RbelMultiMap::getKey)
                     .collect(Collectors.toList()));
             }
             List<RbelElement> lastIterationCandidates = candidates;
@@ -159,8 +156,8 @@ public class RbelPathExecutor {
         RbelJexlExecutor executor = new RbelJexlExecutor();
         return element.getChildNodesWithKey().stream()
             .filter(candidate ->
-                executor.matchesAsJexlExpression(candidate.getValue(), jexl, Optional.of(candidate.getKey())))
-            .map(Entry::getValue)
+                executor.matchesAsJexlExpression(candidate.getRbelElement(), jexl, Optional.of(candidate.getKey())))
+            .map(RbelMultiMap::getRbelElement)
             .collect(Collectors.toList());
     }
 }

@@ -17,12 +17,13 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
-import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @Builder(toBuilder = true)
@@ -31,11 +32,12 @@ public class RbelListFacet implements RbelFacet {
     private final List<RbelElement> childNodes;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
-        List<Entry<String, RbelElement>> result = new ArrayList<>();
-        for (int i = 0; i < childNodes.size(); i++) {
-            result.add(Pair.of(Integer.toString(i), childNodes.get(i)));
-        }
+    public List<RbelMultiMap> getChildElements() {
+        List<RbelMultiMap> result = new ArrayList<>();
+        AtomicInteger index = new AtomicInteger();
+        result.addAll(childNodes.stream()
+            .map(element -> RbelMultiMap.builder().key(String.valueOf(index.getAndIncrement())).rbelElement(element).build())
+            .collect(Collectors.toList()));
         return result;
     }
 

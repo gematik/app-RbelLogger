@@ -19,8 +19,11 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.modifier.RbelModificationDescription;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -132,5 +135,27 @@ public class CharsetTest {
             .isEqualTo(ISO_8859_1);
         assertThat(bodyElement.getRawStringContent())
             .isEqualTo("àáâãäåæçèéêëìíîï");
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "'',UTF-8",
+        "'schmöö:utf8', UTF-8",
+        "'us', US-ASCII",
+        "'ich mag am liebsten unicode, unicode, unicode', UTF-16",
+        "latin1 dance party, ISO-8859-1"
+    })
+    public void parseDefunctCharsetAndExpectCorrectResults(String charsetString, String expectedResult) throws IOException {
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jsonMessage.curl")
+            .replaceFirst("application/json; charset=latin1", charsetString);
+
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .convertElement(curlMessage.getBytes(), null);
+
+        assertThat(convertedMessage.hasFacet(RbelHttpResponseFacet.class))
+            .isTrue();
+        assertThat(convertedMessage.findElement("$.body").get().getElementCharset().displayName())
+            .isEqualTo(expectedResult);
     }
 }

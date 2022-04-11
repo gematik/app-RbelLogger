@@ -16,11 +16,15 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
+import static j2html.TagCreator.div;
+import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.data.facet.RbelVauEpaFacet;
 import de.gematik.rbellogger.key.RbelKey;
@@ -29,22 +33,17 @@ import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
-import lombok.SneakyThrows;
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
-import static j2html.TagCreator.div;
-import static org.assertj.core.api.Assertions.assertThat;
+import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 public class VauEpaConverterTest {
 
@@ -120,6 +119,24 @@ public class VauEpaConverterTest {
     }
 
     @Test
+    @DisplayName("VAU-Flow mit einem \\n Zeilenumbruch. \\r fehlt, trotzdem soll der Parser das MTOM parsen können")
+    public void parseAnotherLogFile() throws IOException {
+        RbelLogger epa2Logger = RbelLogger.build(new RbelConfiguration()
+            .setActivateAsn1Parsing(false)
+            .addInitializer(new RbelKeyFolderInitializer("src/test/resources")));
+
+        String rawSavedVauMessages = FileUtils.readFileToString(new File("src/test/resources/trafficLog.tgr"));
+        Stream.of(rawSavedVauMessages.split("\n\n\n"))
+            .forEach(tgrJson -> epa2Logger.getRbelConverter().parseMessage(
+                Base64.getDecoder().decode(tgrJson.split("\"")[15]), null, null));
+
+        assertThat(epa2Logger.getMessageHistory().get(9)
+            .findElement("$.body.message.reconstructedMessage.Envelope.Header.Action.text").get()
+            .getRawStringContent())
+            .isEqualTo("urn:ihe:iti:2007:ProvideAndRegisterDocumentSet-b");
+    }
+
+    @Test
     public void nestedHandshakeMessage_ShouldParseNestedJson() {
         assertThat(rbelLogger.getMessageHistory())
             .hasSize(8);
@@ -160,7 +177,7 @@ public class VauEpaConverterTest {
 
     private class TestFacet implements RbelFacet {
         @Override
-        public List<Map.Entry<String, RbelElement>> getChildElements() {
+        public List<RbelMultiMap> getChildElements() {
             return List.of();
         }
     }

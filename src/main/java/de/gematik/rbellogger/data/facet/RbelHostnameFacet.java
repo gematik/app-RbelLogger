@@ -18,16 +18,14 @@ package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMultiMap;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Optional;
 
 @Data
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -57,10 +55,10 @@ public class RbelHostnameFacet implements RbelFacet {
     }
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of(
-            Pair.of("port", port),
-            Pair.of("domain", domain)
+            RbelMultiMap.builder().key("port").rbelElement(port).build(),
+            RbelMultiMap.builder().key("domain").rbelElement(domain).build()
         );
     }
 

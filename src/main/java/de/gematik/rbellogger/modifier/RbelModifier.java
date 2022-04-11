@@ -44,6 +44,7 @@ public class RbelModifier {
             new RbelUriWriter(),
             new RbelUriParameterWriter(),
             new RbelJwtWriter(this.rbelKeyManager),
+            new RbelJwtSignatureWriter(),
             new RbelJweWriter(this.rbelKeyManager),
             new RbelVauErpWriter(),
             new RbelVauEpaWriter()
@@ -61,11 +62,7 @@ public class RbelModifier {
                 }
 
                 final byte[] input = applyModification(modification, targetOptional.get());
-                try {
-                    modifiedMessage = rbelConverter.convertElement(input, null);
-                } catch (RuntimeException e) {
-                    throw e;
-                }
+                modifiedMessage = rbelConverter.convertElement(input, null);
             }
         }
         return modifiedMessage;
@@ -140,7 +137,7 @@ public class RbelModifier {
         modificationsMap.remove(modificationsId);
     }
 
-    public class RbelModificationException extends RuntimeException {
+    public static class RbelModificationException extends RuntimeException {
 
         public RbelModificationException(String s) {
             super(s);

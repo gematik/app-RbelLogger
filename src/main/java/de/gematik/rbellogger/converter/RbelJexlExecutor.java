@@ -16,22 +16,21 @@
 
 package de.gematik.rbellogger.converter;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_JEXL_DEBUGGING;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.jexl3.JexlBuilder;
 import org.apache.commons.jexl3.JexlExpression;
 import org.apache.commons.jexl3.MapContext;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static de.gematik.rbellogger.RbelOptions.ACTIVATE_JEXL_DEBUGGING;
 
 @Slf4j
 @Data
@@ -225,8 +224,8 @@ public class RbelJexlExecutor {
             .stream()
             .map(RbelElement::getChildNodesWithKey)
             .flatMap(List::stream)
-            .filter(entry -> entry.getValue() == element)
-            .map(Map.Entry::getKey)
+            .filter(entry -> entry.getRbelElement() == element)
+            .map(RbelMultiMap::getKey)
             .findFirst();
     }
 

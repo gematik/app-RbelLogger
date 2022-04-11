@@ -16,27 +16,27 @@
 
 package de.gematik.rbellogger.data.facet;
 
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
+import static j2html.TagCreator.b;
+import static j2html.TagCreator.div;
+import static j2html.TagCreator.p;
+import static j2html.TagCreator.span;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelVauKey;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
-import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
-import static j2html.TagCreator.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Builder
@@ -106,16 +106,16 @@ public class RbelVauEpaFacet implements RbelFacet {
     private final Optional<RbelKey> keyUsed = Optional.empty();
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return Stream.of(
-                Pair.of("message", message),
-                Pair.of("encryptedMessage", encryptedMessage),
-                Pair.of("sequenceNumber", sequenceNumber),
-                Pair.of("additionalHeaders", additionalHeaders),
-                Pair.of("pVersionNumber", pVersionNumber),
-                Pair.of("keyId", keyIdUsed)
+                RbelMultiMap.builder().key("message").rbelElement(message).build(),
+                RbelMultiMap.builder().key("encryptedMessage").rbelElement(encryptedMessage).build(),
+                RbelMultiMap.builder().key("additionalHeaders").rbelElement(additionalHeaders).build(),
+                RbelMultiMap.builder().key("sequenceNumber").rbelElement(sequenceNumber).build(),
+                RbelMultiMap.builder().key("pVersionNumber").rbelElement(pVersionNumber).build(),
+                RbelMultiMap.builder().key("keyId").rbelElement(keyIdUsed).build()
             )
-            .filter(pair -> pair.getValue() != null)
+            .filter(pair -> pair.getRbelElement() != null)
             .collect(Collectors.toList());
     }
 }

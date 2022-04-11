@@ -16,15 +16,16 @@
 
 package de.gematik.rbellogger.converter;
 
-import static de.gematik.rbellogger.converter.RbelHttpRequestConverter.findEolInHttpMessage;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import de.gematik.rbellogger.util.RbelArrayUtils;
+import lombok.extern.slf4j.Slf4j;
+
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
@@ -32,7 +33,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static de.gematik.rbellogger.converter.RbelHttpRequestConverter.findEolInHttpMessage;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+@Slf4j
 public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
     @Override
@@ -117,14 +123,34 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
         return headerElement;
     }
 
-    private Optional<Charset> findCharsetInHeader(RbelHttpHeaderFacet headerMap) {
+    Optional<Charset> findCharsetInHeader(RbelHttpHeaderFacet headerMap) {
         return headerMap.getCaseInsensitiveMatches("Content-Type")
             .map(RbelElement::getRawStringContent)
-            .map(MediaType::parse)
-            .map(MediaType::charset)
-            .filter(o -> o.isPresent())
-            .map(o -> o.get())
+            .map(str -> strictParsingOfCharset(str)
+                .orElse(guessCharset(str)))
             .findFirst();
+    }
+
+    private Charset guessCharset(String str) {
+        var lowerCaseString = str.toLowerCase();
+        return Stream.of(UTF_8, StandardCharsets.ISO_8859_1, StandardCharsets.US_ASCII, StandardCharsets.UTF_16)
+            .filter(charset -> charset.aliases().stream()
+                .map(String::toLowerCase)
+                .anyMatch(lowerCaseString::contains))
+            .findFirst()
+            .orElse(StandardCharsets.UTF_8);
+    }
+
+    private Optional<Charset> strictParsingOfCharset(String s) {
+        try {
+            return Optional.ofNullable(s)
+                .map(MediaType::parse)
+                .map(MediaType::charset)
+                .filter(com.google.common.base.Optional::isPresent)
+                .map(com.google.common.base.Optional::get);
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
     }
 
     private byte[] extractBodyData(RbelElement rbel, int separator, RbelHttpHeaderFacet headerMap, String eol) {
@@ -140,7 +166,7 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
     }
 
     protected SimpleImmutableEntry<String, RbelElement> parseStringToKeyValuePair(final String line,
-        final RbelConverter context, RbelElement headerElement) {
+                                                                                  final RbelConverter context, RbelElement headerElement) {
         final int colon = line.indexOf(':');
         if (colon == -1) {
             throw new IllegalArgumentException("Header malformed: '" + line + "'");

@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -45,7 +46,7 @@ public class RbelHttpFormDataFacet implements RbelFacet {
 
             @Override
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
-                                                 RbelHtmlRenderingToolkit renderingToolkit) {
+                RbelHtmlRenderingToolkit renderingToolkit) {
                 return table()
                     .withClass("table").with(
                         thead(
@@ -57,9 +58,10 @@ public class RbelHttpFormDataFacet implements RbelFacet {
                                     tr(
                                         td(pre(entry.getKey())),
                                         td(pre()
-                                            .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
+                                            .with(renderingToolkit.convert(entry.getRbelElement(),
+                                                Optional.ofNullable(entry.getKey())))
                                             .withClass("value"))
-                                            .with(renderingToolkit.addNotes(entry.getValue()))
+                                            .with(renderingToolkit.addNotes(entry.getRbelElement()))
                                     )
                                 )
                                 .collect(Collectors.toList())
@@ -72,7 +74,9 @@ public class RbelHttpFormDataFacet implements RbelFacet {
     private final Map<String, RbelElement> formDataMap;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
-        return new ArrayList<>(formDataMap.entrySet());
-    }
+         public List<RbelMultiMap> getChildElements() {
+            return formDataMap.entrySet().stream()
+                .map(el -> RbelMultiMap.builder().key(el.getKey()).rbelElement(el.getValue()).build())
+                .collect(Collectors.toList());
+        }
 }

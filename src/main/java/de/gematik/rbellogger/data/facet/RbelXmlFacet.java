@@ -20,8 +20,8 @@ import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.ancestorTi
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.vertParentTitle;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.pre;
-
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
@@ -34,7 +34,6 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
-import org.dom4j.Branch;
 
 @Data
 @Builder(toBuilder = true)
@@ -79,10 +78,10 @@ public class RbelXmlFacet implements RbelFacet {
     }
 
     @Builder.Default
-    private final List<Entry<String, RbelElement>> childElements = List.of();
+    private final List<RbelMultiMap> childElements = List.of();
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return childElements;
     }
 }

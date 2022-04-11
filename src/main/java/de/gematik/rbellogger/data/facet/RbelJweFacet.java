@@ -19,19 +19,17 @@ package de.gematik.rbellogger.data.facet;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
 import static j2html.TagCreator.div;
-
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @Builder(toBuilder = true)
@@ -51,19 +49,19 @@ public class RbelJweFacet implements RbelFacet {
                 return div(t1ms("JWE").with(showContentButtonAndDialog(element)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
-                        vertParentTitle().with(
-                            childBoxNotifTitle(CLS_HEADER)
-                                .with(t2("Headers"))
-                                .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getHeader()))
-                                .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getHeader())),
-                            childBoxNotifTitle(CLS_BODY)
-                                .with(t2("Body"))
-                                .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getBody()))
-                                .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getBody())),
-                            renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getEncryptionInfo())
+                            vertParentTitle().with(
+                                childBoxNotifTitle(CLS_HEADER)
+                                    .with(t2("Headers"))
+                                    .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getHeader()))
+                                    .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getHeader())),
+                                childBoxNotifTitle(CLS_BODY)
+                                    .with(t2("Body"))
+                                    .with(addNotes(element.getFacetOrFail(RbelJweFacet.class).getBody()))
+                                    .with(renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getBody())),
+                                renderingToolkit.convert(element.getFacetOrFail(RbelJweFacet.class).getEncryptionInfo())
+                            )
                         )
-                    )
-                );
+                    );
             }
         });
     }
@@ -73,11 +71,11 @@ public class RbelJweFacet implements RbelFacet {
     private final RbelElement encryptionInfo;
 
     @Override
-    public List<Entry<String, RbelElement>> getChildElements() {
+    public List<RbelMultiMap> getChildElements() {
         return List.of(
-            Pair.of("header", header),
-            Pair.of("body", body),
-            Pair.of("encryptionInfo", encryptionInfo)
+            RbelMultiMap.builder().key("header").rbelElement(header).build(),
+            RbelMultiMap.builder().key("body").rbelElement(body).build(),
+            RbelMultiMap.builder().key("encryptionInfo").rbelElement(encryptionInfo).build()
         );
     }
 }

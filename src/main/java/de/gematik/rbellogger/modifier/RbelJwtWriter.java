@@ -23,16 +23,17 @@ import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.util.JsonUtils;
+import lombok.AllArgsConstructor;
+import org.jose4j.jws.JsonWebSignature;
+import org.jose4j.jwt.consumer.InvalidJwtSignatureException;
+import org.jose4j.lang.JoseException;
 
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.PrivateKey;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.lang.JoseException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -64,7 +65,12 @@ public class RbelJwtWriter implements RbelElementWriter {
 
         jws.setPayload(extractJwsBodyClaims(oldTargetModifiedChild, newContent, jwtFacet));
 
-        jws.setKey(extractJwsKey(jwtFacet, jws));
+        if (jwtFacet.getSignature() == oldTargetModifiedChild
+            && newContent.startsWith(new String(RbelJwtSignatureWriter.VERIFIED_USING_MARKER, UTF_8))) {
+            jws.setKey(findNewSignerKey(newContent));
+        } else {
+            jws.setKey(extractJwsKey(jwtFacet));
+        }
 
         if (!jwtFacet.getSignature().getFacetOrFail(RbelJwtSignature.class).isValid()) {
             throw new InvalidJwtSignatureException(
@@ -72,32 +78,56 @@ public class RbelJwtWriter implements RbelElementWriter {
         }
 
         try {
-            return jws.getCompactSerialization();
+            final String compactSerialization = jws.getCompactSerialization();
+
+            if (jwtFacet.getSignature() == oldTargetModifiedChild
+                && !newContent.startsWith(new String(RbelJwtSignatureWriter.VERIFIED_USING_MARKER, UTF_8))) {
+                return compactSerialization.substring(0, compactSerialization.lastIndexOf('.')) + "." + newContent;
+            }
+            return compactSerialization;
         } catch (JoseException e) {
             throw new JwtUpdateException("Error writing into Jwt", e);
         }
     }
 
-    private Key extractJwsKey(RbelJwtFacet jwtFacet, JsonWebSignature jsonWebSignature) {
+    private Key findNewSignerKey(String newContent) {
+        final String newSignatureKeyName = newContent.substring(RbelJwtSignatureWriter.VERIFIED_USING_MARKER.length);
+        final Key newSignatureKey = rbelKeyManager.findKeyByName(newSignatureKeyName)
+            .map(key -> {
+                if (key.getKey() instanceof PrivateKey) {
+                    return key;
+                } else {
+                    return rbelKeyManager.findCorrespondingPrivateKey(newSignatureKeyName)
+                        .orElseThrow(() -> new RbelJwtSignatureModificationException("Could not find private key matching '" + newSignatureKeyName + "'"));
+                }
+            })
+            .map(RbelKey::getKey)
+            .orElseThrow(() -> new RbelJwtSignatureModificationException("Could not find key '" + newSignatureKeyName + "'"));
+        return newSignatureKey;
+    }
+
+    private Key extractJwsKey(RbelJwtFacet jwtFacet) {
         return jwtFacet.getSignature().getFacet(RbelJwtSignature.class)
             .map(RbelJwtSignature::getVerifiedUsing)
-            .filter(obj -> Objects.nonNull(obj))
+            .filter(Objects::nonNull)
             .flatMap(verifiedUsing -> verifiedUsing.seekValue(String.class))
             .flatMap(rbelKeyManager::findKeyByName)
             .flatMap(this::getKeyBasedOnEncryptionType)
             .orElseThrow(() -> new InvalidJwtSignatureException(
-                "Could not find the key matching signature \n" + jwtFacet.getSignature().printTreeStructure()));
+                "Could not find the key matching signature \n"
+                    + jwtFacet.getSignature().printTreeStructureWithoutColors()
+                    + "\n(If the private key is unknown then a new signature can not be written)"));
     }
 
     private void writeHeaderInJws(RbelElement oldTargetModifiedChild, String newContent, RbelJwtFacet jwtFacet,
-        JsonWebSignature jws) {
+                                  JsonWebSignature jws) {
         extractJwtHeaderClaims(oldTargetModifiedChild, newContent, jwtFacet)
             .forEach(pair -> jws.setHeader(pair.getKey(), pair.getValue()));
     }
 
     private List<Map.Entry<String, String>> extractJwtHeaderClaims(RbelElement oldTargetModifiedChild,
-        String newContent,
-        RbelJwtFacet jwtFacet) {
+                                                                   String newContent,
+                                                                   RbelJwtFacet jwtFacet) {
         if (jwtFacet.getHeader() == oldTargetModifiedChild) {
             return JsonUtils.convertJsonObjectStringToMap(newContent);
         } else {
@@ -106,7 +136,7 @@ public class RbelJwtWriter implements RbelElementWriter {
     }
 
     private String extractJwsBodyClaims(RbelElement oldTargetModifiedChild, String newContent,
-        RbelJwtFacet jwtFacet) {
+                                        RbelJwtFacet jwtFacet) {
         if (jwtFacet.getBody() == oldTargetModifiedChild) {
             return newContent;
         } else {
@@ -133,6 +163,12 @@ public class RbelJwtWriter implements RbelElementWriter {
     public class InvalidJwtSignatureException extends RuntimeException {
 
         public InvalidJwtSignatureException(String s) {
+            super(s);
+        }
+    }
+
+    private class RbelJwtSignatureModificationException extends RuntimeException {
+        public RbelJwtSignatureModificationException(String s) {
             super(s);
         }
     }

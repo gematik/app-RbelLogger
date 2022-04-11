@@ -36,7 +36,7 @@ public abstract class AbstractModifierTest {
 
     public static final RbelKeyFolderInitializer RBEL_KEY_FOLDER_INITIALIZER = new RbelKeyFolderInitializer(
         "src/test/resources");
-    public RbelLogger rbelLogger;
+    public static RbelLogger rbelLogger;
 
     @BeforeEach
     public void initRbelLogger() {
@@ -53,8 +53,7 @@ public abstract class AbstractModifierTest {
     }
 
     public RbelElement modifyMessageAndParseResponse(RbelElement message) {
-        final RbelElement modifiedMessage = rbelLogger.getRbelModifier().applyModifications(message);
-        return modifiedMessage;
+        return rbelLogger.getRbelModifier().applyModifications(message);
     }
 
     public RbelElement readAndConvertCurlMessage(String fileName, Function<String, String>... messageMappers)
@@ -65,12 +64,5 @@ public abstract class AbstractModifierTest {
         }
         return rbelLogger.getRbelConverter()
             .convertElement(curlMessage, null);
-    }
-
-    public void setKeyManagerAvailableKeys(List<RbelKey> keys) throws IllegalAccessException {
-        Field list = ReflectionUtils.findFields(RbelKeyManager.class, f -> f.getName().equals("keyList"),
-            HierarchyTraversalMode.BOTTOM_UP).get(0);
-        list.setAccessible(true);
-        list.set(rbelLogger.getRbelKeyManager(), keys);
     }
 }

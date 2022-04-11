@@ -16,20 +16,18 @@
 
 package de.gematik.rbellogger.data.util;
 
+import static de.gematik.rbellogger.RbelOptions.ACTIVATE_FACETS_PRINTING;
+import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH;
+import static de.gematik.rbellogger.util.RbelAnsiColors.*;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.util.RbelAnsiColors;
+import java.util.Iterator;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.apache.commons.lang3.StringUtils;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static de.gematik.rbellogger.RbelOptions.ACTIVATE_FACETS_PRINTING;
-import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH;
-import static de.gematik.rbellogger.util.RbelAnsiColors.*;
 
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -44,9 +42,11 @@ public class RbelElementTreePrinter {
     private final boolean printKeys = false;
     @Builder.Default
     private final boolean printFacets = true;
+    @Builder.Default
+    private final boolean printColors = true;
 
     public String execute() {
-        String result = RED_BOLD + rootElement.getKey().orElse("") + RESET;
+        String result = cl(RED_BOLD) + rootElement.getKey().orElse("") + cl(RESET);
         result += printKeyOf(rootElement) + "\n";
         result += executeRecursive(rootElement, "", maximumLevels);
         return result;
@@ -57,8 +57,8 @@ public class RbelElementTreePrinter {
             return "";
         }
         String result = "";
-        for (Iterator<Map.Entry<String, RbelElement>> iterator = position.getChildNodesWithKey().iterator(); iterator.hasNext(); ) {
-            Map.Entry<String, RbelElement> childNode = iterator.next();
+        for (Iterator<RbelMultiMap> iterator = position.getChildNodesWithKey().iterator(); iterator.hasNext(); ) {
+            RbelMultiMap childNode = iterator.next();
             String switchString, padString;
             if (iterator.hasNext()) {
                 switchString = "├──";
@@ -68,16 +68,16 @@ public class RbelElementTreePrinter {
                 padString = "   ";
             }
             // the tree structure
-            result += YELLOW_BRIGHT + padding + switchString + RESET;
+            result += cl(YELLOW_BRIGHT) + padding + switchString + cl(RESET);
             // name of the node
-            result += RbelAnsiColors.RED_BOLD + childNode.getKey() + RbelAnsiColors.RESET;
+            result += cl(RED_BOLD) + childNode.getKey() + cl(RESET);
             // print content
-            result += printContentOf(childNode.getValue());
+            result += printContentOf(childNode.getRbelElement());
             // print facet
-            result += printFacets(childNode.getValue());
+            result += printFacets(childNode.getRbelElement());
             result += "\n";
-            if (!childNode.getValue().getChildNodes().isEmpty()) {
-                result += executeRecursive(childNode.getValue(), padding + padString, remainingLevels - 1);
+            if (!childNode.getRbelElement().getChildNodes().isEmpty()) {
+                result += executeRecursive(childNode.getRbelElement(), padding + padString, remainingLevels - 1);
             }
         }
         return result;
@@ -98,14 +98,14 @@ public class RbelElementTreePrinter {
         if (StringUtils.isEmpty(facetsString)) {
             return "";
         }
-        return CYAN + " (" + facetsString + ")" + RESET;
+        return cl(CYAN) + " (" + facetsString + ")" + cl(RESET);
     }
 
     private String printKeyOf(RbelElement value) {
         if (!printKeys) {
             return "";
         }
-        return " " + GREEN + "[$." + value.findNodePath() + "]" + RESET;
+        return " " + cl(GREEN) + "[$." + value.findNodePath() + "]" + cl(RESET);
     }
 
     private String printContentOf(RbelElement value) {
@@ -122,10 +122,18 @@ public class RbelElementTreePrinter {
         if (content == null) {
             return "";
         }
-        return " (" + RbelAnsiColors.BLUE + StringUtils.substring(content
+        return " (" + cl(BLUE) + StringUtils.substring(content
             .replace("\n", "\\n")
             .replace("\r", "\\r"), 0, RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH)
             + (content.length() > RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH ? "..." : "")
-            + RbelAnsiColors.RESET + ")";
+            + cl(RESET) + ")";
+    }
+
+    private String cl(RbelAnsiColors color) {
+        if (printColors){
+            return color.toString();
+        } else {
+            return "";
+        }
     }
 }
