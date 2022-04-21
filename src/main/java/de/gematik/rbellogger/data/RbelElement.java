@@ -21,12 +21,14 @@ import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.data.util.RbelElementTreePrinter;
 import de.gematik.rbellogger.util.RbelException;
 import de.gematik.rbellogger.util.RbelPathExecutor;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -42,7 +44,9 @@ public class RbelElement {
     private final byte[] rawContent;
     private final transient RbelElement parentNode;
     private final List<RbelFacet> facets = new ArrayList<>();
-    @Builder.Default @Setter @Getter(AccessLevel.PRIVATE)
+    @Builder.Default
+    @Setter
+    @Getter(AccessLevel.PRIVATE)
     private Optional<Charset> charset = Optional.empty();
 
     public static RbelElement wrap(byte[] rawValue, @NonNull RbelElement parentNode, Object value) {
@@ -74,18 +78,20 @@ public class RbelElement {
     public List<RbelElement> getChildNodes() {
         return facets.stream()
             .map(RbelFacet::getChildElements)
-            .flatMap(List::stream)
-            .map(RbelMultiMap::getRbelElement)
+            .map(RbelMultiMap::getValues)
+            .flatMap(Collection::stream)
+            .map(Map.Entry::getValue)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
 
-    public List<RbelMultiMap> getChildNodesWithKey() {
+    public RbelMultiMap getChildNodesWithKey() {
         return facets.stream()
             .map(RbelFacet::getChildElements)
-            .flatMap(List::stream)
-            .filter(el -> el.getRbelElement() != null)
-            .collect(Collectors.toList());
+            .map(RbelMultiMap::getValues)
+            .flatMap(Collection::stream)
+            .filter(el -> el.getValue() != null)
+            .collect(RbelMultiMap.COLLECTOR);
     }
 
     public void triggerPostConversionListener(final RbelConverter context) {
@@ -126,8 +132,8 @@ public class RbelElement {
         while (!(ptr.get().getParentNode() == null)) {
             keyList.addFirst(
                 ptr.get().getParentNode().getChildNodesWithKey().stream()
-                    .filter(entry -> entry.getRbelElement() == ptr.get())
-                    .map(RbelMultiMap::getKey).findFirst());
+                    .filter(entry -> entry.getValue() == ptr.get())
+                    .map(Map.Entry::getKey).findFirst());
             ptr.set(ptr.get().getParentNode());
         }
         return keyList.stream()
@@ -139,14 +145,14 @@ public class RbelElement {
     public Optional<RbelElement> getFirst(String key) {
         return getChildNodesWithKey().stream()
             .filter(entry -> entry.getKey().equals(key))
-            .map(RbelMultiMap::getRbelElement)
+            .map(Map.Entry::getValue)
             .findFirst();
     }
 
     public List<RbelElement> getAll(String key) {
         return getChildNodesWithKey().stream()
             .filter(entry -> entry.getKey().equals(key))
-            .map(RbelMultiMap::getRbelElement)
+            .map(Map.Entry::getValue)
             .collect(Collectors.toList());
     }
 
@@ -156,8 +162,8 @@ public class RbelElement {
             .filter(Objects::nonNull)
             .stream()
             .flatMap(parent -> parent.getChildNodesWithKey().stream())
-            .filter(e -> e.getRbelElement() == this)
-            .map(RbelMultiMap::getKey)
+            .filter(e -> e.getValue() == this)
+            .map(Map.Entry::getKey)
             .findFirst();
     }
 
@@ -217,8 +223,8 @@ public class RbelElement {
         if (parentNode == null) {
             return Optional.empty();
         }
-        for (RbelMultiMap ptr : parentNode.getChildNodesWithKey()) {
-            if (ptr.getRbelElement() == this) {
+        for (Map.Entry<String, RbelElement> ptr : parentNode.getChildNodesWithKey().getValues()) {
+            if (ptr.getValue() == this) {
                 return Optional.ofNullable(ptr.getKey());
             }
         }

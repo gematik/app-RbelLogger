@@ -19,14 +19,17 @@ package de.gematik.rbellogger.data.facet;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
 import static j2html.TagCreator.div;
+
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+
 import java.util.List;
 import java.util.Optional;
+
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -70,11 +73,10 @@ public class RbelJwtFacet implements RbelFacet {
     private final RbelElement signature;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("header").rbelElement(header).build(),
-            RbelMultiMap.builder().key("body").rbelElement(body).build(),
-            RbelMultiMap.builder().key("signature").rbelElement(signature).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("header", header)
+            .with("body", body)
+            .with("signature", signature);
     }
 }

@@ -34,12 +34,6 @@ import org.junit.jupiter.api.Test;
 
 public class JweModifierTest extends AbstractModifierTest {
 
-    @Override
-    public RbelConfiguration getRbelConfiguration() {
-        return super.getRbelConfiguration()
-            .addInitializer(RBEL_KEY_FOLDER_INITIALIZER);
-    }
-
     @Test
     public void modifyJweHeaderEnc_cantBeModified() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jweMessage.curl");

@@ -1,5 +1,12 @@
 # Changelog RBeL Logger
 
+# Release 0.23.2
+
+## Bugfixes
+
+* RBEL-53: RbelMultiMap now correctly shields the internal organisation of element ordering.
+* RBEL-54: Timing-Facet added.
+
 # Release 0.23.1
 
 ## Changed

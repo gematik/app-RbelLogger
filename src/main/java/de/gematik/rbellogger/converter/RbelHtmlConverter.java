@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.xml.sax.SAXException;
@@ -46,42 +47,25 @@ class RbelHtmlConverter {
     }
 
     void buildXmlElementForNode(Node branch, RbelElement parentElement, RbelConverter converter) {
-        final List<RbelMultiMap> childElements = new ArrayList<>();
+        final RbelMultiMap childElements = new RbelMultiMap();
         parentElement.addFacet(RbelXmlFacet.builder()
             .childElements(childElements)
             .build());
         for (Node childNode : branch.childNodes()) {
             if (childNode instanceof TextNode) {
                 childElements
-                    .add(RbelMultiMap.builder().key(XML_TEXT_KEY)
-                        .rbelElement(converter.convertElement(((TextNode) childNode).getWholeText(), parentElement))
-                        .build());
+                    .put(XML_TEXT_KEY,
+                        converter.convertElement(((TextNode) childNode).getWholeText(), parentElement));
             } else {
                 var rbelChildElement = new RbelElement(childNode.toString().getBytes(), parentElement);
-                childElements.add(
-                    RbelMultiMap.builder().key(childNode.nodeName()).rbelElement(rbelChildElement).build());
+                childElements.put(childNode.nodeName(), rbelChildElement);
                 buildXmlElementForNode(childNode, rbelChildElement, converter);
             }
-/*else if (child instanceof AbstractBranch) {
-                final RbelElement element = new RbelElement(
-                    ((AbstractBranch) child).asXML().getBytes(parentElement.getElementCharset()),
-                    parentElement);
-                buildXmlElementForNode((AbstractBranch) child, element, converter);
-                childElements.add(Pair.of(((AbstractBranch) child).getName(), element));
-            } else if (child instanceof Namespace) {
-                final String childXmlName = ((Namespace) child).getPrefix();
-                childElements
-                    .add(Pair.of(childXmlName, converter.convertElement(((Namespace) child).getText(), parentElement)));
-            } else if (child instanceof DefaultComment) {
-                // do nothing
-            } else {
-                throw new RbelException("Could not convert XML element of type " + child.getClass().getSimpleName());
-            }*/
         }
         if (branch instanceof Element) {
             for (Attribute attribute : branch.attributes()) {
-                childElements.add(RbelMultiMap.builder().key(attribute.getKey())
-                    .rbelElement(converter.convertElement(attribute.getValue(), parentElement)).build());
+                childElements.put(attribute.getKey(),
+                    converter.convertElement(attribute.getValue(), parentElement));
             }
         }
     }

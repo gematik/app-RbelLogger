@@ -18,7 +18,9 @@ package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
+
 import java.util.List;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -30,11 +32,10 @@ public class RbelUriParameterFacet implements RbelFacet {
     private final RbelElement value;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("key").rbelElement(key).build(),
-            RbelMultiMap.builder().key("value").rbelElement(value).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("key", key)
+            .with("value", value);
     }
 
     public String getKeyAsString() {

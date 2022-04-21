@@ -20,6 +20,7 @@ import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonA
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.span;
+
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.util.MtomPart;
@@ -27,8 +28,10 @@ import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+
 import java.util.List;
 import java.util.Optional;
+
 import lombok.Data;
 
 @Data
@@ -49,22 +52,22 @@ public class RbelMtomFacet implements RbelFacet {
                         .with(showContentButtonAndDialog(element)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
-                        vertParentTitle().with(
-                            childBoxNotifTitle(CLS_BODY).with(
-                                t2("Content Type"),
-                                Optional.ofNullable(element.getFacetOrFail(RbelMtomFacet.class))
-                                    .map(RbelMtomFacet::getContentType)
-                                    .map(headers -> renderingToolkit.convert(headers))
-                                    .orElse(span())
-                            ),
-                            childBoxNotifTitle(CLS_BODY)
-                                .with(t2("Reconstructed Message"))
-                                .with(addNotes(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
-                                .with(renderingToolkit
-                                    .convert(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
+                            vertParentTitle().with(
+                                childBoxNotifTitle(CLS_BODY).with(
+                                    t2("Content Type"),
+                                    Optional.ofNullable(element.getFacetOrFail(RbelMtomFacet.class))
+                                        .map(RbelMtomFacet::getContentType)
+                                        .map(headers -> renderingToolkit.convert(headers))
+                                        .orElse(span())
+                                ),
+                                childBoxNotifTitle(CLS_BODY)
+                                    .with(t2("Reconstructed Message"))
+                                    .with(addNotes(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
+                                    .with(renderingToolkit
+                                        .convert(element.getFacetOrFail(RbelMtomFacet.class).getReconstructedMessage()))
+                            )
                         )
-                    )
-                );
+                    );
             }
         });
     }
@@ -75,10 +78,9 @@ public class RbelMtomFacet implements RbelFacet {
     private final List<MtomPart> mtomParts;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("contentType").rbelElement(contentType).build(),
-            RbelMultiMap.builder().key("reconstructedMessage").rbelElement(reconstructedMessage).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("contentType", contentType)
+            .with("reconstructedMessage", reconstructedMessage);
     }
 }

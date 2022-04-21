@@ -22,6 +22,7 @@ import static j2html.TagCreator.b;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.p;
 import static j2html.TagCreator.span;
+
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.key.RbelKey;
@@ -30,10 +31,12 @@ import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -106,16 +109,13 @@ public class RbelVauEpaFacet implements RbelFacet {
     private final Optional<RbelKey> keyUsed = Optional.empty();
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return Stream.of(
-                RbelMultiMap.builder().key("message").rbelElement(message).build(),
-                RbelMultiMap.builder().key("encryptedMessage").rbelElement(encryptedMessage).build(),
-                RbelMultiMap.builder().key("additionalHeaders").rbelElement(additionalHeaders).build(),
-                RbelMultiMap.builder().key("sequenceNumber").rbelElement(sequenceNumber).build(),
-                RbelMultiMap.builder().key("pVersionNumber").rbelElement(pVersionNumber).build(),
-                RbelMultiMap.builder().key("keyId").rbelElement(keyIdUsed).build()
-            )
-            .filter(pair -> pair.getRbelElement() != null)
-            .collect(Collectors.toList());
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .withSkipIfNull("message", message)
+            .withSkipIfNull("encryptedMessage", encryptedMessage)
+            .withSkipIfNull("additionalHeaders", additionalHeaders)
+            .withSkipIfNull("sequenceNumber", sequenceNumber)
+            .withSkipIfNull("pVersionNumber", pVersionNumber)
+            .withSkipIfNull("keyId", keyIdUsed);
     }
 }

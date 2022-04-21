@@ -43,13 +43,9 @@ public abstract class AbstractModifierTest {
         RbelOptions.activateJexlDebugging();
         if (rbelLogger == null) {
             rbelLogger = RbelLogger.build(
-                getRbelConfiguration());
+                new RbelConfiguration().addInitializer(RBEL_KEY_FOLDER_INITIALIZER));
         }
         rbelLogger.getRbelModifier().deleteAllModifications();
-    }
-
-    public RbelConfiguration getRbelConfiguration() {
-        return new RbelConfiguration();
     }
 
     public RbelElement modifyMessageAndParseResponse(RbelElement message) {

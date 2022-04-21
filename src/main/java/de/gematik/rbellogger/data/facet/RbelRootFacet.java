@@ -30,7 +30,7 @@ public class RbelRootFacet<T extends RbelFacet> implements RbelFacet {
     private final T rootFacet;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of();
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap();
     }
 }

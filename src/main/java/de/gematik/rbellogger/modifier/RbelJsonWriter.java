@@ -19,9 +19,7 @@ package de.gematik.rbellogger.modifier;
 import com.google.gson.JsonElement;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
-import org.bouncycastle.its.asn1.SymmRecipientInfo;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.StringJoiner;
 

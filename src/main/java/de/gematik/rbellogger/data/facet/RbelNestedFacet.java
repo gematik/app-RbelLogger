@@ -31,9 +31,8 @@ public class RbelNestedFacet implements RbelFacet {
     private final RbelElement nestedElement;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("content").rbelElement(nestedElement).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("content", nestedElement);
     }
 }

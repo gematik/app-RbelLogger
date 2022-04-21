@@ -21,5 +21,5 @@ import java.util.List;
 
 public interface RbelFacet {
 
-    List<RbelMultiMap> getChildElements();
+    RbelMultiMap getChildElements();
 }

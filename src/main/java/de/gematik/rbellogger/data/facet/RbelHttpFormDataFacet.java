@@ -58,10 +58,10 @@ public class RbelHttpFormDataFacet implements RbelFacet {
                                     tr(
                                         td(pre(entry.getKey())),
                                         td(pre()
-                                            .with(renderingToolkit.convert(entry.getRbelElement(),
+                                            .with(renderingToolkit.convert(entry.getValue(),
                                                 Optional.ofNullable(entry.getKey())))
                                             .withClass("value"))
-                                            .with(renderingToolkit.addNotes(entry.getRbelElement()))
+                                            .with(renderingToolkit.addNotes(entry.getValue()))
                                     )
                                 )
                                 .collect(Collectors.toList())
@@ -71,12 +71,10 @@ public class RbelHttpFormDataFacet implements RbelFacet {
         });
     }
 
-    private final Map<String, RbelElement> formDataMap;
+    private final RbelMultiMap formDataMap;
 
     @Override
-         public List<RbelMultiMap> getChildElements() {
-            return formDataMap.entrySet().stream()
-                .map(el -> RbelMultiMap.builder().key(el.getKey()).rbelElement(el.getValue()).build())
-                .collect(Collectors.toList());
+         public RbelMultiMap getChildElements() {
+            return formDataMap;
         }
 }

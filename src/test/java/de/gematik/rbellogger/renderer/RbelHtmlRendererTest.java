@@ -16,26 +16,29 @@
 
 package de.gematik.rbellogger.renderer;
 
-import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Random;
 
+import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
 import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.Test;
+
+import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class RbelHtmlRendererTest {
 
@@ -51,7 +54,7 @@ public class RbelHtmlRendererTest {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage, null);
 
         FileUtils.writeStringToFile(new File("target/out.html"),
-            RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage)), Charset.defaultCharset());
+            RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage, ZonedDateTime.now())), Charset.defaultCharset());
     }
 
     @Test
@@ -78,7 +81,7 @@ public class RbelHtmlRendererTest {
         convertedMessage.findElement("$.body.body.jwks_uri").get().addFacet(new RbelNoteFacet("warnung", RbelNoteFacet.NoteStyling.WARN));
         convertedMessage.findElement("$.body.body.scopes_supported").get().addFacet(new RbelNoteFacet("scopes_supported: note an einem array"));
 
-        final String convertedHtml = RENDERER.render(wrapHttpMessage(convertedMessage), new RbelValueShader()
+        final String convertedHtml = RENDERER.render(wrapHttpMessage(convertedMessage, ZonedDateTime.now()), new RbelValueShader()
             .addSimpleShadingCriterion("Date", "<halt ein date>")
             .addSimpleShadingCriterion("Content-Length", "<Die Länge. Hier %s>")
             .addSimpleShadingCriterion("exp", "<Nested Shading>")
@@ -102,7 +105,7 @@ public class RbelHtmlRendererTest {
         final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
-        final String convertedHtml = RENDERER.render(wrapHttpMessage(RBEL_CONVERTER.convertElement(curlMessage, null)), new RbelValueShader()
+        final String convertedHtml = RENDERER.render(wrapHttpMessage(RBEL_CONVERTER.convertElement(curlMessage, null), ZonedDateTime.now()), new RbelValueShader()
             .addJexlShadingCriterion("key == 'Version'", "<version: %s>")
             .addJexlShadingCriterion("key == 'nbf' && empty(element.parentNode)", "<nbf in JWT: %s>")
         );
@@ -133,10 +136,26 @@ public class RbelHtmlRendererTest {
             .doesNotContain("null");
     }
 
-    private List<RbelElement> wrapHttpMessage(RbelElement convertedMessage) {
+    @Test
+    public void shouldContainTimeStamps() throws IOException {
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter().convertElement(curlMessage, null);
+
+        final ZonedDateTime transmissionTime = ZonedDateTime.now();
+
+        assertThat(RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage, transmissionTime)))
+            .contains(transmissionTime.format(DateTimeFormatter.ISO_TIME));
+    }
+
+    private List<RbelElement> wrapHttpMessage(RbelElement convertedMessage, ZonedDateTime... transmissionTime) {
         convertedMessage.addFacet(RbelTcpIpMessageFacet.builder()
             .receiver(RbelElement.wrap(null, convertedMessage, new RbelHostname("recipient", 1)))
             .sender(RbelElement.wrap(null, convertedMessage, new RbelHostname("sender", 1)))
+            .build());
+        convertedMessage.addFacet(RbelMessageTimingFacet.builder()
+            .transmissionTime(transmissionTime == null ? ZonedDateTime.now() : transmissionTime[0])
             .build());
         return List.of(convertedMessage);
     }

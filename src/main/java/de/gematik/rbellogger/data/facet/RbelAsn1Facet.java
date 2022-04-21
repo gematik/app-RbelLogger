@@ -73,7 +73,8 @@ public class RbelAsn1Facet implements RbelFacet {
     private final ASN1Encodable asn1Content;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(RbelMultiMap.builder().key("unparsedBytes").rbelElement(unparsedBytes).build());
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("unparsedBytes", unparsedBytes);
     }
 }

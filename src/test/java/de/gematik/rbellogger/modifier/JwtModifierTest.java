@@ -40,12 +40,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class JwtModifierTest extends AbstractModifierTest {
 
-    @Override
-    public RbelConfiguration getRbelConfiguration() {
-        return super.getRbelConfiguration()
-            .addInitializer(RBEL_KEY_FOLDER_INITIALIZER);
-    }
-
     @Test
     public void modifyJwtHeader_shouldContainModifiedContent() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");

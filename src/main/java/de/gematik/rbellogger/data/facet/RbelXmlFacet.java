@@ -78,10 +78,10 @@ public class RbelXmlFacet implements RbelFacet {
     }
 
     @Builder.Default
-    private final List<RbelMultiMap> childElements = List.of();
+    private final RbelMultiMap childElements = new RbelMultiMap();
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
+    public RbelMultiMap getChildElements() {
         return childElements;
     }
 }

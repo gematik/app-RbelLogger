@@ -20,6 +20,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -58,7 +59,7 @@ public class RbelJsonConverter implements RbelConverterPlugin {
             .jsonElement(jsonElement)
             .build());
         if (jsonElement.isJsonObject()) {
-            final LinkedHashMap<String, RbelElement> elementMap = new LinkedHashMap<>();
+            final RbelMultiMap elementMap = new RbelMultiMap();
             parentElement.addFacet(RbelMapFacet.builder().childNodes(elementMap).build());
             for (Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
                 RbelElement newChild = new RbelElement(entry.getValue().toString().getBytes(parentElement.getElementCharset()), parentElement);

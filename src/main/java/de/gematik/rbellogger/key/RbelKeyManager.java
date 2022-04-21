@@ -58,7 +58,7 @@ public class RbelKeyManager {
         if (rbelKey.getKey() == null) {
             return;
         }
-
+        
         if (keyIsPresentInList(rbelKey.getKey())) {
             log.trace("Skipping adding key: Key is already known!");
         }

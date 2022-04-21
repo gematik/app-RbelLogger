@@ -55,11 +55,10 @@ public class RbelHostnameFacet implements RbelFacet {
     }
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("port").rbelElement(port).build(),
-            RbelMultiMap.builder().key("domain").rbelElement(domain).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+                .with("port", port)
+                .with("domain", domain);
     }
 
     public String toString() {

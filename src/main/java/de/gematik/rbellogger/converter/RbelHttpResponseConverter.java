@@ -18,6 +18,7 @@ package de.gematik.rbellogger.converter;
 
 import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
@@ -115,9 +116,9 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
         RbelElement headerElement = new RbelElement(
             headerList.stream().collect(Collectors.joining(eol)).getBytes(rbel.getElementCharset()), rbel);
-        final Map<String, List<RbelElement>> headerMap = headerList.stream()
+        final RbelMultiMap headerMap = headerList.stream()
             .map(line -> parseStringToKeyValuePair(line, converter, headerElement))
-            .collect(Collectors.groupingBy(e -> e.getKey(), Collectors.mapping(Entry::getValue, Collectors.toList())));
+            .collect(RbelMultiMap.COLLECTOR);
         headerElement.addFacet(new RbelHttpHeaderFacet(headerMap));
 
         return headerElement;

@@ -34,7 +34,7 @@ public class RbelHttpHeaderWriter implements RbelElementWriter {
     @Override
     public byte[] write(RbelElement oldTargetElement, RbelElement oldTargetModifiedChild, byte[] newContent) {
         StringJoiner joiner = new StringJoiner("\r\n");
-        for (Map.Entry<String, RbelElement> entry : oldTargetElement.getFacetOrFail(RbelHttpHeaderFacet.class).entrySet()) {
+        for (Map.Entry<String, RbelElement> entry : oldTargetElement.getFacetOrFail(RbelHttpHeaderFacet.class).entries()) {
             if (entry.getValue() == oldTargetModifiedChild) {
                 joiner.add(entry.getKey() + ": " + new String(newContent, UTF_8));
             } else {

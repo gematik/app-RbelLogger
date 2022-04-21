@@ -20,9 +20,9 @@ import static de.gematik.rbellogger.RbelOptions.ACTIVATE_FACETS_PRINTING;
 import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH;
 import static de.gematik.rbellogger.util.RbelAnsiColors.*;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.util.RbelAnsiColors;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -57,8 +57,8 @@ public class RbelElementTreePrinter {
             return "";
         }
         String result = "";
-        for (Iterator<RbelMultiMap> iterator = position.getChildNodesWithKey().iterator(); iterator.hasNext(); ) {
-            RbelMultiMap childNode = iterator.next();
+        for (Iterator<Map.Entry<String, RbelElement>> iterator = position.getChildNodesWithKey().iterator(); iterator.hasNext(); ) {
+            Map.Entry<String, RbelElement> childNode = iterator.next();
             String switchString, padString;
             if (iterator.hasNext()) {
                 switchString = "├──";
@@ -72,12 +72,12 @@ public class RbelElementTreePrinter {
             // name of the node
             result += cl(RED_BOLD) + childNode.getKey() + cl(RESET);
             // print content
-            result += printContentOf(childNode.getRbelElement());
+            result += printContentOf(childNode.getValue());
             // print facet
-            result += printFacets(childNode.getRbelElement());
+            result += printFacets(childNode.getValue());
             result += "\n";
-            if (!childNode.getRbelElement().getChildNodes().isEmpty()) {
-                result += executeRecursive(childNode.getRbelElement(), padding + padString, remainingLevels - 1);
+            if (!childNode.getValue().getChildNodes().isEmpty()) {
+                result += executeRecursive(childNode.getValue(), padding + padString, remainingLevels - 1);
             }
         }
         return result;

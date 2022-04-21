@@ -21,10 +21,13 @@ import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelRootFacet;
 import de.gematik.rbellogger.data.facet.RbelXmlFacet;
 import de.gematik.rbellogger.util.RbelException;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import org.dom4j.*;
 import org.dom4j.io.SAXReader;
@@ -51,10 +54,10 @@ public class RbelXmlConverter implements RbelConverterPlugin {
                 log.trace("Exception while trying to parse XML. Trying as HTML (more lenient SAX parsing)", e);
                 try {
                     htmlConverter.parseHtml(content.trim())
-                            .ifPresent(document -> {
-                                htmlConverter.buildXmlElementForNode(document, rbel, context);
-                                rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
-                            });
+                        .ifPresent(document -> {
+                            htmlConverter.buildXmlElementForNode(document, rbel, context);
+                            rbel.addFacet(new RbelRootFacet(rbel.getFacetOrFail(RbelXmlFacet.class)));
+                        });
                 } catch (IOException | SAXException e2) {
                     log.trace("Exception while trying to parse XML. Skipping", e);
                 }
@@ -76,24 +79,28 @@ public class RbelXmlConverter implements RbelConverterPlugin {
     }
 
     private void buildXmlElementForNode(Branch branch, RbelElement parentElement, RbelConverter converter) {
-        final List<RbelMultiMap> childElements = new ArrayList<>();
+        final RbelMultiMap childElements = new RbelMultiMap();
         parentElement.addFacet(RbelXmlFacet.builder()
             .childElements(childElements)
             .build());
         for (Object child : branch.content()) {
             if (child instanceof Text) {
-                childElements
-                    .add(RbelMultiMap.builder().key(XML_TEXT_KEY).rbelElement(converter.convertElement(((Text) child).getText(), parentElement)).build());
+                childElements.put(
+                    XML_TEXT_KEY,
+                    converter.convertElement(((Text) child).getText(), parentElement));
             } else if (child instanceof AbstractBranch) {
                 final RbelElement element = new RbelElement(
                     ((AbstractBranch) child).asXML().getBytes(parentElement.getElementCharset()),
                     parentElement);
                 buildXmlElementForNode((AbstractBranch) child, element, converter);
-                childElements.add(RbelMultiMap.builder().key(((AbstractBranch) child).getName()).rbelElement(element).build());
+                childElements.put(
+                    ((AbstractBranch) child).getName(),
+                    element);
             } else if (child instanceof Namespace) {
                 final String childXmlName = ((Namespace) child).getPrefix();
-                childElements
-                    .add(RbelMultiMap.builder().key(childXmlName).rbelElement(converter.convertElement(((Namespace) child).getText(), parentElement)).build());
+                childElements.put(
+                    childXmlName,
+                    converter.convertElement(((Namespace) child).getText(), parentElement));
             } else if (child instanceof DefaultComment) {
                 // do nothing
             } else {
@@ -102,18 +109,16 @@ public class RbelXmlConverter implements RbelConverterPlugin {
         }
 
         if (childElements.stream()
-            .map(RbelMultiMap::getKey)
+            .map(Map.Entry::getKey)
             .noneMatch(key -> key.equals(XML_TEXT_KEY))) {
-            childElements.add(RbelMultiMap.builder().key(XML_TEXT_KEY).rbelElement(new RbelElement(new byte[]{}, parentElement)).build());
+            childElements.put(XML_TEXT_KEY, new RbelElement(new byte[]{}, parentElement));
         }
 
         if (branch instanceof Element) {
-            for (Object attribute : ((Element) branch).attributes()) {
-                if (!(attribute instanceof Attribute)) {
-                    throw new RbelException(
-                        "Could not convert XML attribute of type " + attribute.getClass().getSimpleName());
-                }
-                childElements.add(RbelMultiMap.builder().key( ((Attribute) attribute).getName()).rbelElement(converter.convertElement(((Attribute) attribute).getText(), parentElement)).build());
+            for (Attribute attribute : ((Element) branch).attributes()) {
+                childElements.put(
+                    attribute.getName(),
+                    converter.convertElement(attribute.getText(), parentElement));
             }
         }
     }

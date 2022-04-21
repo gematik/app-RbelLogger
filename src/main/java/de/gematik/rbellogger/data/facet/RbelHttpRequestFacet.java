@@ -18,8 +18,10 @@ package de.gematik.rbellogger.data.facet;
 
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -38,11 +40,10 @@ public class RbelHttpRequestFacet implements RbelFacet {
     }
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        final List<RbelMultiMap> result = new ArrayList<>();
-        result.add(RbelMultiMap.builder().key("method").rbelElement(method).build());
-        result.add(RbelMultiMap.builder().key("path").rbelElement(path).build());
-        return result;
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("method", method)
+            .with("path", path);
     }
 
     public String getPathAsString() {

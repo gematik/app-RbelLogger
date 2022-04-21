@@ -14,6 +14,37 @@
  * limitations under the License.
  */
 
+h1.title{
+    font-size: 20px;
+}
+h2.title{
+    font-size: 18px;
+}
+.title:not(:last-child) {
+    margin-bottom: .5rem;
+}
+pre{
+    padding: .7rem;
+}
+div.message-header {
+    padding: .4rem;
+}
+article.message{
+    margin: .5rem !important;
+}
+.notification .tile .message-body{
+    padding: .25rem;
+}
+.is-size-4 {
+    font-size: 1.3rem !important;
+}
+td {
+    padding: .3rem !important;
+}
+.card-content{
+    padding: .75rem;
+}
+
 @media screen and (min-width: 1408px) {
     .container:not(.is-max-desktop):not(.is-max-widescreen) {
         max-width: 100% !important;
@@ -70,7 +101,7 @@
     border-radius: .4em;
     border: 1px solid #6b999f;
     color: #8aecf7;
-    padding: 0.3rem;
+    padding: 0.15rem;
     display: inline-block;
     margin-left: 0.5rem;
 }

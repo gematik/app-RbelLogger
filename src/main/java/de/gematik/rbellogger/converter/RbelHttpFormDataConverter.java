@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelHttpFormDataFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
@@ -34,11 +35,11 @@ public class RbelHttpFormDataConverter implements RbelConverterPlugin {
     @Override
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         if (isBodyOfFormDataRequest(rbelElement)) {
-            final Map<String, RbelElement> formDataMap = Stream.of(rbelElement.getRawStringContent().split("&"))
+            final RbelMultiMap formDataMap = Stream.of(rbelElement.getRawStringContent().split("&"))
                 .map(param -> param.split("="))
                 .filter(params -> params.length == 2)
                 .map(paramList -> Pair.of(paramList[0], converter.convertElement(paramList[1], rbelElement)))
-                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+                .collect(RbelMultiMap.COLLECTOR);
 
             rbelElement.addFacet(RbelHttpFormDataFacet.builder()
                 .formDataMap(formDataMap)

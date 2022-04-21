@@ -19,6 +19,7 @@ package de.gematik.rbellogger.converter;
 import static de.gematik.rbellogger.TestUtils.readCurlFromFileWithCorrectedLineBreaks;
 import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 public class XmlConverterTest {
@@ -108,7 +110,9 @@ public class XmlConverterTest {
             .isEqualTo("XDSDuplicateUniqueIdInRegistry");
     }
 
-    @Test
+    @RepeatedTest(10)
+    // repeated since this is a test very sensitive to wrong element ordering. It should be our canary in case
+    // we screw up the element ordering while parsing!
     public void retrieveTextContent() {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .convertElement(curlMessage, null);

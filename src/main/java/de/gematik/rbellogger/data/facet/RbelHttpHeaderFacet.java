@@ -51,9 +51,9 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
                                     tr(
                                         td(pre(entry.getKey())),
                                         td(pre()
-                                            .with(renderingToolkit.convert(entry.getRbelElement(), Optional.ofNullable(entry.getKey())))
+                                            .with(renderingToolkit.convert(entry.getValue(), Optional.ofNullable(entry.getKey())))
                                             .withClass("value"))
-                                            .with(renderingToolkit.addNotes(entry.getRbelElement()))
+                                            .with(RbelHtmlRenderingToolkit.addNotes(entry.getValue()))
                                     )
                                 )
                                 .collect(Collectors.toList())
@@ -63,13 +63,13 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
         });
     }
 
-    private final Map<String, List<RbelElement>> values;
+    private final RbelMultiMap values;
 
     public RbelHttpHeaderFacet() {
-        this.values = new LinkedHashMap<>();
+        this.values = new RbelMultiMap();
     }
 
-    public RbelHttpHeaderFacet(Map<String, List<RbelElement>> values) {
+    public RbelHttpHeaderFacet(RbelMultiMap values) {
         this.values = values;
     }
 
@@ -95,36 +95,23 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
 
     @Override
     public RbelElement get(Object key) {
-        final List<RbelElement> list = values.get(key);
-        if (list == null || list.isEmpty()) {
-            return null;
-        }
-        return list.get(0);
+        return values.get(key);
     }
 
     @Override
     public RbelElement put(String key, RbelElement value) {
-        if (!values.containsKey(key)) {
-            values.put(key, new ArrayList<>());
-        }
-        values.get(key).add(value);
+        values.put(key, value);
         return value;
     }
 
     @Override
     public RbelElement remove(Object key) {
-        final List<RbelElement> list = values.remove(key);
-        if (list == null || list.isEmpty()) {
-            return null;
-        }
-        return list.get(0);
+        return values.remove(key);
     }
 
     @Override
     public void putAll(Map<? extends String, ? extends RbelElement> m) {
-        for (Entry<? extends String, ? extends RbelElement> entry : m.entrySet()) {
-            put(entry.getKey(), entry.getValue());
-        }
+        values.putAll(m);
     }
 
     @Override
@@ -139,47 +126,41 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
 
     @Override
     public List<RbelElement> values() {
-        return values.values().stream()
-            .flatMap(List::stream)
-            .collect(Collectors.toList());
+        return values.stream()
+            .map(Entry::getValue)
+            .collect(Collectors.toUnmodifiableList());
     }
 
+    /**
+     * not supported: will lose order. Use .entries() instead
+     */
     @Override
+    @Deprecated
     public Set<Entry<String, RbelElement>> entrySet() {
-        final HashSet<Entry<String, RbelElement>> result = new HashSet<>();
-        result.addAll(getChildElements().stream().map(el -> Pair.of(el.getKey(), el.getRbelElement())).collect(
-            Collectors.toList()));
-        return result;
+        return values.entrySet();
+    }
+
+    public List<Entry<String, RbelElement>> entries() {
+        return values.getValues();
     }
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return values.entrySet().stream()
-            .flatMap(entry -> {
-                if (entry.getValue().isEmpty()) {
-                    return Stream.of();
-                } else {
-                    return entry.getValue().stream()
-                        .map(value -> RbelMultiMap.builder().key(entry.getKey()).rbelElement(value).build());
-                }
-            })
-            .collect(Collectors.toList());
+    public RbelMultiMap getChildElements() {
+        return values;
     }
 
     public Stream<RbelElement> getCaseInsensitiveMatches(String key) {
         final String lowerCaseKey = key.toLowerCase();
-        return values.entrySet().stream()
+        return values.getValues().stream()
             .filter(entry -> entry.getKey() != null)
             .filter(entry -> entry.getKey().toLowerCase().equals(lowerCaseKey))
-            .map(Entry::getValue)
-            .flatMap(List::stream);
+            .map(Entry::getValue);
     }
 
     public boolean hasValueMatching(String headerKey, String prefix) {
-        return values.entrySet().stream()
+        return values.getValues().stream()
             .filter(entry -> entry.getKey().equalsIgnoreCase(headerKey))
             .map(Entry::getValue)
-            .flatMap(List::stream)
             .map(RbelElement::getRawStringContent)
             .anyMatch(str -> str.startsWith(prefix));
     }

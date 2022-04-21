@@ -27,9 +27,8 @@ public class RbelBearerTokenFacet implements RbelFacet {
     private final RbelElement bearerToken;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("BearerToken").rbelElement(bearerToken).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("BearerToken", bearerToken);
     }
 }

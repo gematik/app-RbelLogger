@@ -27,9 +27,8 @@ public class RbelBase64Facet implements RbelFacet {
     private final RbelElement child;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("decoded").rbelElement(child).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("decoded", child);
     }
 }

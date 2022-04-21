@@ -24,12 +24,11 @@ import static j2html.TagCreator.*;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.exceptions.RbelRenderingException;
 import j2html.tags.ContainerTag;
+
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
@@ -66,6 +65,17 @@ public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
             .withClass("is-size-6 ml-4");
     }
 
+    public static ContainerTag buildTimingInfo(final RbelElement element) {
+        if (!element.hasFacet(RbelMessageTimingFacet.class)) {
+            return span();
+        }
+        final RbelMessageTimingFacet timingFacet = element.getFacet(RbelMessageTimingFacet.class).get();
+        return span()
+            .with(icon("fa-clock"))
+            .withText(timingFacet.getTransmissionTime().format(DateTimeFormatter.ISO_TIME))
+            .withClass("is-size-6 ml-4 ");
+    }
+
     @Override
     public boolean checkForRendering(RbelElement element) {
         return element.hasFacet(RbelHttpMessageFacet.class);
@@ -90,6 +100,7 @@ public class RbelHttpMessageRenderer implements RbelHtmlFacetRenderer {
                     requestFacet.map(f -> text(" " + f.getMethod().getRawStringContent() + " ")).orElse(text("")),
                     requestFacet.map(f -> text("Request")).orElse(text("Response")))
                     .with(buildAddressInfo(element))
+                    .with(buildTimingInfo(element))
                     .withClass(requestFacet.map(f -> "title has-text-link").orElse("title has-text-success")),
                 div().withClass("container is-widescreen").with(
                     requestFacet.map(f ->

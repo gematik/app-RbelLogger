@@ -36,8 +36,8 @@ public class RbelNoteFacet implements RbelFacet {
     }
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of();
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap();
     }
 
     @RequiredArgsConstructor

@@ -21,9 +21,11 @@ import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
+import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
@@ -31,14 +33,17 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -157,6 +162,8 @@ public class PcapCaptureTest {
 
         pCapCapture.initialize();
 
+        addRandomTimestamps(rbelLogger);
+
         log.info("start rendering " + LocalDateTime.now());
         final String render = new RbelHtmlRenderer()
             .doRender(rbelLogger.getMessageHistory());
@@ -177,5 +184,15 @@ public class PcapCaptureTest {
         assertThat(render).contains("Hier gibts die pairings");
         assertThat(render).contains("some note about x5c");
         assertThat(render).contains("Note an einem Object");
+    }
+
+    private void addRandomTimestamps(RbelLogger rbelLogger) {
+        ZonedDateTime now = ZonedDateTime.now();
+        for (RbelElement msg : rbelLogger.getMessageHistory()) {
+            msg.addFacet(RbelMessageTimingFacet.builder()
+                .transmissionTime(now)
+                .build());
+            now = now.plusNanos((long) (1000 * 1000 * RandomUtils.nextDouble(10, 1000)));
+        }
     }
 }

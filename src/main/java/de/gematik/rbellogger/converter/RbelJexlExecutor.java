@@ -185,9 +185,9 @@ public class RbelJexlExecutor {
                 .flatMap(el -> el.getFacet(RbelHttpHeaderFacet.class))
                 .filter(RbelHttpHeaderFacet.class::isInstance)
                 .map(RbelHttpHeaderFacet.class::cast)
-                .map(RbelHttpHeaderFacet::entrySet)
+                .map(RbelHttpHeaderFacet::entries)
                 .stream()
-                .flatMap(Set::stream)
+                .flatMap(List::stream)
                 .collect(Collectors.groupingBy(e -> e.getKey(),
                     Collectors.mapping(e -> e.getValue().getRawStringContent(), Collectors.toList()))))
             .build();
@@ -223,9 +223,9 @@ public class RbelJexlExecutor {
         return parent
             .stream()
             .map(RbelElement::getChildNodesWithKey)
-            .flatMap(List::stream)
-            .filter(entry -> entry.getRbelElement() == element)
-            .map(RbelMultiMap::getKey)
+            .flatMap(RbelMultiMap::stream)
+            .filter(entry -> entry.getValue() == element)
+            .map(Map.Entry::getKey)
             .findFirst();
     }
 

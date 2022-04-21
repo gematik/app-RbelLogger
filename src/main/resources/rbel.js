@@ -84,11 +84,12 @@ function toggleCollapsableIcon(target) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  let cardToggles = document.getElementsByClassName('card-toggle');
+  let cardToggles = document.getElementsByClassName('toggle-icon');
   for (let i = 0; i < cardToggles.length; i++) {
     cardToggles[i].addEventListener('click', e => {
-      e.currentTarget.parentElement.parentElement.childNodes[1].classList.toggle(
-          'is-hidden');
+      e.currentTarget
+          .parentElement.parentElement.parentElement.parentElement
+          .childNodes[1].classList.toggle('is-hidden');
       toggleCollapsableIcon(e.currentTarget);
       e.preventDefault();
       return false;

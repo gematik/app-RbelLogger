@@ -39,11 +39,10 @@ public class RbelTcpIpMessageFacet implements RbelFacet {
     private final RbelElement receiver;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of(
-            RbelMultiMap.builder().key("sender").rbelElement(sender).build(),
-            RbelMultiMap.builder().key("receiver").rbelElement(receiver).build()
-        );
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .with("sender", sender)
+            .with("receiver", receiver);
     }
 
     public RbelHostname getSenderHostname() {

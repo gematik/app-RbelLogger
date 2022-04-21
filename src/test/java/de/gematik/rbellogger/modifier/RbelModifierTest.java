@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.modifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;

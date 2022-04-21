@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.23.1</version>
+    <version>0.23.2</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -140,7 +140,7 @@
         <dependency>
             <artifactId>jose4j</artifactId>
             <groupId>org.bitbucket.b_c</groupId>
-            <version>0.7.2</version>
+            <version>0.7.11</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20201115</version>
+            <version>20220320</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/jnetpcap/jnetpcap -->
         <dependency>
@@ -183,7 +183,7 @@
         <dependency>
             <artifactId>bcpkix-jdk15on</artifactId>
             <groupId>org.bouncycastle</groupId>
-            <version>1.68</version>
+            <version>1.70</version>
         </dependency>
         <dependency>
             <artifactId>commons-io</artifactId>

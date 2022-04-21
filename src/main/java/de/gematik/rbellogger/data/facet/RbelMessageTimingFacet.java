@@ -16,27 +16,26 @@
 
 package de.gematik.rbellogger.data.facet;
 
-import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
-
-import java.util.List;
-
+import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import java.time.ZonedDateTime;
+
+@Slf4j
 @Data
-public class RbelAsn1TaggedValueFacet implements RbelFacet {
+@RequiredArgsConstructor
+@Builder(toBuilder = true)
+public class RbelMessageTimingFacet implements RbelFacet {
 
-    private final RbelElement tag;
-    private final RbelElement nestedElement;
+    @NonNull
+    private final ZonedDateTime transmissionTime;
 
     @Override
     public RbelMultiMap getChildElements() {
-        if (nestedElement == null) {
-            return new RbelMultiMap();
-        } else {
-            return new RbelMultiMap()
-                .with("content", nestedElement)
-                .with("tag", tag);
-        }
+        return new RbelMultiMap();
     }
 }

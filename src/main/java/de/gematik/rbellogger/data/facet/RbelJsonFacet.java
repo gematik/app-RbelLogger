@@ -87,7 +87,7 @@ public class RbelJsonFacet implements RbelFacet {
     private final JsonElement jsonElement;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return List.of();
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap();
     }
 }

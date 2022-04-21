@@ -32,16 +32,10 @@ public class RbelListFacet implements RbelFacet {
     private final List<RbelElement> childNodes;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        List<RbelMultiMap> result = new ArrayList<>();
+    public RbelMultiMap getChildElements() {
+        RbelMultiMap result = new RbelMultiMap();
         AtomicInteger index = new AtomicInteger();
-        result.addAll(childNodes.stream()
-            .map(element -> RbelMultiMap.builder().key(String.valueOf(index.getAndIncrement())).rbelElement(element).build())
-            .collect(Collectors.toList()));
+        childNodes.forEach(element -> result.put(String.valueOf(index.getAndIncrement()), element));
         return result;
-    }
-
-    public boolean isStructuralHelperElement() {
-        return true;
     }
 }

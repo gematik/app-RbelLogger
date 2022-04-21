@@ -62,7 +62,7 @@ public class RbelPathExecutor {
             if (ACTIVATE_RBEL_PATH_DEBUGGING) {
                 log.info("Resolving key '{}' with candidates {}", key, candidates.stream()
                     .flatMap(el -> el.getChildNodesWithKey().stream())
-                    .map(RbelMultiMap::getKey)
+                    .map(Map.Entry::getKey)
                     .collect(Collectors.toList()));
             }
             List<RbelElement> lastIterationCandidates = candidates;
@@ -156,8 +156,8 @@ public class RbelPathExecutor {
         RbelJexlExecutor executor = new RbelJexlExecutor();
         return element.getChildNodesWithKey().stream()
             .filter(candidate ->
-                executor.matchesAsJexlExpression(candidate.getRbelElement(), jexl, Optional.of(candidate.getKey())))
-            .map(RbelMultiMap::getRbelElement)
+                executor.matchesAsJexlExpression(candidate.getValue(), jexl, Optional.of(candidate.getKey())))
+            .map(Map.Entry::getValue)
             .collect(Collectors.toList());
     }
 }

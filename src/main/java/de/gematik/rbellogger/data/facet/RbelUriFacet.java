@@ -21,6 +21,7 @@ import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.ancestorTi
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.vertParentTitle;
 import static j2html.TagCreator.br;
 import static j2html.TagCreator.div;
+
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
@@ -28,13 +29,16 @@ import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
 import j2html.tags.UnescapedText;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 import lombok.Builder;
 import lombok.Data;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Builder
 @Data
@@ -49,7 +53,7 @@ public class RbelUriFacet implements RbelFacet {
 
             @Override
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
-                RbelHtmlRenderingToolkit renderingToolkit) {
+                                                 RbelHtmlRenderingToolkit renderingToolkit) {
                 final RbelUriFacet uriFacet = element.getFacetOrFail(RbelUriFacet.class);
                 final String originalUrl = element.getRawStringContent();
                 final ContainerTag urlContent = renderUrlContent(renderingToolkit, uriFacet, originalUrl);
@@ -57,12 +61,13 @@ public class RbelUriFacet implements RbelFacet {
                     return div().with(urlContent).with(addNotes(element));
                 } else {
                     return ancestorTitle().with(
-                            vertParentTitle().with(
-                                    div().withClass("tile is-child pr-3")
-                                            .with(urlContent)
-                                            .with(addNotes(element))
-                                            .with(renderingToolkit.convertNested(element))));
-                }            }
+                        vertParentTitle().with(
+                            div().withClass("tile is-child pr-3")
+                                .with(urlContent)
+                                .with(addNotes(element))
+                                .with(renderingToolkit.convertNested(element))));
+                }
+            }
 
             private ContainerTag renderUrlContent(RbelHtmlRenderingToolkit renderingToolkit, RbelUriFacet uriFacet, String originalUrl) {
                 if (!originalUrl.contains("?")) {
@@ -72,14 +77,14 @@ public class RbelUriFacet implements RbelFacet {
                     boolean firstElement = true;
                     for (final RbelElement queryElementEntry : uriFacet.getQueryParameters()) {
                         final RbelUriParameterFacet parameterFacet = queryElementEntry
-                                .getFacetOrFail(RbelUriParameterFacet.class);
+                            .getFacetOrFail(RbelUriParameterFacet.class);
                         final String shadedStringContent = renderingToolkit
-                                .shadeValue(parameterFacet.getValue(), Optional.of(parameterFacet.getKeyAsString()))
-                                .map(content -> queryElementEntry.getKey() + "=" + content)
-                                .orElse(queryElementEntry.getRawStringContent());
+                            .shadeValue(parameterFacet.getValue(), Optional.of(parameterFacet.getKeyAsString()))
+                            .map(content -> queryElementEntry.getKey() + "=" + content)
+                            .orElse(queryElementEntry.getRawStringContent());
 
                         div.with(div((firstElement ? "" : "&") + shadedStringContent)
-                                .with(addNotes(queryElementEntry, " ml-6")));
+                            .with(addNotes(queryElementEntry, " ml-6")));
                         firstElement = false;
                     }
                     return div;
@@ -92,13 +97,11 @@ public class RbelUriFacet implements RbelFacet {
     private final List<RbelElement> queryParameters;
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        List<RbelMultiMap> result = new ArrayList<>();
-        result.addAll(queryParameters.stream()
-              .map(el -> RbelMultiMap.builder().key(el.getFacetOrFail(RbelUriParameterFacet.class).getKeyAsString()).rbelElement(el).build())
-             .collect(Collectors.toList())
-        );
-        result.add(RbelMultiMap.builder().key("basicPath").rbelElement(basicPath).build());
+    public RbelMultiMap getChildElements() {
+        RbelMultiMap result = new RbelMultiMap();
+        queryParameters.forEach(el ->
+            result.put(el.getFacetOrFail(RbelUriParameterFacet.class).getKeyAsString(), el));
+        result.put("basicPath", basicPath);
         return result;
     }
 

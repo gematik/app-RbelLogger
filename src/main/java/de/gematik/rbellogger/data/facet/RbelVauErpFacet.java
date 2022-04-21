@@ -22,6 +22,7 @@ import static j2html.TagCreator.b;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.p;
 import static j2html.TagCreator.span;
+
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.key.RbelKey;
@@ -29,10 +30,12 @@ import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -73,7 +76,7 @@ public class RbelVauErpFacet implements RbelFacet {
                                         .withText("Was decrypted using Key ")
                                         .with(b(element.getFacetOrFail(RbelVauErpFacet.class).getKeyIdUsed().getRawStringContent())))
                                 .with(addNotes(element))
-                    )));
+                        )));
             }
         });
     }
@@ -89,17 +92,14 @@ public class RbelVauErpFacet implements RbelFacet {
     private final Optional<RbelKey> keyUsed = Optional.empty();
 
     @Override
-    public List<RbelMultiMap> getChildElements() {
-        return Stream.of(
-                RbelMultiMap.builder().key("message").rbelElement(message).build(),
-                RbelMultiMap.builder().key("encryptedMessage").rbelElement(encryptedMessage).build(),
-                RbelMultiMap.builder().key("requestId").rbelElement(requestId).build(),
-                RbelMultiMap.builder().key("pVersionNumber").rbelElement(pVersionNumber).build(),
-                RbelMultiMap.builder().key("keyId").rbelElement(keyIdUsed).build(),
-                RbelMultiMap.builder().key("responseKey").rbelElement(responseKey).build(),
-                RbelMultiMap.builder().key("decryptedPString").rbelElement(decryptedPString).build()
-            )
-            .filter(pair -> pair.getRbelElement() != null)
-            .collect(Collectors.toList());
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap()
+            .withSkipIfNull("message", message)
+            .withSkipIfNull("encryptedMessage", encryptedMessage)
+            .withSkipIfNull("requestId", requestId)
+            .withSkipIfNull("pVersionNumber", pVersionNumber)
+            .withSkipIfNull("keyId", keyIdUsed)
+            .withSkipIfNull("responseKey", responseKey)
+            .withSkipIfNull("decryptedPString", decryptedPString);
     }
 }

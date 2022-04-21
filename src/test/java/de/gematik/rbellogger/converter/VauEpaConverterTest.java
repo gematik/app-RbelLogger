@@ -177,8 +177,8 @@ public class VauEpaConverterTest {
 
     private class TestFacet implements RbelFacet {
         @Override
-        public List<RbelMultiMap> getChildElements() {
-            return List.of();
+        public RbelMultiMap getChildElements() {
+            return new RbelMultiMap();
         }
     }
 }
