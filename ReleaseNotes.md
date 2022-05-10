@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.24
+
+## Bugfixes
+
+* RBEL-59: BearerToken are now output to HTML-Renderings
+
 # Release 0.23.2
 
 ## Bugfixes
