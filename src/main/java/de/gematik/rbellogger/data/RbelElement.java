@@ -172,10 +172,6 @@ public class RbelElement {
             .execute();
     }
 
-    public boolean isSimpleElement() {
-        return false;
-    }
-
     public String getRawStringContent() {
         if (rawContent == null) {
             return null;

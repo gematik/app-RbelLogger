@@ -216,13 +216,12 @@ public class RbelPathTest {
         final ListAppender<ILoggingEvent> listAppender = listFollowingLoggingEventsForClass(RbelPathExecutor.class);
         convertedMessage.findRbelPathMembers("$.body.body.acr_values_supported.content");
 
+        listAppender.list.stream()
+                .forEach(System.out::println);
+
         assertThat(listAppender.list.stream()
             .map(ILoggingEvent::getMessage)
             .filter(str -> str.startsWith("No more candidate-nodes in RbelPath execution!")))
-            .hasSize(1);
-        assertThat(listAppender.list.stream()
-            .map(ILoggingEvent::getFormattedMessage)
-            .filter(str -> str.contains("[$.body.body.acr_values_supported]")))
             .hasSize(1);
         assertThat(listAppender.list.stream()
             .map(ILoggingEvent::getFormattedMessage)

@@ -20,9 +20,12 @@ import static de.gematik.rbellogger.RbelOptions.ACTIVATE_FACETS_PRINTING;
 import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_VALUE_OUTPUT_LENGTH;
 import static de.gematik.rbellogger.util.RbelAnsiColors.*;
 import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelMultiMap;
+import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.util.RbelAnsiColors;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -46,10 +49,23 @@ public class RbelElementTreePrinter {
     private final boolean printColors = true;
 
     public String execute() {
-        String result = cl(RED_BOLD) + rootElement.getKey().orElse("") + cl(RESET);
-        result += printKeyOf(rootElement) + "\n";
-        result += executeRecursive(rootElement, "", maximumLevels);
-        return result;
+        final RbelElement position = new RbelElement(null, null);
+        position.addFacet(() -> new RbelMultiMap()
+            .with(findKeyOfRootElement(), rootElement));
+        return executeRecursive(position, "",
+            Math.max(maximumLevels, maximumLevels + 1) // avoid overflow problems
+        );
+    }
+
+    private String findKeyOfRootElement() {
+        return Optional.ofNullable(rootElement.getParentNode())
+            .map(RbelElement::getChildNodesWithKey)
+            .stream()
+            .flatMap(RbelMultiMap::stream)
+            .filter(pair -> pair.getValue() == rootElement)
+            .map(Map.Entry::getKey)
+            .findFirst()
+            .orElse("");
     }
 
     private String executeRecursive(RbelElement position, String padding, int remainingLevels) {

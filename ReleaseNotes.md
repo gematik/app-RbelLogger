@@ -10,6 +10,12 @@
 
 ## Bugfixes
 
+* RBEL-58: printTreeStructure now correctly displays root-node key and content for singular structures
+
+# Release 0.23.2
+
+## Bugfixes
+
 * RBEL-53: RbelMultiMap now correctly shields the internal organisation of element ordering.
 * RBEL-54: Timing-Facet added.
 
