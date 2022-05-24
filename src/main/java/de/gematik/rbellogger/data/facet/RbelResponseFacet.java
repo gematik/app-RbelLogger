@@ -14,26 +14,24 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.modifier;
+package de.gematik.rbellogger.data.facet;
 
-import lombok.*;
+import de.gematik.rbellogger.data.RbelMultiMap;
+import lombok.Data;
 
+/**
+ * Empty marker: The element is a response.
+ */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class RbelModificationDescription {
+public class RbelResponseFacet implements RbelFacet {
 
-    @With
-    private String name;
-    @With
-    private String condition;
-    @With
-    private String targetElement;
-    @With
-    private String replaceWith;
-    @With
-    private String regexFilter;
-    @With
-    private Integer deleteAfterNExecutions;
+    /**
+     * Short info string describing this request. Will primarily be displayed in the menu.
+     */
+    private final String menuInfoString;
+
+    @Override
+    public RbelMultiMap getChildElements() {
+        return new RbelMultiMap();
+    }
 }

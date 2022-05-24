@@ -98,8 +98,6 @@ public class RbelPathExecutor {
                     .map(RbelNestedFacet::getNestedElement)
                     .get(),
                 rbelElement);
-//        } else if (rbelElement.hasFacet(RbelHostnameFacet.class)) {
-//            return List.of(rbelElement.getFacetOrFail(RbelHostnameFacet.class).toRbelHostname());
         } else {
             return List.of(rbelElement);
         }

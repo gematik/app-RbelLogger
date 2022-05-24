@@ -1,6 +1,17 @@
 # Changelog RBeL Logger
 
-# Release 0.24
+# Release 0.26.0
+
+## Features
+
+* RBEL-61: Binary-only messages can now be rendered correctly
+* TGR-498: Modifications should contain a TTL 
+* TGR-404: Sicct-Envelope can be parsed
+* RBEL-62: The information of X509-Certificates now shows up in the element tree
+* RBEL-62: JEXL-expressions now support the '@'-operator
+* RBEL-22: Basic-Support for SICCT messages added
+
+# Release 0.24.0
 
 ## Bugfixes
 

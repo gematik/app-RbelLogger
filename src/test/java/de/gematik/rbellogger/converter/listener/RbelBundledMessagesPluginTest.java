@@ -21,7 +21,7 @@ import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.converter.RbelBundleCriterion;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

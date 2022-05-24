@@ -21,7 +21,7 @@ import de.gematik.rbellogger.captures.PCapCapture;
 import de.gematik.rbellogger.captures.RbelFileReaderCapturer;
 import de.gematik.rbellogger.configuration.RbelFileSaveInfo;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;

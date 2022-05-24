@@ -21,15 +21,17 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelValueShader;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.List;
 
+import de.gematik.rbellogger.data.facet.RbelBinaryFacet;
 import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
 import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import org.apache.commons.io.FileUtils;
@@ -147,6 +149,39 @@ public class RbelHtmlRendererTest {
 
         assertThat(RbelHtmlRenderer.render(wrapHttpMessage(convertedMessage, transmissionTime)))
             .contains(transmissionTime.format(DateTimeFormatter.ISO_TIME));
+    }
+
+    @Test
+    public void shouldRenderBinaryMessagesDirectly() throws IOException {
+        final byte[] content = Base64.getDecoder().decode("awAAAUEAAAAADoAoAAAIaQYTABMAEwD/");
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(content,
+                new RbelHostname("sender", 1),
+                new RbelHostname("receiver", 1));
+        convertedMessage.addFacet(new RbelBinaryFacet());
+
+        final String convertedHtml = RENDERER.render(List.of(convertedMessage));
+        FileUtils.writeStringToFile(new File("target/binary.html"), convertedHtml);
+
+        assertThat(convertedHtml)
+            .contains("08 69 06 13 00 13 00 13 00 ff")
+            .contains(".i........");
+    }
+
+    @Test
+    public void shouldRenderXmlMessagesDirectly() throws IOException {
+        byte[] xmlBytes = FileUtils.readFileToByteArray(new File("src/test/resources/log4j2.xml"));
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(xmlBytes,
+                new RbelHostname("sender", 13421),
+                new RbelHostname("receiver", 14512));
+
+        final String convertedHtml = RENDERER.render(List.of(convertedMessage));
+        FileUtils.writeStringToFile(new File("target/directXml.html"), convertedHtml);
+
+        assertThat(convertedHtml)
+            .contains("Configuration status=")
+            .contains("sender:13421");
     }
 
     private List<RbelElement> wrapHttpMessage(RbelElement convertedMessage, ZonedDateTime... transmissionTime) {

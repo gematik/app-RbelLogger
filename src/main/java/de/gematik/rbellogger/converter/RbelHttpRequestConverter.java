@@ -18,10 +18,7 @@ package de.gematik.rbellogger.converter;
 
 import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
-import de.gematik.rbellogger.data.facet.RbelUriFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.util.RbelArrayUtils;
 
 import java.nio.charset.Charset;
@@ -82,6 +79,7 @@ public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
             .path(pathElement)
             .build();
         targetElement.addFacet(httpRequest);
+        targetElement.addFacet(new RbelRequestFacet(method + " " + path));
         targetElement.addFacet(RbelHttpMessageFacet.builder()
             .header(headerElement)
             .body(bodyElement)

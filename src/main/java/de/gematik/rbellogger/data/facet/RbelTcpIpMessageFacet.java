@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package de.gematik.rbellogger.data;
+package de.gematik.rbellogger.data.facet;
 
+import de.gematik.rbellogger.data.RbelElement;
+import de.gematik.rbellogger.data.RbelHostname;
+import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
-import de.gematik.rbellogger.renderer.RbelHttpMessageRenderer;
-import java.util.List;
+import de.gematik.rbellogger.renderer.RbelMessageRenderer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+
+import javax.annotation.Nullable;
 
 @Data
 @Builder(toBuilder = true)
@@ -31,7 +35,7 @@ import lombok.Data;
 public class RbelTcpIpMessageFacet implements RbelFacet {
 
     static {
-        RbelHtmlRenderer.registerFacetRenderer(new RbelHttpMessageRenderer());
+        RbelHtmlRenderer.registerFacetRenderer(new RbelMessageRenderer());
     }
 
     private final long sequenceNumber;

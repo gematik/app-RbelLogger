@@ -18,12 +18,8 @@ package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
-import de.gematik.rbellogger.data.facet.RbelNoteFacet;
-import de.gematik.rbellogger.exceptions.RbelConversionException;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +63,10 @@ public class RbelConverter {
         new RbelXmlConverter(),
         new RbelJsonConverter(),
         new RbelVauKeyDeriver(),
-        new RbelMtomConverter()
+        new RbelMtomConverter(),
+        new RbelX509Converter(),
+        new RbelSicctEnvelopeConverter(),
+        new RbelSicctCommandConverter()
     ));
     @Builder.Default
     private long messageSequenceNumber = 0;
@@ -157,18 +156,11 @@ public class RbelConverter {
     }
 
     public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname recipient) {
-        final RbelElement rbelHttpMessage = convertElement(content, null);
-        return parseMessage(rbelHttpMessage, sender, recipient);
+        final RbelElement rbelMessage = convertElement(content, null);
+        return parseMessage(rbelMessage, sender, recipient);
     }
 
     public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
-        if (rbelElement.getFacet(RbelHttpResponseFacet.class).isEmpty()
-            && rbelElement.getFacet(RbelHttpRequestFacet.class).isEmpty()) {
-            throw new RbelConversionException("Illegal type encountered: Content of http-Message was parsed as "
-                + rbelElement.getFacets().stream().map(Object::getClass).map(Class::getSimpleName)
-                .collect(Collectors.toList())
-                + ". Expected RbelHttpMessage (Rbel can only handle HTTP messages right now)");
-        }
         if (rbelElement.getFacet(RbelHttpResponseFacet.class).isPresent()) {
             final RbelElement lastRequest = findLastRequest();
             if (lastRequest != null) {

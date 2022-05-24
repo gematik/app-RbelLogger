@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+hex-viewer {
+    display: inline !important;
+}
+
 h1.title{
     font-size: 20px;
 }

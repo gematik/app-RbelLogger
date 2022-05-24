@@ -19,10 +19,8 @@ package de.gematik.rbellogger.converter;
 import static de.gematik.rbellogger.RbelOptions.ACTIVATE_JEXL_DEBUGGING;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
-import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import de.gematik.rbellogger.data.facet.*;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Builder;
@@ -106,6 +104,7 @@ public class RbelJexlExecutor {
             .orElse(null));
         if (element instanceof RbelElement) {
             mapContext.put("charset", ((RbelElement) element).getElementCharset().displayName());
+            mapContext.put("@", buildPositionDescriptor((RbelElement) element));
         }
 
         final Optional<RbelElement> requestMessage = tryToFindRequestMessage(element);
@@ -148,6 +147,20 @@ public class RbelJexlExecutor {
         }
 
         return mapContext;
+    }
+
+    private Map<String, String> buildPositionDescriptor(RbelElement element) {
+        final HashMap<String, String> result = new HashMap<>();
+        element.getChildNodesWithKey().stream()
+            .forEach(entry -> {
+                if (entry.getValue().hasFacet(RbelJsonFacet.class) && entry.getValue().hasFacet(RbelNestedFacet.class)) {
+                    result.put(entry.getKey(),
+                        entry.getValue().getFacetOrFail(RbelNestedFacet.class).getNestedElement().getRawStringContent());
+                } else {
+                    result.put(entry.getKey(), entry.getValue().getRawStringContent());
+                }
+            });
+        return result;
     }
 
     private Optional<RbelElement> tryToFindRequestMessage(Object element) {

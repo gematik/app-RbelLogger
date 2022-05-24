@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.25.0</version>
+    <version>0.26.0</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -65,7 +65,6 @@
         <maven.compiler.target>11</maven.compiler.target>
         <version.junit-jupiter>5.8.2</version.junit-jupiter>
         <version.java>11</version.java>
-
 
         <!-- settings for upload to sonar server -->
         <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/index.xml
@@ -130,7 +129,7 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.8.6</version>
+            <version>2.9.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

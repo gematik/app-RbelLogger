@@ -70,7 +70,7 @@ public class RbelErpVauDecrpytionConverter implements RbelConverterPlugin {
 
             final byte[] ciphertext = Arrays.copyOfRange(encMessage, 1 + 32 + 32, encMessage.length);
 
-            log.info("Decrypting. AesKey '{}' and ciphertext {}",
+            log.trace("Decrypting. AesKey '{}' and ciphertext {}",
                 Base64.getEncoder().encodeToString(aesKeyBytes),
                 Base64.getEncoder().encodeToString(ciphertext));
 

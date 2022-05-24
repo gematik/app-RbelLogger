@@ -20,7 +20,7 @@ import de.gematik.rbellogger.configuration.RbelFileSaveInfo;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelConverterPlugin;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import lombok.Data;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +49,7 @@ public class RbelFileAppenderPlugin implements RbelConverterPlugin {
     public void consumeElement(RbelElement rbelElement, RbelConverter converter) {
         if (fileSaveInfo.isWriteToFile()
             && StringUtils.isNotEmpty(fileSaveInfo.getFilename())
-            && rbelElement.hasFacet(RbelHttpMessageFacet.class)) {
+            && rbelElement.hasFacet(RbelTcpIpMessageFacet.class)) {
             try {
                 FileUtils.writeStringToFile(new File(fileSaveInfo.getFilename()),
                     convertToRbelFileString(rbelElement), Charset.defaultCharset(), true);

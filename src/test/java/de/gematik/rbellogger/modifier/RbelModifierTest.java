@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.modifier;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
@@ -24,6 +25,7 @@ import de.gematik.rbellogger.data.facet.RbelHttpRequestFacet;
 import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
 import java.io.IOException;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 
@@ -349,5 +351,87 @@ public class RbelModifierTest extends AbstractModifierTest {
         assertThat(modifiedMessage.findElement("$.path.first.value")
             .map(RbelElement::getRawStringContent).get())
             .contains(specialCaseParameter);
+    }
+
+    @Test
+    public void checkTtlEqualsOneWorksCorrectly() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .name("blub")
+            .targetElement("$.responseCode")
+            .replaceWith("666")
+            .deleteAfterNExecutions(1)
+            .build());
+
+        final RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getResponseCode().getRawStringContent())
+            .isEqualTo("666");
+
+        final RbelElement modifiedMessage2 = modifyMessageAndParseResponse(message);
+
+        assertThat(modifiedMessage2.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getResponseCode().getRawStringContent())
+            .isEqualTo("200");
+    }
+
+    @Test
+    public void checkTtlEqualsFiveWorksCorrectly() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .name("blub")
+            .targetElement("$.responseCode")
+            .replaceWith("666")
+            .deleteAfterNExecutions(5)
+            .build());
+
+        IntStream.range(1, 6)
+            .forEach(index -> {
+                RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+                assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+                    .getResponseCode().getRawStringContent())
+                    .isEqualTo("666");
+                });
+
+        final RbelElement modifiedMessage2 = modifyMessageAndParseResponse(message);
+        assertThat(modifiedMessage2.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getResponseCode().getRawStringContent())
+            .isEqualTo("200");
+        assertThat(rbelLogger.getRbelModifier().getModifications()).isEmpty();
+    }
+
+    @Test
+    public void checkTtlEqualsZeroWorksCorrectly() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .name("blub")
+            .targetElement("$.responseCode")
+            .replaceWith("666")
+            .deleteAfterNExecutions(0)
+            .build());
+
+        final RbelElement modifiedMessage2 = modifyMessageAndParseResponse(message);
+        assertThat(modifiedMessage2.getFacetOrFail(RbelHttpResponseFacet.class)
+            .getResponseCode().getRawStringContent())
+            .isEqualTo("200");
+    }
+
+    @Test
+    public void checkTtlEqualsNullWorksCorrectly() throws IOException {
+        final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jsonMessage.curl");
+        rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
+            .name("blub")
+            .targetElement("$.responseCode")
+            .replaceWith("666")
+            .build());
+
+        IntStream.range(1, 10)
+            .forEach(index -> {
+                RbelElement modifiedMessage = modifyMessageAndParseResponse(message);
+                assertThat(modifiedMessage.getFacetOrFail(RbelHttpResponseFacet.class)
+                    .getResponseCode().getRawStringContent())
+                    .isEqualTo("666");
+            });
     }
 }

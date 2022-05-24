@@ -17,10 +17,7 @@
 package de.gematik.rbellogger.converter;
 
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
-import de.gematik.rbellogger.data.facet.RbelJsonFacet;
-import de.gematik.rbellogger.data.facet.RbelRootFacet;
-import de.gematik.rbellogger.data.facet.RbelVauEpaFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.exceptions.RbelConversionException;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.util.CryptoUtils;
@@ -100,8 +97,10 @@ public class RbelVauEpaConverter implements RbelConverterPlugin {
         final String cleartextString = new String(decryptedBytes);
         if (cleartextString.startsWith("VAUClientSigFin")
             || cleartextString.startsWith("VAUServerFin")) {
+            final RbelElement decryptedPayload = new RbelElement(decryptedBytes, parentNode);
+            decryptedPayload.addFacet(new RbelBinaryFacet());
             return Optional.of(RbelVauEpaFacet.builder()
-                .message(converter.filterInputThroughPreConversionMappers(new RbelElement(decryptedBytes, parentNode)))
+                .message(converter.filterInputThroughPreConversionMappers(decryptedPayload))
                 .encryptedMessage(RbelElement.wrap(parentNode, splitVauMessage.getValue()))
                 .keyIdUsed(RbelElement.wrap(parentNode, rbelKey.getKeyName().split("_")[0]))
                 .keyUsed(Optional.of(rbelKey))

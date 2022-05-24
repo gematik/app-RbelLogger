@@ -20,11 +20,14 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.key.RbelKeyManager;
+
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+
 import lombok.Builder;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.K;
 
 public class RbelModifier {
 
@@ -62,13 +65,34 @@ public class RbelModifier {
                 }
 
                 final byte[] input = applyModification(modification, targetOptional.get());
+                reduceTtl(modification);
                 modifiedMessage = rbelConverter.convertElement(input, null);
             }
         }
+        deleteOutdatedModifications();
         return modifiedMessage;
     }
 
+    private void deleteOutdatedModifications() {
+        for (Iterator<RbelModificationDescription> ks = modificationsMap.values().iterator(); ks.hasNext(); ) {
+            RbelModificationDescription next = ks.next();
+            if (next.getDeleteAfterNExecutions() != null
+                && next.getDeleteAfterNExecutions() <= 0) {
+                ks.remove();
+            }
+        }
+    }
+
+    private void reduceTtl(RbelModificationDescription modification) {
+        if (modification.getDeleteAfterNExecutions() != null) {
+            modification.setDeleteAfterNExecutions(modification.getDeleteAfterNExecutions() - 1);
+        }
+    }
+
     private boolean shouldBeApplied(RbelModificationDescription modification, RbelElement message) {
+        if (modification.getDeleteAfterNExecutions() != null && modification.getDeleteAfterNExecutions() == 0) {
+            return false;
+        }
         if (StringUtils.isEmpty(modification.getCondition())) {
             return true;
         }

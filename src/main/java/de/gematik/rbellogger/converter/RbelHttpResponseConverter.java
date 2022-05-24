@@ -19,9 +19,7 @@ package de.gematik.rbellogger.converter;
 import com.google.common.net.MediaType;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelMultiMap;
-import de.gematik.rbellogger.data.facet.RbelHttpHeaderFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpMessageFacet;
-import de.gematik.rbellogger.data.facet.RbelHttpResponseFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.util.RbelArrayUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,12 +61,14 @@ public class RbelHttpResponseConverter implements RbelConverterPlugin {
             headerElement.getFacet(RbelHttpHeaderFacet.class).get(), eol);
         final RbelElement bodyElement = new RbelElement(bodyData, targetElement,
             findCharsetInHeader(headerElement.getFacetOrFail(RbelHttpHeaderFacet.class)));
+        final RbelElement responseCode = extractResponseCodeFromMessage(targetElement, content);
         final RbelHttpResponseFacet rbelHttpResponse = RbelHttpResponseFacet.builder()
-            .responseCode(extractResponseCodeFromMessage(targetElement, content))
+            .responseCode(responseCode)
             .reasonPhrase(extractReasonPhraseFromMessage(targetElement, content))
             .build();
 
         targetElement.addFacet(rbelHttpResponse);
+        targetElement.addFacet(new RbelResponseFacet(responseCode.getRawStringContent()));
         targetElement.addFacet(RbelHttpMessageFacet.builder()
             .header(headerElement)
             .body(bodyElement)

@@ -18,7 +18,7 @@ package de.gematik.rbellogger.renderer;
 
 import com.google.gson.*;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.*;
 import j2html.TagCreator;
 import j2html.tags.*;
@@ -31,6 +31,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.bouncycastle.util.encoders.Hex;
 import org.dom4j.DocumentHelper;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
@@ -43,6 +44,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.showContentButtonAndDialog;
 import static j2html.TagCreator.*;
@@ -60,6 +62,7 @@ public class RbelHtmlRenderingToolkit {
     public static final String CLS_BODY = "is-info";
     public static final String CLS_PKIOK = "is-success";
     public static final String CLS_PKINOK = "is-primary";
+    private static final String HEX_STYLE = "display: inline-flex;padding-bottom: 0.2rem;padding-top: 0.2rem;white-space: revert;";
 
     @Getter
     private final Map<UUID, JsonNoteEntry> noteTags = new HashMap<>();
@@ -119,6 +122,9 @@ public class RbelHtmlRenderingToolkit {
     }
 
     public DomContent constructMessageId(final RbelElement message) {
+        if (message.getParentNode() != null) {
+            return span();
+        }
         return span(getElementSequenceNumber(message))
             .withClass("msg-sequence tag is-info is-light mr-3 is-size-3");
     }
@@ -129,7 +135,22 @@ public class RbelHtmlRenderingToolkit {
 
     public ContainerTag convert(final RbelElement element, final Optional<String> key) {
         return convertUnforced(element, key)
-            .orElseGet(() -> span(performElementToTextConversion(element)));
+            .orElseGet(() -> {
+                if (element.hasFacet(RbelBinaryFacet.class)) {
+                    return printAsBinary(element);
+                } else {
+                    return span(performElementToTextConversion(element));
+                }
+            });
+    }
+
+    private String performElementToTextConversion(final RbelElement el) {
+        return rbelHtmlRenderer.getRbelValueShader().shadeValue(el, el.findKeyInParentElement())
+            .or(() -> Optional.ofNullable(el)
+                .map(RbelElement::getRawStringContent)
+                .filter(Objects::nonNull)
+                .map(str -> str.replace("\n", "<br/>")))
+            .orElse("");
     }
 
     public Optional<ContainerTag> convertUnforced(final RbelElement element, final Optional<String> key) {
@@ -140,14 +161,41 @@ public class RbelHtmlRenderingToolkit {
         return rbelHtmlRenderer.getRbelValueShader().shadeValue(element, key);
     }
 
-    private String performElementToTextConversion(final RbelElement el) {
-        return rbelHtmlRenderer.getRbelValueShader().shadeValue(el, el.findKeyInParentElement())
-            .or(() -> Optional.ofNullable(el)
+    public ContainerTag printAsBinary(final RbelElement el) {
+        return
+            div(
+                pre().withStyle(HEX_STYLE).withText("Offset    "
+                    + " | " + " 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f"
+                    + " | " + "ASCII Text      ")
+            )
+                .with(
+                    IntStream.range(0, (el.getRawContent().length + 15) / 16)
+                        .mapToObj(line ->
+                            div(
+                                pre().withStyle(HEX_STYLE).withText(StringUtils.leftPad(Integer.toHexString(line * 16), 8, '0') + "  "
+                                    + " | " + getLineAsHexString(el.getRawContent(), line)
+                                    + " | " + getLineAsAsciiString(el.getRawContent(), line))
+                            )
+                        )
+                        .collect(Collectors.toList())
+                );
+    }
+
+    private String getLineAsHexString(byte[] rawContent, int start) {
+        return StringUtils.rightPad(IntStream.range(start * 16, Math.min((start + 1) * 16, rawContent.length))
+                .mapToObj(index -> Hex.toHexString(rawContent, index, 1))
+                .collect(Collectors.joining(" ")),
+            16 * 3 - 1, ' ');
+    }
+
+    private String getLineAsAsciiString(byte[] rawContent, int start) {
+        return StringUtils.rightPad(IntStream.range(start * 16, Math.min((start + 1) * 16, rawContent.length))
+                .mapToObj(index -> rawContent[index])
                 .filter(Objects::nonNull)
-                .map(RbelElement::getRawStringContent)
-                .filter(Objects::nonNull)
-                .map(str -> str.replace("\n", "<br/>")))
-            .orElse("");
+                .map(bit -> new String(new byte[]{bit}, StandardCharsets.US_ASCII)
+                    .replaceAll("[^ -~]", "."))
+                .collect(Collectors.joining("")),
+            16, ' ');
     }
 
     public DomContent renderMenu(final List<RbelElement> elements) {
@@ -167,24 +215,24 @@ public class RbelHtmlRenderingToolkit {
 
     public DomContent menuTab(final RbelElement rbelElement) {
         final String uuid = rbelElement.getUuid();
-        if (rbelElement.hasFacet(RbelHttpRequestFacet.class)) {
+        if (rbelElement.hasFacet(RbelRequestFacet.class)) {
             return div().withClass("ml-5").with(
-                a().withHref("#" + uuid).withClass("mt-3 is-block").with(
+                a().with(
                     div(span(getElementSequenceNumber(rbelElement)).withClass("tag is-info is-light mr-1"),
                         i().withClass("fas fa-share"),
                         text(" REQUEST")).withClass("menu-label mb-1 has-text-link"),
-                    div(
-                        rbelElement.getFacetOrFail(RbelHttpRequestFacet.class).getMethod().seekValue().orElse("")
-                            + "  "
-                            + rbelElement.getFacetOrFail(RbelHttpRequestFacet.class).getPathAsString())
+                    div(rbelElement.getFacetOrFail(RbelRequestFacet.class).getMenuInfoString())
                         .attr("style", "text-overflow: ellipsis;overflow: hidden;")
                         .withClass("is-size-6 ml-3")
-                )
+                ).withHref("#" + uuid).withClass("mt-3 is-block")
             );
         } else {
             return a(span(getElementSequenceNumber(rbelElement)).withClass("tag is-info is-light mr-1"),
                 i().withClass("fas fa-reply"),
-                text(" RESPONSE"))
+                text(" RESPONSE"),
+                div(rbelElement.getFacet(RbelResponseFacet.class).map(RbelResponseFacet::getMenuInfoString).orElse(""))
+                    .attr("style", "text-overflow: ellipsis;overflow: hidden;")
+                    .withClass("is-size-6 ml-3"))
                 .withHref("#" + uuid).withClass("menu-label ml-5 mt-3 is-block has-text-success");
         }
     }
@@ -235,8 +283,8 @@ public class RbelHtmlRenderingToolkit {
                                     .withClass("created is-italic is-size-6 is-pulled-right mr-6"),
                                 div().with(
                                     elements.stream()
-                                        .filter(el -> el.hasFacet(RbelHttpMessageFacet.class))
-                                        .map(el -> convert(el, Optional.empty()))
+                                        .filter(el -> el.hasFacet(RbelTcpIpMessageFacet.class))
+                                        .map(this::convertMessage)
                                         .collect(Collectors.toList())
                                 ),
                                 div("Created " +
@@ -250,6 +298,11 @@ public class RbelHtmlRenderingToolkit {
                     .with(new UnescapedText(IOUtils.resourceToString("/rbel.js", StandardCharsets.UTF_8)))
             )
         );
+    }
+
+    public DomContent convertMessage(RbelElement element) {
+        return div(new RbelMessageRenderer()
+            .performRendering(element, Optional.empty(), this));
     }
 
     public JsonElement shadeJson(final JsonElement input, final Optional<String> key,
@@ -349,6 +402,25 @@ public class RbelHtmlRenderingToolkit {
                     )
             )
             .collect(Collectors.toList());
+    }
+
+    public List<DomContent> packAsInfoLine(String parameterName, DomContent... contentObject) {
+        return List.of(div().withClass("columns is-multiline is-mobile").with(
+            div().withClass("column is-one-quarter")
+                .with(b().withText(parameterName + ": ")),
+            div().withClass("column")
+                .with(contentObject)));
+    }
+
+
+    public DomContent formatHex(RbelElement value) {
+        return span().withText(Hex.toHexString(value.getRawContent()))
+            .withStyle("font-family: monospace; padding-right: 0.3rem;");
+    }
+
+    public DomContent formatHexAlike(String value) {
+        return span().withText(value)
+            .withStyle("font-family: monospace; padding-right: 0.3rem;");
     }
 
     @Builder

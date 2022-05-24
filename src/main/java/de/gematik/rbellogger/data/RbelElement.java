@@ -33,6 +33,8 @@ import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import javax.annotation.Nullable;
+
 @AllArgsConstructor
 @RequiredArgsConstructor
 @Getter
@@ -172,6 +174,7 @@ public class RbelElement {
             .execute();
     }
 
+    @Nullable
     public String getRawStringContent() {
         if (rawContent == null) {
             return null;
@@ -205,6 +208,13 @@ public class RbelElement {
         return getFacet(RbelValueFacet.class)
             .map(RbelValueFacet::getValue)
             .filter(Objects::nonNull);
+    }
+
+    public Optional<String> printValue() {
+        return getFacet(RbelValueFacet.class)
+            .map(RbelValueFacet::getValue)
+            .filter(Objects::nonNull)
+            .map(Object::toString);
     }
 
     public <T> Optional<T> seekValue(Class<T> clazz) {
@@ -284,7 +294,15 @@ public class RbelElement {
             .collect(Collectors.toUnmodifiableList());
     }
 
-    private class RbelPathNotUniqueException extends RuntimeException {
+    public RbelElement findMessage() {
+        RbelElement position = this;
+        while (position.getParentNode() != null) {
+            position = position.getParentNode();
+        }
+        return position;
+    }
+
+    private static class RbelPathNotUniqueException extends RuntimeException {
 
         public RbelPathNotUniqueException(String s) {
             super(s);

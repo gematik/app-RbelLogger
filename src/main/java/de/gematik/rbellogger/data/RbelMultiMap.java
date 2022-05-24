@@ -112,13 +112,16 @@ public class RbelMultiMap implements Map<String, RbelElement> {
     @Override
     @Deprecated
     public Collection<RbelElement> values() {
-        throw new RbelMapUnorderedOperationException();
+        return stream()
+            .map(Entry::getValue)
+            .collect(Collectors.toUnmodifiableList());
     }
 
     @Override
     @Deprecated
     public Set<Map.Entry<String, RbelElement>> entrySet() {
-        throw new RbelMapUnorderedOperationException();
+        return stream()
+            .collect(Collectors.toUnmodifiableSet());
     }
 
     public Stream<Entry<String, RbelElement>> stream() {
@@ -146,11 +149,5 @@ public class RbelMultiMap implements Map<String, RbelElement> {
 
     public Iterator<Entry<String, RbelElement>> iterator() {
         return values.listIterator();
-    }
-
-    private class RbelMapUnorderedOperationException extends RuntimeException {
-        RbelMapUnorderedOperationException() {
-            super("This collection is ordered. Therefore this operation should never be called. Use getValues() instead!");
-        }
     }
 }

@@ -19,8 +19,9 @@ package de.gematik.rbellogger.util;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.RbelTcpIpMessageFacet;
+import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
+import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.json.JSONObject;
@@ -38,6 +39,7 @@ public class RbelFileWriterUtils {
     private static final String SENDER_HOSTNAME = "senderHostname";
     private static final String RECEIVER_HOSTNAME = "receiverHostname";
     private static final String SEQUENCE_NUMBER = "sequenceNumber";
+    private static final String MESSAGE_TIME = "timestamp";
 
     public static String convertToRbelFileString(RbelElement rbelElement) {
         final JSONObject jsonObject = new JSONObject(Map.of(
@@ -56,6 +58,10 @@ public class RbelFileWriterUtils {
                 .orElse(""),
             SEQUENCE_NUMBER, rbelElement.getFacet(RbelTcpIpMessageFacet.class)
                 .map(RbelTcpIpMessageFacet::getSequenceNumber)
+                .map(Object::toString)
+                .orElse(""),
+            MESSAGE_TIME, rbelElement.getFacet(RbelMessageTimingFacet.class)
+                .map(RbelMessageTimingFacet::getTransmissionTime)
                 .map(Object::toString)
                 .orElse("")
         ));
