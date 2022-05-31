@@ -19,9 +19,7 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
-import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
-import de.gematik.rbellogger.data.facet.RbelJwtFacet;
-import de.gematik.rbellogger.data.facet.RbelNoteFacet;
+import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.exceptions.RbelConversionException;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import org.apache.commons.io.FileUtils;
@@ -67,5 +65,49 @@ public class RbelConverterTest {
         assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> {
             RbelLogger.build().getRbelConverter().parseMessage(content, null, null);
         });
+    }
+
+    @Test
+    public void simulateRaceCondition_PairingShouldBeConserved() {
+        RbelElement pair1A = new RbelElement("foo".getBytes(), null);
+        RbelElement pair1B = new RbelElement("foo".getBytes(), null);
+        RbelElement pair2A = new RbelElement("foo".getBytes(), null);
+        RbelElement pair2B = new RbelElement("foo".getBytes(), null);
+
+        pair1A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair2A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair1B.addFacet(new RbelHttpResponseFacet(null, null, pair1A));
+        pair2B.addFacet(new RbelHttpResponseFacet(null, null, pair2A));
+
+        var rbelLogger = RbelLogger.build();
+        rbelLogger.getRbelConverter().parseMessage(pair1A,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair2A,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair2A,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair1B,null, null);
+
+        assertThat(pair1B.getFacetOrFail(RbelHttpResponseFacet.class).getRequest()).isEqualTo(pair1A);
+        assertThat(pair2B.getFacetOrFail(RbelHttpResponseFacet.class).getRequest()).isEqualTo(pair2A);
+    }
+
+    @Test
+    public void implicitPairingOfConsecutivePairs() {
+        RbelElement pair1A = new RbelElement("foo".getBytes(), null);
+        RbelElement pair1B = new RbelElement("foo".getBytes(), null);
+        RbelElement pair2A = new RbelElement("foo".getBytes(), null);
+        RbelElement pair2B = new RbelElement("foo".getBytes(), null);
+
+        pair1A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair2A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair1B.addFacet(new RbelHttpResponseFacet(null, null, null));
+        pair2B.addFacet(new RbelHttpResponseFacet(null, null, null));
+
+        var rbelLogger = RbelLogger.build();
+        rbelLogger.getRbelConverter().parseMessage(pair1A,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair1B,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair2A,null, null);
+        rbelLogger.getRbelConverter().parseMessage(pair2B,null, null);
+
+        assertThat(pair1B.getFacetOrFail(RbelHttpResponseFacet.class).getRequest()).isEqualTo(pair1A);
+        assertThat(pair2B.getFacetOrFail(RbelHttpResponseFacet.class).getRequest()).isEqualTo(pair2A);
     }
 }

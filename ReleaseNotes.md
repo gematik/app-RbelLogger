@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.26.1
+
+## Features
+
+* TGR-521: Explicitly set message-pairing is now conserved
+
 # Release 0.26.0
 
 ## Features

@@ -87,7 +87,7 @@ public class RbelConverter {
             .parentNode(parentNode)
             .rawContent(input.getBytes(Optional.ofNullable(parentNode)
                 .map(RbelElement::getElementCharset)
-                    .orElse(StandardCharsets.UTF_8)))
+                .orElse(StandardCharsets.UTF_8)))
             .build());
     }
 
@@ -161,22 +161,14 @@ public class RbelConverter {
     }
 
     public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
-        if (rbelElement.getFacet(RbelHttpResponseFacet.class).isPresent()) {
-            final RbelElement lastRequest = findLastRequest();
-            if (lastRequest != null) {
-                rbelElement.addOrReplaceFacet(
-                    rbelElement.getFacet(RbelHttpResponseFacet.class)
-                        .map(RbelHttpResponseFacet::toBuilder)
-                        .orElse(RbelHttpResponseFacet.builder())
-                        .request(lastRequest)
-                        .build());
-            }
-
+        if (rbelElement.getFacet(RbelHttpResponseFacet.class)
+            .map(resp -> resp.getRequest() == null)
+            .orElse(false)) {
             rbelElement.addOrReplaceFacet(
                 rbelElement.getFacet(RbelHttpResponseFacet.class)
                     .map(RbelHttpResponseFacet::toBuilder)
                     .orElse(RbelHttpResponseFacet.builder())
-                    .request(lastRequest)
+                    .request(findLastRequest())
                     .build());
         }
 
@@ -206,7 +198,7 @@ public class RbelConverter {
     public void manageRbelBufferSize() {
         if (manageBuffer) {
             synchronized (messageHistory) {
-                while (rbelBufferIsExceedingMaxSize()) {
+                while (rbelBufferIsExceedingMaxSize() && !getMessageHistory().isEmpty()) {
                     log.info("Exceeded buffer size, dropping oldest message in history");
                     getMessageHistory().remove(0);
                 }
@@ -215,14 +207,16 @@ public class RbelConverter {
     }
 
     private boolean rbelBufferIsExceedingMaxSize() {
+        if (getRbelBufferSizeInMb() <= 0) {
+            return true;
+        }
         final long bufferSize = getMessageHistory().stream()
             .map(RbelElement::getRawContent)
             .mapToLong(ar -> ar.length)
             .sum();
-        final boolean exceedingLimit =
-            bufferSize > ((long) getRbelBufferSizeInMb() * 1024 * 1024);
+        final boolean exceedingLimit = bufferSize > ((long) getRbelBufferSizeInMb() * 1024 * 1024);
         if (exceedingLimit) {
-            log.info("Buffersize is {} Mb which exceeds the limit of {} Mb",
+            log.trace("Buffer is currently at {} Mb which exceeds the limit of {} Mb",
                 bufferSize / (1024 ^ 2), getRbelBufferSizeInMb());
         }
         return exceedingLimit;
