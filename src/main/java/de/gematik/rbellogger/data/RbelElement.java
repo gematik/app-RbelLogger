@@ -31,25 +31,46 @@ import java.util.stream.Stream;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import javax.annotation.Nullable;
 
-@AllArgsConstructor
-@RequiredArgsConstructor
 @Getter
-@Builder(toBuilder = true)
 @Slf4j
 public class RbelElement {
 
-    private final String uuid = UUID.randomUUID().toString();
+    private final String uuid;
     private final byte[] rawContent;
     private final transient RbelElement parentNode;
     private final List<RbelFacet> facets = new ArrayList<>();
-    @Builder.Default
     @Setter
     @Getter(AccessLevel.PRIVATE)
-    private Optional<Charset> charset = Optional.empty();
+    private Optional<Charset> charset;
+
+    public RbelElement(byte[] rawContent, RbelElement parentNode) {
+        this(null, rawContent, parentNode, Optional.empty());
+    }
+
+    public RbelElement(byte[] rawContent, RbelElement parentNode, Optional<Charset> charset) {
+        this(null, rawContent, parentNode, charset);
+    }
+
+    @Builder(toBuilder = true)
+    public RbelElement(@Nullable String uuid, byte[] rawContent, RbelElement parentNode, Optional<Charset> charset) {
+        if (StringUtils.isNotEmpty(uuid)) {
+            this.uuid = uuid;
+        } else {
+            this.uuid = UUID.randomUUID().toString();
+        }
+        this.rawContent = rawContent;
+        this.parentNode = parentNode;
+        if (charset == null) {
+            this.charset = Optional.empty();
+        } else {
+            this.charset = charset;
+        }
+    }
 
     public static RbelElement wrap(byte[] rawValue, @NonNull RbelElement parentNode, Object value) {
         return new RbelElement(rawValue, parentNode)

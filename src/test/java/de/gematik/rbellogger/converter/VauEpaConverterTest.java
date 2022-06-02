@@ -32,15 +32,22 @@ import de.gematik.rbellogger.key.RbelVauKey;
 import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
+import de.gematik.rbellogger.util.RbelFileWriterUtils;
 import j2html.tags.ContainerTag;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -126,14 +133,29 @@ public class VauEpaConverterTest {
             .addInitializer(new RbelKeyFolderInitializer("src/test/resources")));
 
         String rawSavedVauMessages = FileUtils.readFileToString(new File("src/test/resources/trafficLog.tgr"));
-        Stream.of(rawSavedVauMessages.split("\n\n\n"))
-            .forEach(tgrJson -> epa2Logger.getRbelConverter().parseMessage(
-                Base64.getDecoder().decode(tgrJson.split("\"")[15]), null, null));
+        RbelFileWriterUtils.convertFromRbelFile(rawSavedVauMessages, epa2Logger.getRbelConverter());
 
         assertThat(epa2Logger.getMessageHistory().get(9)
             .findElement("$.body.message.reconstructedMessage.Envelope.Header.Action.text").get()
             .getRawStringContent())
             .isEqualTo("urn:ihe:iti:2007:ProvideAndRegisterDocumentSet-b");
+    }
+
+    @Test
+    @DisplayName("Parse MTOMs with Regex-relevant characters in MTOM-barrier")
+    public void parseIbmLogFile() throws IOException {
+        RbelLogger epa2Logger = RbelLogger.build(new RbelConfiguration()
+            .setActivateAsn1Parsing(false)
+            .addInitializer(new RbelKeyFolderInitializer("src/test/resources")));
+
+        String rawSavedVauMessages = FileUtils.readFileToString(new File("src/test/resources/mtomVauTraffic.tgr"));
+
+        RbelFileWriterUtils.convertFromRbelFile(rawSavedVauMessages, epa2Logger.getRbelConverter());
+
+        assertThat(epa2Logger.getMessageHistory().get(5)
+            .findElement("$.body.message.reconstructedMessage.Envelope.Header.Action.text").get()
+            .getRawStringContent())
+            .isEqualTo("urn:ihe:iti:2007:RetrieveDocumentSetResponse");
     }
 
     @Test

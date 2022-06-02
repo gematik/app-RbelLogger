@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -119,7 +120,7 @@ public class RbelMtomConverter implements RbelConverterPlugin {
             return List.of();
         }
         return Stream.of(rbelElement.getRawStringContent()
-            .split("(\r\n|\n)--" + boundary.get(0)))
+            .split("(\r\n|\n)--" + Pattern.quote(boundary.get(0))))
             .map(MtomPart::new)
             .filter(mtomPart -> mtomPart.getMessageHeader().size() > 0)
             .collect(Collectors.toList());

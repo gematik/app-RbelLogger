@@ -155,12 +155,17 @@ public class RbelConverter {
         converterPlugins.add(converter);
     }
 
-    public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname recipient) {
+    public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname receiver) {
         final RbelElement rbelMessage = convertElement(content, null);
-        return parseMessage(rbelMessage, sender, recipient);
+        return doMessagePostConversion(rbelMessage, sender, receiver);
     }
 
     public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
+        final RbelElement rbelMessage = convertElement(rbelElement);
+        return doMessagePostConversion(rbelMessage, sender, receiver);
+    }
+
+    public RbelElement doMessagePostConversion(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class)
             .map(resp -> resp.getRequest() == null)
             .orElse(false)) {

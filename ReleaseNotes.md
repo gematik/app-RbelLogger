@@ -1,5 +1,15 @@
 # Changelog RBeL Logger
 
+# Release 0.26.2
+
+## Bugfixes
+
+* TGR-523: Fix for Regex-relevant characters in MTOM-Boundaries
+
+## Features
+
+* TGR-523: UUID can be supplied for RbelElements
+
 # Release 0.26.1
 
 ## Features
