@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.27.0
+
+## Bugfixes
+
+* RBEL-63: Improved resilience when parsing URIs
+
 # Release 0.26.2
 
 ## Bugfixes

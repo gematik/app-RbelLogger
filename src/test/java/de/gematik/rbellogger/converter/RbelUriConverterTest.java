@@ -19,6 +19,8 @@ package de.gematik.rbellogger.converter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.gematik.rbellogger.RbelLogger;
+import de.gematik.rbellogger.captures.RbelFileReaderCapturer;
+import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelJweFacet;
 import de.gematik.rbellogger.data.facet.RbelUriFacet;
@@ -29,6 +31,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
+import lombok.val;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.eclipse.jetty.util.URIUtil;
@@ -126,5 +129,18 @@ public class RbelUriConverterTest {
             .isEqualTo(sourceParameter);
         assertThat(rbelElement.findElement("$.blub.value").get().getRawStringContent())
             .isEqualTo("blab");
+    }
+
+    @Test
+    public void emptyQueryPart_shouldParseCorrectly() {
+        final RbelElement rbelElement = RbelLogger.build().getRbelConverter()
+            .convertElement("/foobar?", null);
+
+        assertThat(rbelElement.hasFacet(RbelUriFacet.class))
+            .isTrue();
+        assertThat(rbelElement.getFacetOrFail(RbelUriFacet.class).getBasicPath().getRawStringContent())
+            .isEqualTo("/foobar");
+        assertThat(rbelElement.getFacetOrFail(RbelUriFacet.class).getQueryParameters())
+            .isEmpty();
     }
 }

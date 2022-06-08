@@ -51,13 +51,13 @@ public class RbelConverter {
         = new HashMap<>();
     private final List<RbelConverterPlugin> converterPlugins = new ArrayList<>(List.of(
         new RbelBase64JsonConverter(),
+        new RbelUriConverter(),
         new RbelHttpResponseConverter(),
         new RbelHttpRequestConverter(),
         new RbelJwtConverter(),
         new RbelHttpFormDataConverter(),
         new RbelJweConverter(),
         new RbelErpVauDecrpytionConverter(),
-        new RbelUriConverter(),
         new RbelBearerTokenConverter(),
         new RbelVauEpaConverter(),
         new RbelXmlConverter(),
@@ -101,6 +101,12 @@ public class RbelConverter {
                 final String msg = "Exception during conversion with plugin '" + plugin.getClass().getName()
                     + "' (" + e.getMessage() + ")";
                 log.info(msg, e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Content in failed conversion-attempt was (B64-encoded) {}", Base64.getEncoder().encodeToString(rawInput.getRawContent()));
+                    if (rawInput.getParentNode() != null) {
+                        log.debug("Parent-Content in failed conversion-attempt was (B64-encoded) {}", Base64.getEncoder().encodeToString(rawInput.getParentNode().getRawContent()));
+                    }
+                }
                 rawInput.addFacet(new RbelNoteFacet(msg, RbelNoteFacet.NoteStyling.ERROR));
             }
         }

@@ -34,7 +34,7 @@ public class RbelUriConverter implements RbelConverterPlugin {
 
     public List<RbelElement> extractParameterMap(final URI uri, final RbelConverter context,
                                                  String originalContent, RbelElement parentNode) {
-        if (uri.getQuery() == null) {
+        if (StringUtils.isEmpty(uri.getQuery())) {
             return List.of();
         }
 
