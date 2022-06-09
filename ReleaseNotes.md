@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.27.1
+
+## Bugfixes
+
+* TGR-530: Improved resilience when parsing Rbel-Files
+
 # Release 0.27.0
 
 ## Bugfixes

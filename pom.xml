@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.27.0</version>
+    <version>0.27.1</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -163,7 +163,6 @@
             <artifactId>json</artifactId>
             <version>20220320</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/jnetpcap/jnetpcap -->
         <dependency>
             <groupId>jnetpcap</groupId>
             <artifactId>jnetpcap</artifactId>
@@ -204,6 +203,7 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.9</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>

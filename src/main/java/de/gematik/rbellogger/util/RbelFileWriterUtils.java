@@ -78,7 +78,7 @@ public class RbelFileWriterUtils {
     private static void parseFileObject(RbelConverter rbelConverter, JSONObject messageObject) {
         try {
             final String msgUuid = messageObject.optString(MESSAGE_UUID);
-            if (rbelConverter.getMessageHistory().stream()
+            if (new ArrayList<>(rbelConverter.getMessageHistory()).stream()
                 .anyMatch(msg -> msg.getUuid().equals(msgUuid))) {
                 return;
             }
