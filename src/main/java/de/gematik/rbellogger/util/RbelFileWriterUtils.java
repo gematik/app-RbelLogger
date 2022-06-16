@@ -16,6 +16,7 @@
 
 package de.gematik.rbellogger.util;
 
+import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
@@ -28,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class RbelFileWriterUtils {
@@ -68,27 +70,30 @@ public class RbelFileWriterUtils {
         return jsonObject + FILE_DIVIDER;
     }
 
-    public static void convertFromRbelFile(String rbelFileContent, RbelConverter rbelConverter) {
-        Arrays.stream(rbelFileContent.split(FILE_DIVIDER))
+    public static List<RbelElement> convertFromRbelFile(String rbelFileContent, RbelConverter rbelConverter) {
+        return Arrays.stream(rbelFileContent.split(FILE_DIVIDER))
             .filter(StringUtils::isNotEmpty)
             .map(JSONObject::new)
-            .forEach(content -> parseFileObject(rbelConverter, content));
+            .map(content -> parseFileObject(rbelConverter, content))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
     }
 
-    private static void parseFileObject(RbelConverter rbelConverter, JSONObject messageObject) {
+    private static Optional<RbelElement> parseFileObject(RbelConverter rbelConverter, JSONObject messageObject) {
         try {
             final String msgUuid = messageObject.optString(MESSAGE_UUID);
             if (new ArrayList<>(rbelConverter.getMessageHistory()).stream()
                 .anyMatch(msg -> msg.getUuid().equals(msgUuid))) {
-                return;
+                return Optional.empty();
             }
-            rbelConverter.parseMessage(RbelElement.builder()
+            return Optional.of(rbelConverter.parseMessage(RbelElement.builder()
                     .rawContent(Base64.getDecoder().decode(messageObject.getString(RAW_MESSAGE_CONTENT)))
                     .uuid(msgUuid)
                     .parentNode(null)
                     .build(),
                 RbelHostname.fromString(messageObject.getString(SENDER_HOSTNAME)).orElse(null),
-                RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)).orElse(null));
+                RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)).orElse(null)));
         } catch (Exception e) {
             throw new RbelFileReadingException("Error while converting from object '" + messageObject.toString() + "'", e);
         }

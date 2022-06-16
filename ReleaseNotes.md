@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.27.2
+
+## Features
+
+* TGR-553: Return parsed traffic in RbelFileWriterUtils
+
 # Release 0.27.1
 
 ## Bugfixes
