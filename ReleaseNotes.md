@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.27.3
+
+## Bugfix
+
+* ANFTIG-8: Logging improvement
+
 # Release 0.27.2
 
 ## Features

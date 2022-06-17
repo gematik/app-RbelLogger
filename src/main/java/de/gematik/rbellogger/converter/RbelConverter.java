@@ -210,7 +210,7 @@ public class RbelConverter {
         if (manageBuffer) {
             synchronized (messageHistory) {
                 while (rbelBufferIsExceedingMaxSize() && !getMessageHistory().isEmpty()) {
-                    log.info("Exceeded buffer size, dropping oldest message in history");
+                    log.trace("Exceeded buffer size, dropping oldest message in history");
                     getMessageHistory().remove(0);
                 }
             }
