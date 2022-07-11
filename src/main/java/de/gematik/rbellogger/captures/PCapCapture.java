@@ -20,6 +20,7 @@ import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.util.RbelException;
+import java.time.ZonedDateTime;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -393,7 +394,7 @@ public class PCapCapture extends RbelCapturer {
 
         @SneakyThrows
         private void processSimpleHttpPackets(final byte[] content, RbelHostname sender, RbelHostname recipient) {
-            final RbelElement convertedMessage = getRbelConverter().parseMessage(content, sender, recipient);
+            final RbelElement convertedMessage = getRbelConverter().parseMessage(content, sender, recipient, Optional.of(ZonedDateTime.now()));
             if (printMessageToSystemOut && convertedMessage != null && content.length > 0) {
                 if (convertedMessage.getRawStringContent() != null) {
                     log.trace("RBEL: " + convertedMessage.getRawStringContent());

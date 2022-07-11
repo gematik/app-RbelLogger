@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -117,7 +118,7 @@ public class VauEpaConverterTest {
         String rawSavedVauMessages = FileUtils.readFileToString(new File("src/test/resources/vauEpa2Flow.rawHttpDump"));
         Stream.of(rawSavedVauMessages.split("\n\n"))
             .map(Base64.getDecoder()::decode)
-            .forEach(msgBytes -> epa2Logger.getRbelConverter().parseMessage(msgBytes, null, null));
+            .forEach(msgBytes -> epa2Logger.getRbelConverter().parseMessage(msgBytes, null, null, Optional.of(ZonedDateTime.now())));
 
         assertThat(epa2Logger.getMessageHistory().get(24)
             .findRbelPathMembers("$.body.Data.content.decoded.AuthorizationAssertion.content.decoded.Assertion.Issuer.text")

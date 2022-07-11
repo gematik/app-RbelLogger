@@ -1,5 +1,11 @@
 # Changelog RBeL Logger
 
+# Release 0.27.4
+
+## Features
+
+* TGR-535: Make header and body collapsible
+
 # Release 0.27.3
 
 ## Bugfix

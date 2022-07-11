@@ -25,6 +25,7 @@ import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.util.JsonUtils;
 import lombok.AllArgsConstructor;
+import org.jose4j.jca.ProviderContext;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.consumer.InvalidJwtSignatureException;
 import org.jose4j.lang.JoseException;
@@ -61,6 +62,10 @@ public class RbelJwtWriter implements RbelElementWriter {
 
     private String createUpdatedJws(RbelElement oldTargetModifiedChild, String newContent, RbelJwtFacet jwtFacet) {
         final JsonWebSignature jws = new JsonWebSignature();
+
+        ProviderContext context = new ProviderContext();
+        context.getSuppliedKeyProviderContext().setGeneralProvider("BC");
+        jws.setProviderContext(context);
 
         writeHeaderInJws(oldTargetModifiedChild, newContent, jwtFacet, jws);
 

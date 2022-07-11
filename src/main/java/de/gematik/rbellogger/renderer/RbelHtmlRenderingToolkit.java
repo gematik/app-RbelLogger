@@ -91,7 +91,8 @@ public class RbelHtmlRenderingToolkit {
         final String className = StringUtils.join(extraClasses, " ");
         return el.getNotes().stream()
             .map(note -> div(i().withText(note.getValue()))
-                .withClass("is-family-primary has-text-weight-light m-3 " + className + " " + note.getStyle().toCssClass())
+                .withClass(
+                    "is-family-primary has-text-weight-light m-3 " + className + " " + note.getStyle().toCssClass())
                 .withStyle("word-break: normal;"))
             .collect(Collectors.toUnmodifiableList());
     }
@@ -172,9 +173,10 @@ public class RbelHtmlRenderingToolkit {
                     IntStream.range(0, (el.getRawContent().length + 15) / 16)
                         .mapToObj(line ->
                             div(
-                                pre().withStyle(HEX_STYLE).withText(StringUtils.leftPad(Integer.toHexString(line * 16), 8, '0') + "  "
-                                    + " | " + getLineAsHexString(el.getRawContent(), line)
-                                    + " | " + getLineAsAsciiString(el.getRawContent(), line))
+                                pre().withStyle(HEX_STYLE)
+                                    .withText(StringUtils.leftPad(Integer.toHexString(line * 16), 8, '0') + "  "
+                                        + " | " + getLineAsHexString(el.getRawContent(), line)
+                                        + " | " + getLineAsAsciiString(el.getRawContent(), line))
                             )
                         )
                         .collect(Collectors.toList())
@@ -306,7 +308,7 @@ public class RbelHtmlRenderingToolkit {
     }
 
     public JsonElement shadeJson(final JsonElement input, final Optional<String> key,
-                                 final RbelElement originalElement) {
+        final RbelElement originalElement) {
         if (input.isJsonPrimitive()) {
             final JsonElement jsonElement = rbelHtmlRenderer.getRbelValueShader().shadeValue(input, key)
                 .map(shadedValue -> (JsonElement) new JsonPrimitive(StringEscapeUtils.escapeHtml4(shadedValue)))

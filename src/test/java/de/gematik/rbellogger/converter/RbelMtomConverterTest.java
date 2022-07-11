@@ -21,6 +21,8 @@ import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.converter.initializers.RbelKeyFolderInitializer;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +49,7 @@ public class RbelMtomConverterTest {
         String rawSavedVauMessages = FileUtils.readFileToString(new File("src/test/resources/vauEpa2Flow.rawHttpDump"));
         Stream.of(rawSavedVauMessages.split("\n\n"))
                 .map(Base64.getDecoder()::decode)
-                .forEach(msgBytes -> rbelLogger.getRbelConverter().parseMessage(msgBytes, null, null));
+                .forEach(msgBytes -> rbelLogger.getRbelConverter().parseMessage(msgBytes, null, null, Optional.of(ZonedDateTime.now())));
     }
 
     @Test

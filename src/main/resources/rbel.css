@@ -19,12 +19,13 @@ hex-viewer {
 }
 
 h1.title{
-    font-size: 20px;
+    font-size: 2rem;
 }
 h2.title{
-    font-size: 18px;
+    font-size: 1.5rem;
 }
-.title:not(:last-child) {
+.title {
+    font-size: 1.5rem;
     margin-bottom: .5rem;
 }
 pre{
@@ -135,6 +136,7 @@ pre.json {
     white-space: break-spaces;
     color: greenyellow !important;
 }
+
 
 @media print {
     .column.menu {

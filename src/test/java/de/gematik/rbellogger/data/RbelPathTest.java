@@ -31,9 +31,11 @@ import de.gematik.rbellogger.util.RbelPathExecutor;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
 
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +61,7 @@ public class RbelPathTest {
             ("src/test/resources/sampleMessages/" + fileName);
 
         return RbelLogger.build().getRbelConverter()
-            .parseMessage(curlMessage.getBytes(), null, null);
+            .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()));
     }
 
     @Test
@@ -181,7 +183,7 @@ public class RbelPathTest {
             ("src/test/resources/sampleMessages/getChallenge.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .parseMessage(challengeMessage.getBytes(), null, null);
+            .parseMessage(challengeMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()));
 
         assertThat(convertedMessage.findElement("$.body.challenge.signature").get())
             .isSameAs(convertedMessage.findElement("$.body.challenge.content.signature").get());

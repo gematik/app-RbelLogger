@@ -31,6 +31,7 @@ import de.gematik.rbellogger.renderer.RbelHtmlFacetRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit;
 import j2html.tags.ContainerTag;
+import java.time.ZonedDateTime;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +59,7 @@ public class RbelX509ConverterTest {
         RbelOptions.activateRbelPathDebugging();
         xmlMessage = RbelLogger.build().getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks
-                ("src/test/resources/sampleMessages/xmlMessage.curl").getBytes(), null, null);
+                ("src/test/resources/sampleMessages/xmlMessage.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
     }
 
     @SneakyThrows

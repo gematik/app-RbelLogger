@@ -31,6 +31,7 @@ import java.util.Base64;
 import java.util.Optional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jose4j.jca.ProviderContext;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.lang.JoseException;
 
@@ -86,6 +87,11 @@ public class RbelJwtConverter implements RbelConverterPlugin {
 
     private JsonWebSignature initializeJws(RbelElement rbel) throws JoseException {
         final JsonWebSignature jsonWebSignature = new JsonWebSignature();
+
+        ProviderContext context = new ProviderContext();
+        context.getSuppliedKeyProviderContext().setGeneralProvider("BC");
+        jsonWebSignature.setProviderContext(context);
+
         jsonWebSignature.setCompactSerialization(rbel.getRawStringContent());
         return jsonWebSignature;
     }

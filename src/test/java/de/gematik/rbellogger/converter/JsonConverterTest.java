@@ -28,7 +28,9 @@ import de.gematik.rbellogger.data.facet.RbelJwtFacet;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
 import java.io.File;
 import java.io.IOException;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +65,7 @@ public class JsonConverterTest {
             "src/test/resources/sampleMessages/getChallenge.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .parseMessage(curlMessage.getBytes(), null, null);
+            .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()));
 
         FileUtils.writeStringToFile(new File("target/jsonNested.html"),
             RbelHtmlRenderer.render(List.of(convertedMessage)));

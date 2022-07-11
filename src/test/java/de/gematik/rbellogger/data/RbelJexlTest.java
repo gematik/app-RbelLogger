@@ -19,6 +19,7 @@ package de.gematik.rbellogger.data;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.RbelOptions;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
+import java.time.ZonedDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -42,10 +43,10 @@ public class RbelJexlTest {
 
         response = RbelLogger.build().getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks
-                ("src/test/resources/sampleMessages/rbelPath.curl").getBytes(), null, null);
+                ("src/test/resources/sampleMessages/rbelPath.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
         request = RbelLogger.build().getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks
-                ("src/test/resources/sampleMessages/getRequest.curl").getBytes(), null, null);
+                ("src/test/resources/sampleMessages/getRequest.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
         jexlExecutor = new RbelJexlExecutor();
     }
 
@@ -79,7 +80,7 @@ public class RbelJexlTest {
     public void checkJexlParsingForDoubleHeaders() throws IOException {
         RbelElement doubleHeaderMessage = RbelLogger.build().getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks
-                ("src/test/resources/sampleMessages/doubleHeader.curl").getBytes(), null, null);
+                ("src/test/resources/sampleMessages/doubleHeader.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
 
         assertThat(jexlExecutor.matchesAsJexlExpression(
             doubleHeaderMessage, "isResponse", Optional.empty()))
@@ -90,8 +91,7 @@ public class RbelJexlTest {
     public void shouldFindReceiverPort() throws IOException {
         RbelElement request = RbelLogger.build().getRbelConverter().parseMessage(
             readCurlFromFileWithCorrectedLineBreaks("src/test/resources/sampleMessages/getRequest.curl").getBytes(),
-            localhostWithPort(44444),
-            localhostWithPort(5432));
+            localhostWithPort(44444), localhostWithPort(5432), Optional.of(ZonedDateTime.now()));
 
         assertThat(jexlExecutor.matchesAsJexlExpression(
             request, "$.receiver.port == '5432'", Optional.empty()))

@@ -34,6 +34,7 @@ import java.util.List;
 import de.gematik.rbellogger.data.facet.RbelBinaryFacet;
 import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
 import de.gematik.rbellogger.data.facet.RbelNoteFacet;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -127,7 +128,7 @@ public class RbelHtmlRendererTest {
             ("src/test/resources/sampleMessages/jwtMessage.curl");
 
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
-            .parseMessage(curlMessage.getBytes(), new RbelHostname("foobar", 666), null);
+            .parseMessage(curlMessage.getBytes(), new RbelHostname("foobar", 666), null, Optional.of(ZonedDateTime.now()));
 
         final String convertedHtml = RENDERER.render(List.of(convertedMessage));
 
@@ -157,7 +158,8 @@ public class RbelHtmlRendererTest {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .parseMessage(content,
                 new RbelHostname("sender", 1),
-                new RbelHostname("receiver", 1));
+                new RbelHostname("receiver", 1),
+                Optional.of(ZonedDateTime.now()));
         convertedMessage.addFacet(new RbelBinaryFacet());
 
         final String convertedHtml = RENDERER.render(List.of(convertedMessage));
@@ -174,7 +176,8 @@ public class RbelHtmlRendererTest {
         final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
             .parseMessage(xmlBytes,
                 new RbelHostname("sender", 13421),
-                new RbelHostname("receiver", 14512));
+                new RbelHostname("receiver", 14512),
+                Optional.of(ZonedDateTime.now()));
 
         final String convertedHtml = RENDERER.render(List.of(convertedMessage));
         FileUtils.writeStringToFile(new File("target/directXml.html"), convertedHtml);

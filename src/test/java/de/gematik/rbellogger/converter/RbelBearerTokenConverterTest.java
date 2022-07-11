@@ -19,6 +19,8 @@ package de.gematik.rbellogger.converter;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +39,8 @@ public class RbelBearerTokenConverterTest {
             ("src/test/resources/sampleMessages/bearerToken.curl");
 
         final RbelLogger logger = RbelLogger.build();
-        final RbelElement convertedMessage = logger.getRbelConverter().parseMessage(curlMessage.getBytes(StandardCharsets.UTF_8), null, null);
+        final RbelElement convertedMessage = logger.getRbelConverter()
+            .parseMessage(curlMessage.getBytes(StandardCharsets.UTF_8), null, null, Optional.of(ZonedDateTime.now()));
 
         assertThat(convertedMessage.findRbelPathMembers("$.header.Authorization.BearerToken"))
             .isNotEmpty();
@@ -49,7 +52,7 @@ public class RbelBearerTokenConverterTest {
             ("src/test/resources/sampleMessages/bearerToken.curl");
 
         final RbelLogger logger = RbelLogger.build();
-        logger.getRbelConverter().parseMessage(curlMessage.getBytes(StandardCharsets.UTF_8), null, null);
+        logger.getRbelConverter().parseMessage(curlMessage.getBytes(StandardCharsets.UTF_8), null, null, Optional.of(ZonedDateTime.now()));
 
         final String renderingOutput = RbelHtmlRenderer.render(logger.getMessageHistory());
         assertThat(renderingOutput)

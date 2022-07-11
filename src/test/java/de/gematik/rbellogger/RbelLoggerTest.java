@@ -25,6 +25,8 @@ import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import de.gematik.rbellogger.key.RbelKey;
 import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.renderer.RbelHtmlRenderer;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -49,7 +51,7 @@ public class RbelLoggerTest {
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("key == 'Version'", "Extra note");
         final RbelHttpMessageFacet convertedMessage = rbelLogger.getRbelConverter()
-                .parseMessage(curlMessage.getBytes(), null, null)
+                .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()))
                 .getFacetOrFail(RbelHttpMessageFacet.class);
 
         assertThat(convertedMessage.getHeader().getFirst("Version").get().getNotes())
@@ -76,7 +78,7 @@ public class RbelLoggerTest {
                     }
                 }));
         final RbelHttpMessageFacet convertedMessage = rbelLogger.getRbelConverter()
-                .parseMessage(curlMessage.getBytes(), null, null)
+                .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()))
                 .getFacetOrFail(RbelHttpMessageFacet.class);
 
         assertThat(convertedMessage.getHeader().getFirst("Host").get().getRawStringContent())
@@ -91,7 +93,7 @@ public class RbelLoggerTest {
         final RbelLogger rbelLogger = RbelLogger.build();
         rbelLogger.getValueShader().addJexlNoteCriterion("path == 'header'", "Header note");
         final RbelHttpMessageFacet convertedMessage = rbelLogger.getRbelConverter()
-                .parseMessage(curlMessage.getBytes(), null, null)
+                .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()))
                 .getFacetOrFail(RbelHttpMessageFacet.class);
 
         assertThat(convertedMessage.getHeader().getNotes())

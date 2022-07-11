@@ -42,9 +42,6 @@ public class RbelHttpHeaderFacet implements RbelFacet, Map<String, RbelElement> 
                 RbelHtmlRenderingToolkit renderingToolkit) {
                 return table()
                     .withClass("table").with(
-                        thead(
-                            tr(th("name"), th("value"))
-                        ),
                         tbody().with(
                             element.getFacetOrFail(RbelHttpHeaderFacet.class).getChildElements().stream()
                                 .map(entry ->

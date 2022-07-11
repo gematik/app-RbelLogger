@@ -19,6 +19,8 @@ package de.gematik.rbellogger;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelNoteFacet;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -38,7 +40,7 @@ public class RbelConverterBufferTest {
             .rbelBufferSizeInMb(0)
             .build());
         final RbelElement convertedMessage = rbelLogger.getRbelConverter()
-            .parseMessage(curlMessage.getBytes(), null, null);
+            .parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()));
 
         assertThat(convertedMessage.findRbelPathMembers("$..*"))
             .hasSizeGreaterThan(30);

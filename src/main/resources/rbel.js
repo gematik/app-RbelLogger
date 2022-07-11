@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function toggleCollapsableIcon(target) {
-  const classList = target.children[0].children[1].classList;
+  const classList = target.classList;
   if (classList.contains("fa-toggle-on")) {
     classList.remove("fa-toggle-on");
     classList.add("fa-toggle-off");

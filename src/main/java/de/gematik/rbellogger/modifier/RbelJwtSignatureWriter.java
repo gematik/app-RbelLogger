@@ -27,7 +27,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @AllArgsConstructor
 public class RbelJwtSignatureWriter implements RbelElementWriter {
 
-    public static final byte[] VERIFIED_USING_MARKER = "NewVerfiedUsing: ".getBytes(UTF_8);
+    public static final byte[] VERIFIED_USING_MARKER = "NewVerifiedUsing: ".getBytes(UTF_8);
 
     static {
         BrainpoolCurves.init();

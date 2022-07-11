@@ -25,10 +25,12 @@ import de.gematik.rbellogger.key.RbelKeyManager;
 import de.gematik.rbellogger.util.JsonUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.security.Provider;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
+import org.jose4j.jca.ProviderContext;
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.lang.JoseException;
 
@@ -59,6 +61,10 @@ public class RbelJweWriter implements RbelElementWriter {
 
     private String createUpdatedJwe(RbelElement oldTargetModifiedChild, String newContent, RbelJweFacet rbelJweFacet) {
         final JsonWebEncryption jwe = new JsonWebEncryption();
+
+        ProviderContext context = new ProviderContext();
+        context.getGeneralProviderContext().setGeneralProvider("BC");
+        jwe.setProviderContext(context);
 
         writeHeaderInJwe(oldTargetModifiedChild, newContent, rbelJweFacet, jwe);
 

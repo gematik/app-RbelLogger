@@ -19,6 +19,8 @@ package de.gematik.rbellogger.converter;
 import com.google.common.io.Files;
 import de.gematik.rbellogger.RbelLogger;
 import de.gematik.rbellogger.configuration.RbelConfiguration;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -34,7 +36,7 @@ class RbelX5cKeyReaderTest {
         RbelLogger logger = RbelLogger.build();
         logger.getRbelConverter()
             .parseMessage(Files.toByteArray(
-                Path.of("src/test/resources/sampleMessages/multipleKeyIds.curl").toFile()), null, null);
+                Path.of("src/test/resources/sampleMessages/multipleKeyIds.curl").toFile()), null, null, Optional.of(ZonedDateTime.now()));
 
         assertThat(logger.getRbelKeyManager().findKeyByName("puk_idp_sig"))
             .isPresent();

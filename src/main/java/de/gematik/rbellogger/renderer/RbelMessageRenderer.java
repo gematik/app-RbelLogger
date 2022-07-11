@@ -17,6 +17,7 @@
 package de.gematik.rbellogger.renderer;
 
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.*;
+import static de.gematik.rbellogger.renderer.RbelHtmlRenderer.collapsibleCard;
 import static de.gematik.rbellogger.renderer.RbelHtmlRenderingToolkit.*;
 import static j2html.TagCreator.*;
 
@@ -29,8 +30,8 @@ import j2html.tags.DomContent;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 
 public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
 
@@ -97,7 +98,7 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
 
     @Override
     public ContainerTag performRendering(final RbelElement element, final Optional<String> key,
-                                         final RbelHtmlRenderingToolkit renderingToolkit) {
+        final RbelHtmlRenderingToolkit renderingToolkit) {
         final Optional<RbelHttpMessageFacet> httpMessageFacet = element.getFacet(RbelHttpMessageFacet.class);
         final Optional<RbelHttpRequestFacet> httpRequestFacet = element.getFacet(RbelHttpRequestFacet.class);
         final Optional<RbelHttpResponseFacet> httpResponseFacet = element.getFacet(RbelHttpResponseFacet.class);
@@ -105,43 +106,42 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
         //////////////////////////////// TITLE (+path, response-code...) //////////////////////////////////
         List<DomContent> messageTitleElements = new ArrayList<>();
         messageTitleElements.add(a().withName(element.getUuid()));
-        messageTitleElements.add(i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3",
-            httpRequestFacet.map(f -> "has-text-link").orElse("has-text-success")));
+        messageTitleElements.add(
+            i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3",
+                httpRequestFacet.map(f -> "has-text-link").orElse("has-text-success")));
         messageTitleElements.add(showContentButtonAndDialog(element));
-        messageTitleElements.add(h1(renderingToolkit.constructMessageId(element),
+        messageTitleElements.add(h1(
+            renderingToolkit.constructMessageId(element),
             getRequestOrReplySymbol(isRequest),
-            httpRequestFacet.map(f -> text(" " + f.getMethod().getRawStringContent() + " ")).orElse(text("")),
-            isRequest.map(req -> req ? text("Request") : text("Response")).orElse(text("")))
-            .with(buildAddressInfo(element))
-            .with(buildTimingInfo(element))
-            .withClass(isRequest
-                .map(req -> req ? "title has-text-link" : "title has-text-success")
-                .orElse("title")));
+            httpRequestFacet.map(f -> span(" " + f.getMethod().getRawStringContent() + " ")).orElse(span("")),
+            isRequest.map(req -> req ? text("Request") : text("Response")).orElse(text("")),
+            httpResponseFacet.map(
+                response -> span(response.getResponseCode().getRawStringContent())
+                    .withClass("ml-3 is-family-monospace title")
+            ).orElse(span(""))
+        ).withClasses("title", "ml-3", isRequest
+            .map(req -> req ? "has-text-link" : "has-text-success")
+            .orElse("")));
+        messageTitleElements.add(
+            div().with(
+                buildAddressInfo(element), buildTimingInfo(element)
+            ).withClass(isRequest
+                .map(req -> req ? "has-text-link" : "has-text-success")
+                .orElse("")));
         if (httpMessageFacet.isPresent()) {
-            messageTitleElements.add(div().withClass("container is-widescreen").with(
+            messageTitleElements.add(span().withClass("container is-widescreen").with(
                 httpRequestFacet.map(f ->
-                        div(renderingToolkit.convert(httpRequestFacet.get().getPath(), Optional.empty()))
-                            .withClass("is-family-monospace title is-size-4")
-                            .with(addNotes(httpRequestFacet.get().getPath())))
-                    .orElseGet(() -> t1ms(httpResponseFacet.get().getResponseCode().getRawStringContent() + ""))
+                    renderingToolkit.convert(
+                            httpRequestFacet.get().getPath(), Optional.empty())
+                        .withClass("is-family-monospace title is-size-4 ml-3")
+                        .with(addNotes(httpRequestFacet.get().getPath()))).orElse(span())
             ));
         }
         messageTitleElements.addAll(addNotes(element));
         //////////////////////////////// HEADER & BODY //////////////////////////////////////
         List<DomContent> messageBodyElements = new ArrayList<>();
         if (httpMessageFacet.isPresent()) {
-            messageBodyElements.add(ancestorTitle().with(
-                div().withClass("tile is-parent is-vertical pr-3").with(
-                    childBoxNotifTitle(CLS_HEADER).with(
-                        httpRequestFacet.map(f -> t2("REQ Headers")).orElseGet(() -> t2("RES Headers")),
-                        renderingToolkit.convert(httpMessageFacet.get().getHeader(), Optional.empty())
-                    ),
-                    childBoxNotifTitle(CLS_BODY).with(
-                        httpRequestFacet.map(f -> t2("REQ Body")).orElseGet(() -> t2("RES Body")),
-                        renderingToolkit.convert(httpMessageFacet.get().getBody(), Optional.empty())
-                    )
-                )
-            ));
+            messageBodyElements = performRenderingForBody(renderingToolkit, httpMessageFacet, httpRequestFacet);
         } else {
             // non parseable message
             messageBodyElements.add(renderingToolkit.convert(element));
@@ -150,16 +150,51 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
             div()
                 .with(messageTitleElements)
                 .withClass("full-width"),
-            ancestorTitle().with(messageBodyElements));
+            ancestorTitle().with(messageBodyElements), "", "mx-3 my-6");
+    }
+
+    private List<DomContent> performRenderingForBody(RbelHtmlRenderingToolkit renderingToolkit,
+        Optional<RbelHttpMessageFacet> httpMessageFacet,
+        Optional<RbelHttpRequestFacet> httpRequestFacet) {
+
+        List<DomContent> headerTitleElements = new ArrayList<>();
+        headerTitleElements.add(
+            i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3 has-text-primary"));
+        headerTitleElements.add(div(httpRequestFacet.map(f -> t2("REQ Headers")).orElseGet(() -> t2("RES Headers")))
+            .withClass("has-text-primary"));
+
+        List<DomContent> bodyTitleElements = new ArrayList<>();
+        bodyTitleElements.add(
+            i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3 has-text-info"));
+        bodyTitleElements.add(div(httpRequestFacet.map(f -> t2("REQ Body")).orElseGet(() -> t2("RES Body")))
+            .withClass("has-text-info"));
+
+        List<DomContent> messageBodyElements = new ArrayList<>();
+        messageBodyElements.add(
+            ancestorTitle().with(
+                div().withClass("tile is-parent is-vertical pr-3").with(
+                    div().with(collapsibleCard(
+                        div().withClass("tile is-child pr-3")
+                            .with(headerTitleElements),
+                        renderingToolkit.convert(httpMessageFacet.get().getHeader(), Optional.empty()),
+                        CLS_HEADER + " notification", "my-3")),
+                    StringUtils.isBlank(httpMessageFacet.get().getBody().getRawStringContent()) ?
+                        div("Empty body").withClass(CLS_BODY + " notification tile is-child") :
+                        div().with(collapsibleCard(
+                            div().withClass("tile is-child pr-3").with(bodyTitleElements),
+                            renderingToolkit.convert(httpMessageFacet.get().getBody(), Optional.empty()),
+                            CLS_BODY + " notification", "my-3")))));
+
+        return messageBodyElements;
     }
 
     private DomContent getRequestOrReplySymbol(Optional<Boolean> isRequestOptional) {
         return isRequestOptional
             .map(isRequest -> {
                 if (isRequest) {
-                    return i().withClass("fas fa-share");
+                    return i().withClass("fas fa-share mr-3");
                 } else {
-                    return i().withClass("fas fa-reply");
+                    return i().withClass("fas fa-reply mr-3");
                 }
             })
             .orElse(span());

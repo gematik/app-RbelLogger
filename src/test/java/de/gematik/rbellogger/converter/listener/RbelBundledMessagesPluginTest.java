@@ -23,6 +23,8 @@ import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -171,6 +173,6 @@ public class RbelBundledMessagesPluginTest {
         throws IOException {
         return rbelLogger.getRbelConverter().parseMessage(
             readCurlFromFileWithCorrectedLineBreaks(filename).getBytes(),
-            sender, receiver);
+            sender, receiver, Optional.of(ZonedDateTime.now()));
     }
 }

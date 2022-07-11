@@ -23,6 +23,7 @@ import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.RbelHostnameFacet;
 import de.gematik.rbellogger.data.facet.RbelMessageTimingFacet;
+import java.time.ZonedDateTime;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -87,19 +88,33 @@ public class RbelFileWriterUtils {
                 .anyMatch(msg -> msg.getUuid().equals(msgUuid))) {
                 return Optional.empty();
             }
-            return Optional.of(rbelConverter.parseMessage(RbelElement.builder()
-                    .rawContent(Base64.getDecoder().decode(messageObject.getString(RAW_MESSAGE_CONTENT)))
-                    .uuid(msgUuid)
-                    .parentNode(null)
-                    .build(),
-                RbelHostname.fromString(messageObject.getString(SENDER_HOSTNAME)).orElse(null),
-                RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)).orElse(null)));
+            return Optional.of(rbelConverter.parseMessage(
+                    RbelElement.builder()
+                        .rawContent(Base64.getDecoder().decode(messageObject.getString(RAW_MESSAGE_CONTENT)))
+                        .uuid(msgUuid)
+                        .parentNode(null)
+                        .build(),
+                    RbelHostname.fromString(messageObject.getString(SENDER_HOSTNAME)).orElse(null),
+                    RbelHostname.fromString(messageObject.getString(RECEIVER_HOSTNAME)).orElse(null),
+                    messageObject.has(MESSAGE_TIME) ?
+                        parseTransmissionTimeFromString(messageObject.getString(MESSAGE_TIME)) :
+                        Optional.empty()
+                )
+            );
         } catch (Exception e) {
             throw new RbelFileReadingException("Error while converting from object '" + messageObject.toString() + "'", e);
         }
     }
 
+    private static Optional<ZonedDateTime> parseTransmissionTimeFromString(String time) {
+        if (StringUtils.isBlank(time)) {
+            return Optional.empty();
+        }
+        return Optional.of(ZonedDateTime.parse(time));
+    }
+
     private static class RbelFileReadingException extends RuntimeException {
+
         public RbelFileReadingException(String s, Exception e) {
             super(s, e);
         }

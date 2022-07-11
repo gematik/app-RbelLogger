@@ -21,6 +21,7 @@ import de.gematik.rbellogger.data.RbelHostname;
 import de.gematik.rbellogger.data.facet.RbelTcpIpMessageFacet;
 import de.gematik.rbellogger.data.facet.*;
 import de.gematik.rbellogger.key.RbelKeyManager;
+import java.time.ZonedDateTime;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -161,17 +162,17 @@ public class RbelConverter {
         converterPlugins.add(converter);
     }
 
-    public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname receiver) {
+    public RbelElement parseMessage(@NonNull byte[] content, RbelHostname sender, RbelHostname receiver, Optional<ZonedDateTime> transmissionTime) {
         final RbelElement rbelMessage = convertElement(content, null);
-        return doMessagePostConversion(rbelMessage, sender, receiver);
+        return doMessagePostConversion(rbelMessage, sender, receiver, transmissionTime);
     }
 
-    public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
+    public RbelElement parseMessage(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver, Optional<ZonedDateTime> transmissionTime) {
         final RbelElement rbelMessage = convertElement(rbelElement);
-        return doMessagePostConversion(rbelMessage, sender, receiver);
+        return doMessagePostConversion(rbelMessage, sender, receiver, transmissionTime);
     }
 
-    public RbelElement doMessagePostConversion(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver) {
+    public RbelElement doMessagePostConversion(@NonNull final RbelElement rbelElement, RbelHostname sender, RbelHostname receiver, Optional<ZonedDateTime> transmissionTime) {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class)
             .map(resp -> resp.getRequest() == null)
             .orElse(false)) {
@@ -188,6 +189,8 @@ public class RbelConverter {
             .sender(RbelHostnameFacet.buildRbelHostnameFacet(rbelElement, sender))
             .sequenceNumber(messageSequenceNumber++)
             .build());
+
+        transmissionTime.ifPresent(tt -> rbelElement.addFacet(RbelMessageTimingFacet.builder().transmissionTime(tt).build()));
 
         rbelElement.triggerPostConversionListener(this);
         synchronized (messageHistory) {
