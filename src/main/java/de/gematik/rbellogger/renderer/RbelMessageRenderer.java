@@ -110,33 +110,27 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
             i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3",
                 httpRequestFacet.map(f -> "has-text-link").orElse("has-text-success")));
         messageTitleElements.add(showContentButtonAndDialog(element));
-        messageTitleElements.add(h1(
-            renderingToolkit.constructMessageId(element),
-            getRequestOrReplySymbol(isRequest),
-            httpRequestFacet.map(f -> span(" " + f.getMethod().getRawStringContent() + " ")).orElse(span("")),
-            isRequest.map(req -> req ? text("Request") : text("Response")).orElse(text("")),
-            httpResponseFacet.map(
-                response -> span(response.getResponseCode().getRawStringContent())
-                    .withClass("ml-3 is-family-monospace title")
-            ).orElse(span(""))
-        ).withClasses("title", "ml-3", isRequest
-            .map(req -> req ? "has-text-link" : "has-text-success")
-            .orElse("")));
         messageTitleElements.add(
-            div().with(
-                buildAddressInfo(element), buildTimingInfo(element)
-            ).withClass(isRequest
+            h1(
+                renderingToolkit.constructMessageId(element),
+                getRequestOrReplySymbol(isRequest),
+                httpRequestFacet.map(f ->
+                    span().with(
+                        span(" " + f.getMethod().getRawStringContent() + " " + f.getPathAsString())
+                            .withClass("is-family-monospace title is-size-4 ml-3")
+                            .withTitle(f.getPathAsString())
+                            .with(addNotes(f.getPath())))
+                        .withClass("has-text-link text-ellipsis")).orElse(span()),
+                httpResponseFacet.map(response ->
+                    span(response.getResponseCode().getRawStringContent())
+                        .withClass("is-family-monospace title ml-3")
+                ).orElse(span("")),
+                span().with(
+                    buildTimingInfo(element), buildAddressInfo(element)
+                ).withStyle(isRequest.map(r -> (isRequest.get() ? "display: block;" : "")).orElse(""))
+            ).withClasses("title", "ml-3", "text-ellipsis", isRequest
                 .map(req -> req ? "has-text-link" : "has-text-success")
                 .orElse("")));
-        if (httpMessageFacet.isPresent()) {
-            messageTitleElements.add(span().withClass("container is-widescreen").with(
-                httpRequestFacet.map(f ->
-                    renderingToolkit.convert(
-                            httpRequestFacet.get().getPath(), Optional.empty())
-                        .withClass("is-family-monospace title is-size-4 ml-3")
-                        .with(addNotes(httpRequestFacet.get().getPath()))).orElse(span())
-            ));
-        }
         messageTitleElements.addAll(addNotes(element));
         //////////////////////////////// HEADER & BODY //////////////////////////////////////
         List<DomContent> messageBodyElements = new ArrayList<>();
@@ -150,7 +144,7 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
             div()
                 .with(messageTitleElements)
                 .withClass("full-width"),
-            ancestorTitle().with(messageBodyElements), "", "mx-3 my-6");
+            ancestorTitle().with(messageBodyElements), "msg-card", "mx-3 " + isRequest.map(r -> r ? "mt-5" : "mt-2").orElse("mt-3"));
     }
 
     private List<DomContent> performRenderingForBody(RbelHtmlRenderingToolkit renderingToolkit,
@@ -192,9 +186,9 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
         return isRequestOptional
             .map(isRequest -> {
                 if (isRequest) {
-                    return i().withClass("fas fa-share mr-3");
+                    return i().withClass("fas fa-share mr-3").withTitle("Request");
                 } else {
-                    return i().withClass("fas fa-reply mr-3");
+                    return i().withClass("fas fa-reply mr-3").withTitle("Response");
                 }
             })
             .orElse(span());

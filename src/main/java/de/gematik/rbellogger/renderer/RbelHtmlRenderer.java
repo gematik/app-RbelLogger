@@ -95,7 +95,7 @@ public class RbelHtmlRenderer {
     public static DomContent showContentButtonAndDialog(final RbelElement el) {
         final String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);//NOSONAR
         return span().with(
-            a().withClass("button modal-button is-pulled-right mx-3")
+            a().withClass("button modal-button modal-button-details is-pulled-right mx-3")
                 .attr("data-target", id)
                 .with(span().withClass("icon is-small").with(
                     i().withClass("fas fa-align-left")

@@ -1,5 +1,15 @@
 # Changelog RBeL Logger
 
+# Release 0.27.5
+
+## Features
+
+* TGR-594: implemented optimized spacing view
+
+## Bugfixes
+
+* fixed bug about raw content modal not working, checked all three modes: workflowui, proxy webui, rbel log html file
+
 # Release 0.27.4
 
 ## Features
@@ -8,7 +18,7 @@
 
 # Release 0.27.3
 
-## Bugfix
+## Bugfixes
 
 * ANFTIG-8: Logging improvement
 

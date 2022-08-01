@@ -5,7 +5,7 @@
 
     <groupId>de.gematik</groupId>
     <artifactId>rbellogger</artifactId>
-    <version>0.27.4</version>
+    <version>0.27.5</version>
     <packaging>jar</packaging>
     <description>rbellogger</description>
     <url>https://github.com/gematik/app-RbelLogger</url>
@@ -134,7 +134,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>30.1.1-jre</version>
+            <version>31.0.1-jre</version>
         </dependency>
         <dependency>
             <artifactId>jose4j</artifactId>

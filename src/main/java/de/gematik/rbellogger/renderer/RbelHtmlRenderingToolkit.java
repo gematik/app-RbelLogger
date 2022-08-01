@@ -127,7 +127,7 @@ public class RbelHtmlRenderingToolkit {
             return span();
         }
         return span(getElementSequenceNumber(message))
-            .withClass("msg-sequence tag is-info is-light mr-3 is-size-3");
+            .withClass("msg-sequence tag is-info is-light mr-3 is-size-2");
     }
 
     public ContainerTag convert(final RbelElement element) {

@@ -84,9 +84,9 @@ function toggleCollapsableIcon(target) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  let cardToggles = document.getElementsByClassName('toggle-icon');
-  for (let i = 0; i < cardToggles.length; i++) {
-    cardToggles[i].addEventListener('click', e => {
+  let msgCards = document.getElementsByClassName('msg-card');
+  for (let i = 0; i < msgCards.length; i++) {
+    msgCards[i].children[0].children[0].children[0].children[1].addEventListener('click', e => {
       e.currentTarget
           .parentElement.parentElement.parentElement.parentElement
           .childNodes[1].classList.toggle('is-hidden');
@@ -97,12 +97,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   document.getElementById("collapse-all").addEventListener('click', e => {
-    for (let i = 0; i < cardToggles.length; i++) {
-      const classList = cardToggles[i].parentElement.parentElement.childNodes[1].classList;
+    for (let i = 0; i < msgCards.length; i++) {
+      const classList = msgCards[i].childNodes[1].classList;
       if (!classList.contains('is-hidden')) {
         classList.add('is-hidden');
       }
-      const classList2 = cardToggles[i].children[0].children[1].classList;
+      const classList2 = msgCards[i].children[0].children[0].children[0].children[1].classList;
       if (classList2.contains("fa-toggle-on")) {
         classList2.remove("fa-toggle-on");
         classList2.add("fa-toggle-off");
@@ -113,12 +113,12 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById("expand-all").addEventListener('click', e => {
-    for (let i = 0; i < cardToggles.length; i++) {
-      const classList = cardToggles[i].parentElement.parentElement.childNodes[1].classList;
+    for (let i = 0; i < msgCards.length; i++) {
+      const classList = msgCards[i].childNodes[1].classList;
       if (classList.contains('is-hidden')) {
         classList.remove('is-hidden');
       }
-      const classList2 = cardToggles[i].children[0].children[1].classList;
+      const classList2 = msgCards[i].children[0].children[0].children[0].children[1].classList;
       if (classList2.contains("fa-toggle-off")) {
         classList2.remove("fa-toggle-off");
         classList2.add("fa-toggle-on");
