@@ -272,7 +272,10 @@ public class RbelPathTest {
     @ParameterizedTest
     @CsvSource({
         "$..[?(@.alg=='BP256R1')],$.body.RegistryResponse.RegistryErrorList.RegistryError.jwtTag.text.header",
-        "$..[?(@.hier=='ist kein text')].text,$.body.RegistryResponse.RegistryErrorList.RegistryError.textTest.text"
+        "$..[?(@.hier=='ist kein text')].text,$.body.RegistryResponse.RegistryErrorList.RegistryError.textTest.text",
+        "$..RegistryError.[?(@.hier=='ist kein text')].text,$.body.RegistryResponse.RegistryErrorList.RegistryError.textTest.text",
+        "$..textTest[?(@.hier=='ist kein text')].text,$.body.RegistryResponse.RegistryErrorList.RegistryError.textTest.text",
+        "$..RegistryError[1].textTest[?(@.hier=='ist kein text')].text,$.body.RegistryResponse.RegistryErrorList.RegistryError.textTest.text"
     })
     public void rbelPathWithAddSign_ShouldFindCorrectNode(String path1, String path2) {
         final List<RbelElement> path1Results = xmlMessage.findRbelPathMembers(path1);

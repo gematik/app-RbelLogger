@@ -1,5 +1,10 @@
 # Changelog RBeL Logger
 
+# Release 0.28.0
+
+## Features
+* RBEL-64: It is now possible to write JEXL-path expressions directly behind a key, the expression refers to the key addressed knot and not to its children
+
 # Release 0.27.5
 
 ## Features

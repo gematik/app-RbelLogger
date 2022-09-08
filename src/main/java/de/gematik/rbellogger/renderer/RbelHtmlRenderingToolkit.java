@@ -254,6 +254,8 @@ public class RbelHtmlRenderingToolkit {
                     meta().attr("charset", "utf-8"),
                     meta().attr("name", "viewport").attr("content", "width=device-width, initial-scale=1"),
                     title().withText("Rbel Flow"),
+                    script().withSrc("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"),
+                    script().withSrc("https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"),
                     link2CSS("https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css"),
                     link2CSS("https://jenil.github.io/bulmaswatch/simplex/bulmaswatch.min.css"),
                     link2CSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"),

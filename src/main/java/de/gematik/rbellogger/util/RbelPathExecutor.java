@@ -20,7 +20,6 @@ import static de.gematik.rbellogger.RbelOptions.ACTIVATE_RBEL_PATH_DEBUGGING;
 import static de.gematik.rbellogger.RbelOptions.RBEL_PATH_TREE_VIEW_MINIMUM_DEPTH;
 import de.gematik.rbellogger.converter.RbelJexlExecutor;
 import de.gematik.rbellogger.data.RbelElement;
-import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.RbelJsonFacet;
 import de.gematik.rbellogger.data.facet.RbelNestedFacet;
 import de.gematik.rbellogger.exceptions.RbelPathException;
@@ -28,6 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.math.NumberUtils;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -104,19 +104,25 @@ public class RbelPathExecutor {
     }
 
     private List<? extends RbelElement> resolveRbelPathElement(final String key, final RbelElement element) {
-        if (key.startsWith("[") && key.endsWith("]")) {
-            return executeFunctionalExpression(key.substring(1, key.length() - 1).trim(), element);
-        } else if (key.contains("[") && key.endsWith("]")) {
-            final String[] parts = key.split("\\[");
-            final String subKey = parts[0];
-            List<? extends RbelElement> keySelectionResult = executeNonFunctionalExpression(subKey, element);
-            final int selectionIndex = Integer.parseInt(parts[1].substring(0, parts[1].length() - 1));
-            if (keySelectionResult.size() <= selectionIndex) {
-                return Collections.emptyList();
-            }
-            return List.of(keySelectionResult.get(selectionIndex));
+        final String[] parts = key.split("\\[", 2);
+        final String selectorPart = parts[0];
+        List<? extends RbelElement> keySelectionResult = executeNonFunctionalExpression(selectorPart, element);
+        if (parts.length == 1) {
+            return keySelectionResult;
         } else {
-            return executeNonFunctionalExpression(key, element);
+            final String functionalPart = parts[1].substring(0, parts[1].length() - 1);
+            if (NumberUtils.isParsable(functionalPart)) {
+                final int selectionIndex = Integer.parseInt(parts[1].substring(0, parts[1].length() - 1));
+                if (keySelectionResult.size() <= selectionIndex) {
+                    return Collections.emptyList();
+                }
+                return List.of(keySelectionResult.get(selectionIndex));
+            } else {
+                return keySelectionResult.stream()
+                    .map(candidate -> executeFunctionalExpression(functionalPart, candidate.getParentNode()))
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
+            }
         }
     }
 
