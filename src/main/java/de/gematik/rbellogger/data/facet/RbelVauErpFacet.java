@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import j2html.tags.DomContent;
 import lombok.Builder;
 import lombok.Data;
 
@@ -62,9 +63,11 @@ public class RbelVauErpFacet implements RbelFacet {
                                 t2("Header"),
                                 Optional.ofNullable(element.getFacetOrFail(RbelVauErpFacet.class).getPVersionNumber())
                                     .map(v -> p(b("Version Number: ")).withText(v.getRawStringContent()))
+                                    .map(DomContent.class::cast)
                                     .orElse(span()),
                                 Optional.ofNullable(element.getFacetOrFail(RbelVauErpFacet.class).getRequestId())
                                     .map(v -> p(b("Request ID: ")).withText(v.getRawStringContent()))
+                                    .map(DomContent.class::cast)
                                     .orElse(span())
                             ),
                             childBoxNotifTitle(CLS_BODY).with(t2("Body"))

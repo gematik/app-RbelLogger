@@ -187,6 +187,22 @@ public class RbelHtmlRendererTest {
             .contains("sender:13421");
     }
 
+    @Test
+    public void shouldRenderHtmlMessagesWithoutError() throws IOException {
+        byte[] htmlBytes = FileUtils.readFileToByteArray(new File("src/test/resources/sample.html"));
+        final RbelElement convertedMessage = RbelLogger.build().getRbelConverter()
+            .parseMessage(htmlBytes,
+                new RbelHostname("sender", 13421),
+                new RbelHostname("receiver", 14512),
+                Optional.of(ZonedDateTime.now()));
+
+        final String convertedHtml = RENDERER.render(List.of(convertedMessage));
+        FileUtils.writeStringToFile(new File("target/directHtml.html"), convertedHtml);
+
+        assertThat(convertedHtml)
+            .contains("\n       &lt;li&gt;LoginCreateToken");
+    }
+
     private List<RbelElement> wrapHttpMessage(RbelElement convertedMessage, ZonedDateTime... transmissionTime) {
         convertedMessage.addFacet(RbelTcpIpMessageFacet.builder()
             .receiver(RbelElement.wrap(null, convertedMessage, new RbelHostname("recipient", 1)))

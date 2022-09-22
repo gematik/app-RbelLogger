@@ -76,8 +76,8 @@ public class RbelConverterTest {
         RbelElement pair2A = new RbelElement("foo".getBytes(), null);
         RbelElement pair2B = new RbelElement("foo".getBytes(), null);
 
-        pair1A.addFacet(new RbelHttpRequestFacet(null, null));
-        pair2A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair1A.addFacet(new RbelHttpRequestFacet(null, null, null));
+        pair2A.addFacet(new RbelHttpRequestFacet(null, null, null));
         pair1B.addFacet(new RbelHttpResponseFacet(null, null, pair1A));
         pair2B.addFacet(new RbelHttpResponseFacet(null, null, pair2A));
 
@@ -98,8 +98,8 @@ public class RbelConverterTest {
         RbelElement pair2A = new RbelElement("foo".getBytes(), null);
         RbelElement pair2B = new RbelElement("foo".getBytes(), null);
 
-        pair1A.addFacet(new RbelHttpRequestFacet(null, null));
-        pair2A.addFacet(new RbelHttpRequestFacet(null, null));
+        pair1A.addFacet(new RbelHttpRequestFacet(null, null, null));
+        pair2A.addFacet(new RbelHttpRequestFacet(null, null, null));
         pair1B.addFacet(new RbelHttpResponseFacet(null, null, null));
         pair2B.addFacet(new RbelHttpResponseFacet(null, null, null));
 

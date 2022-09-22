@@ -35,6 +35,7 @@ import org.bouncycastle.util.encoders.Hex;
 import org.dom4j.DocumentHelper;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
+import org.jsoup.Jsoup;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -82,8 +83,12 @@ public class RbelHtmlRenderingToolkit {
             writer.write(document);
             return sw.getBuffer().toString();
         } catch (final Exception e) {
-            log.warn("Exception while pretty-printing {}", content);
-            return content;
+            try {
+                return Jsoup.parse(content).html();
+            } catch (Exception e2) {
+                log.debug("Exception while pretty-printing {}", content);
+                return content;
+            }
         }
     }
 

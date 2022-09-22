@@ -105,7 +105,7 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
         final Optional<Boolean> isRequest = determineIsRequest(element);
         //////////////////////////////// TITLE (+path, response-code...) //////////////////////////////////
         List<DomContent> messageTitleElements = new ArrayList<>();
-        messageTitleElements.add(a().withName(element.getUuid()));
+        messageTitleElements.add(a().attr("name", element.getUuid()));
         messageTitleElements.add(
             i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3",
                 httpRequestFacet.map(f -> "has-text-link").orElse("has-text-success")));
@@ -130,7 +130,8 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
                 ).withStyle(isRequest.map(r -> (isRequest.get() ? "display: block;" : "")).orElse(""))
             ).withClasses("title", "ml-3", "text-ellipsis", isRequest
                 .map(req -> req ? "has-text-link" : "has-text-success")
-                .orElse("")));
+                .orElse(""))
+                .withStyle("overflow: hidden;"));
         messageTitleElements.addAll(addNotes(element));
         //////////////////////////////// HEADER & BODY //////////////////////////////////////
         List<DomContent> messageBodyElements = new ArrayList<>();
@@ -191,6 +192,7 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
                     return i().withClass("fas fa-reply mr-3").withTitle("Response");
                 }
             })
+            .map(DomContent.class::cast)
             .orElse(span());
     }
 }

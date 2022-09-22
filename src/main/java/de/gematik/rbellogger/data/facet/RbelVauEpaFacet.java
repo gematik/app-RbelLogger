@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import j2html.tags.DomContent;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -69,9 +70,11 @@ public class RbelVauEpaFacet implements RbelFacet {
                                         .orElse(span()),
                                     Optional.ofNullable(element.getFacetOrFail(RbelVauEpaFacet.class).getPVersionNumber())
                                         .map(v -> p(b("Version Number: ")).withText(v.seekValue().get().toString()))
+                                        .map(DomContent.class::cast)
                                         .orElse(span()),
                                     Optional.ofNullable(element.getFacetOrFail(RbelVauEpaFacet.class).getSequenceNumber())
                                         .map(v -> p(b("Sequence Number: ")).withText(v.seekValue().get().toString()))
+                                        .map(DomContent.class::cast)
                                         .orElse(span())
                                 ),
                                 childBoxNotifTitle(CLS_BODY).with(t2("Body"))

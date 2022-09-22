@@ -32,11 +32,13 @@ public class RbelHttpRequestFacet implements RbelFacet {
 
     private final RbelElement method;
     private final RbelElement path;
+    private final RbelElement response;
 
     @Builder(toBuilder = true)
-    public RbelHttpRequestFacet(RbelElement method, RbelElement path) {
+    public RbelHttpRequestFacet(RbelElement method, RbelElement path, RbelElement response) {
         this.method = method;
         this.path = path;
+        this.response = response;
     }
 
     @Override

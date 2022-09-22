@@ -83,7 +83,7 @@ public class RbelElement {
     }
 
     public <T> Optional<T> getFacet(@NonNull Class<T> clazz) {
-        return facets.stream()
+        return Collections.unmodifiableList(facets).stream()
             .filter(facet -> clazz.isAssignableFrom(facet.getClass()))
             .map(clazz::cast)
             .findFirst();
@@ -94,12 +94,14 @@ public class RbelElement {
     }
 
     public RbelElement addFacet(RbelFacet facet) {
-        facets.add(facet);
+        synchronized (facets) {
+            facets.add(facet);
+        }
         return this;
     }
 
     public List<RbelElement> getChildNodes() {
-        return facets.stream()
+        return Collections.unmodifiableList(facets).stream()
             .map(RbelFacet::getChildElements)
             .map(RbelMultiMap::getValues)
             .flatMap(Collection::stream)
@@ -109,7 +111,7 @@ public class RbelElement {
     }
 
     public RbelMultiMap getChildNodesWithKey() {
-        return facets.stream()
+        return Collections.unmodifiableList(facets).stream()
             .map(RbelFacet::getChildElements)
             .map(RbelMultiMap::getValues)
             .flatMap(Collection::stream)
@@ -259,10 +261,12 @@ public class RbelElement {
     }
 
     public void addOrReplaceFacet(RbelFacet facet) {
-        if (hasFacet(facet.getClass())) {
-            facets.remove(getFacet(facet.getClass()).get());
+        synchronized (facets) {
+            if (hasFacet(facet.getClass())) {
+                facets.remove(getFacet(facet.getClass()).get());
+            }
+            facets.add(facet);
         }
-        facets.add(facet);
     }
 
     public Optional<RbelElement> findElement(String rbelPath) {
@@ -302,7 +306,7 @@ public class RbelElement {
     }
 
     public List<RbelNoteFacet> getNotes() {
-        return facets.stream()
+        return Collections.unmodifiableList(facets).stream()
             .flatMap(facet -> {
                 if (facet instanceof RbelNestedFacet) {
                     return ((RbelNestedFacet) facet).getNestedElement().getFacets().stream();

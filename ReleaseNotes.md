@@ -1,5 +1,13 @@
 # Changelog RBeL Logger
 
+# Release 0.28.1
+
+## Bugfixes
+
+* TGR-662: Hardening of HTML-Rendering
+* TGR-531: Fixed Rbel-Element race condition
+* TGR-662: Extension of JEXL-context: Now request and request.statusCode are included
+
 # Release 0.28.0
 
 ## Features

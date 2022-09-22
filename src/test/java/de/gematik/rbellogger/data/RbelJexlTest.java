@@ -41,12 +41,13 @@ public class RbelJexlTest {
     public void setUp() throws IOException {
         RbelOptions.activateJexlDebugging();
 
-        response = RbelLogger.build().getRbelConverter()
-            .parseMessage(readCurlFromFileWithCorrectedLineBreaks
-                ("src/test/resources/sampleMessages/rbelPath.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
-        request = RbelLogger.build().getRbelConverter()
+        final RbelLogger rbelLogger = RbelLogger.build();
+        request = rbelLogger.getRbelConverter()
             .parseMessage(readCurlFromFileWithCorrectedLineBreaks
                 ("src/test/resources/sampleMessages/getRequest.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
+        response = rbelLogger.getRbelConverter()
+            .parseMessage(readCurlFromFileWithCorrectedLineBreaks
+                ("src/test/resources/sampleMessages/rbelPath.curl").getBytes(), null, null, Optional.of(ZonedDateTime.now()));
         jexlExecutor = new RbelJexlExecutor();
     }
 
@@ -60,6 +61,25 @@ public class RbelJexlTest {
             .isTrue();
         assertThat(jexlExecutor.matchesAsJexlExpression(
             request, "request == message", Optional.empty()))
+            .isTrue();
+    }
+
+    @Test
+    public void checkResponseStatusCode() {
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            request, "response.statusCode == 200", Optional.empty()))
+            .isTrue();
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            request, "response.statusCode == 400", Optional.empty()))
+            .isFalse();
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            response, "response.statusCode == 200", Optional.empty()))
+            .isTrue();
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            request, "request.statusCode == null", Optional.empty()))
+            .isTrue();
+        assertThat(jexlExecutor.matchesAsJexlExpression(
+            response, "request.statusCode == null", Optional.empty()))
             .isTrue();
     }
 

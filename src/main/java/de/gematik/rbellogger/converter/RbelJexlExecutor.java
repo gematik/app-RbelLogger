@@ -108,17 +108,21 @@ public class RbelJexlExecutor {
         }
 
         final Optional<RbelElement> requestMessage = tryToFindRequestMessage(element);
+        final Optional<JexlMessage> responseMessage = tryToFindResponseMessage(element)
+            .map(this::convertToJexlMessage);
         if (requestMessage
             .filter(msg -> message.isPresent())
             .map(msg -> message.get() == msg)
             .orElse(false)) {
             mapContext.put("request", mapContext.get("message"));
+            mapContext.put("response", responseMessage.orElse(null));
             mapContext.put("isRequest", true);
             mapContext.put("isResponse", false);
         } else {
             mapContext.put("request", requestMessage
                 .map(this::convertToJexlMessage)
                 .orElse(null));
+            mapContext.put("response", responseMessage.orElse(null));
             mapContext.put("isRequest", false);
             mapContext.put("isResponse", true);
         }
@@ -180,6 +184,24 @@ public class RbelJexlExecutor {
         }
     }
 
+    private Optional<RbelElement> tryToFindResponseMessage(Object element) {
+        if (!(element instanceof RbelElement)) {
+            return Optional.empty();
+        }
+        final Optional<RbelElement> message = findMessage(element);
+        if (message.isEmpty()) {
+            return Optional.empty();
+        }
+        if (message.get().getFacet(RbelHttpResponseFacet.class).isPresent()) {
+            return message;
+        } else {
+            return message
+                .flatMap(msg -> msg.getFacet(RbelHttpRequestFacet.class))
+                .map(RbelHttpRequestFacet::getResponse)
+                .filter(Objects::nonNull);
+        }
+    }
+
     private JexlMessage convertToJexlMessage(RbelElement element) {
         final Optional<RbelElement> bodyOptional = element.getFirst("body");
         return JexlMessage.builder()
@@ -193,6 +215,10 @@ public class RbelJexlExecutor {
                 .orElse(null))
             .bodyAsString(bodyOptional.map(RbelElement::getRawStringContent).orElse(null))
             .body(bodyOptional.orElse(null))
+            .statusCode(element.getFacet(RbelHttpResponseFacet.class)
+                .map(RbelHttpResponseFacet::getResponseCode)
+                .map(RbelElement::getRawStringContent)
+                .orElse(null))
             .headers(element.getFacet(RbelHttpMessageFacet.class)
                 .map(RbelHttpMessageFacet::getHeader)
                 .flatMap(el -> el.getFacet(RbelHttpHeaderFacet.class))
@@ -248,8 +274,10 @@ public class RbelJexlExecutor {
 
         public final String method;
         public final String url;
+        public final String statusCode;
         public final boolean request;
         public final boolean response;
+        public final int responseCode;
         public final Map<String, List<String>> headers;
         public final String bodyAsString;
         public final RbelElement body;

@@ -114,16 +114,16 @@ public class RbelConverter {
         return convertedInput;
     }
 
-    private RbelElement findLastRequest() {
+    private Optional<RbelElement> findLastRequest() {
         final List<RbelElement> messageHistory = getMessageHistory();
         for (int i = messageHistory.size() - 1; i >= 0; i--) {
             if (this.messageHistory.get(i)
                 .getFacet(RbelHttpRequestFacet.class)
                 .isPresent()) {
-                return this.messageHistory.get(i);
+                return Optional.ofNullable(this.messageHistory.get(i));
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     public RbelElement filterInputThroughPreConversionMappers(final RbelElement input) {
@@ -176,12 +176,18 @@ public class RbelConverter {
         if (rbelElement.getFacet(RbelHttpResponseFacet.class)
             .map(resp -> resp.getRequest() == null)
             .orElse(false)) {
+            final Optional<RbelElement> request = findLastRequest();
             rbelElement.addOrReplaceFacet(
                 rbelElement.getFacet(RbelHttpResponseFacet.class)
                     .map(RbelHttpResponseFacet::toBuilder)
                     .orElse(RbelHttpResponseFacet.builder())
-                    .request(findLastRequest())
+                    .request(request.orElse(null))
                     .build());
+            request
+                .flatMap(req -> req.getFacet(RbelHttpRequestFacet.class))
+                .ifPresent(reqFacet -> request.get().addOrReplaceFacet(reqFacet.toBuilder()
+                    .response(rbelElement)
+                    .build()));
         }
 
         rbelElement.addFacet(RbelTcpIpMessageFacet.builder()
