@@ -22,6 +22,7 @@ import de.gematik.rbellogger.data.RbelMultiMap;
 import de.gematik.rbellogger.data.facet.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
@@ -63,6 +64,20 @@ public class RbelJexlExecutor {
         } catch (Exception e) {
             if (ACTIVATE_JEXL_DEBUGGING) {
                 log.info("Error during Jexl-Evaluation.", e);
+            }
+            return false;
+        }
+    }
+
+    public boolean matchAsTextExpression(Object element, String textExpression) {
+        try {
+            final boolean textMatchResult = ((RbelElement) element).getRawStringContent().contains(textExpression);
+            final boolean regexMatchResult = Pattern.compile(textExpression).matcher(((RbelElement) element).getRawStringContent()).find();
+
+            return textMatchResult || regexMatchResult;
+        } catch (Exception e) {
+            if (ACTIVATE_JEXL_DEBUGGING) {
+                log.info("Error during Text search.", e);
             }
             return false;
         }
@@ -227,7 +242,7 @@ public class RbelJexlExecutor {
                 .map(RbelHttpHeaderFacet::entries)
                 .stream()
                 .flatMap(List::stream)
-                .collect(Collectors.groupingBy(e -> e.getKey(),
+                .collect(Collectors.groupingBy(Map.Entry::getKey,
                     Collectors.mapping(e -> e.getValue().getRawStringContent(), Collectors.toList()))))
             .build();
     }
@@ -277,7 +292,6 @@ public class RbelJexlExecutor {
         public final String statusCode;
         public final boolean request;
         public final boolean response;
-        public final int responseCode;
         public final Map<String, List<String>> headers;
         public final String bodyAsString;
         public final RbelElement body;

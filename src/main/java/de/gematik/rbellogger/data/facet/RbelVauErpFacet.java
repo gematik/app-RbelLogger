@@ -55,7 +55,7 @@ public class RbelVauErpFacet implements RbelFacet {
             public ContainerTag performRendering(final RbelElement element, final Optional<String> key,
                                                  final RbelHtmlRenderingToolkit renderingToolkit) {
                 return div(t1ms("VAU Encrypted Message (E-Rezept)")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, renderingToolkit)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
                         vertParentTitle().with(

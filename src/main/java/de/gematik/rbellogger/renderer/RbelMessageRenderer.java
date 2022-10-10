@@ -109,7 +109,7 @@ public class RbelMessageRenderer implements RbelHtmlFacetRenderer {
         messageTitleElements.add(
             i().withClasses("fas fa-toggle-on toggle-icon is-pulled-right mr-3 is-size-3",
                 httpRequestFacet.map(f -> "has-text-link").orElse("has-text-success")));
-        messageTitleElements.add(showContentButtonAndDialog(element));
+        messageTitleElements.add(showContentButtonAndDialog(element, renderingToolkit));
         messageTitleElements.add(
             h1(
                 renderingToolkit.constructMessageId(element),

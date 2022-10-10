@@ -1,6 +1,15 @@
 # Changelog RBeL Logger
 
+# Release 0.28.2
+
+## Features 
+* TGR-596: Text based Regex/Search as filter 
+
 # Release 0.28.1
+
+## Features
+
+* TGR-673: Oversized messages are no longer parsed or rendered (performance boost)
 
 ## Bugfixes
 

@@ -38,10 +38,10 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-public class JwtModifierTest extends AbstractModifierTest {
+class JwtModifierTest extends AbstractModifierTest {
 
     @Test
-    public void modifyJwtHeader_shouldContainModifiedContent() throws IOException {
+    void modifyJwtHeader_shouldContainModifiedContent() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -60,7 +60,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwtBody_shouldContainModifiedContent() throws IOException {
+    void modifyJwtBody_shouldContainModifiedContent() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -83,7 +83,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwtBody_jwtSignatureVerified() throws IOException {
+    void modifyJwtBody_jwtSignatureVerified() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -101,7 +101,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwtHeader_jwtSignatureVerified() throws IOException {
+    void modifyJwtHeader_jwtSignatureVerified() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -119,7 +119,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwtHeader_cantEditAlg() throws IOException {
+    void modifyJwtHeader_cantEditAlg() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
             .targetElement("$.body.header.alg")
@@ -133,7 +133,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void jwtSignature_changeVerifiedUsingToPuk() throws IOException {
+    void jwtSignature_changeVerifiedUsingToPuk() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -154,7 +154,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void jwtSignature_changeVerifiedUsingToPrk() throws IOException {
+    void jwtSignature_changeVerifiedUsingToPrk() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -169,7 +169,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void jwtSignature_changeVerifiedUsingToUnkownKey() throws IOException {
+    void jwtSignature_changeVerifiedUsingToUnkownKey() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -182,7 +182,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void jwtSignature_changeSignatureItself() throws IOException {
+    void jwtSignature_changeSignatureItself() throws IOException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
 
         rbelLogger.getRbelModifier().addModification(RbelModificationDescription.builder()
@@ -197,7 +197,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwt_noMatchingPrivateKeyFound() throws IOException, IllegalAccessException {
+    void modifyJwt_noMatchingPrivateKeyFound() throws IOException, IllegalAccessException {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
         var rbelLoggerWithoutKeys = RbelLogger.build();
 
@@ -212,7 +212,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwt_noPublicAndPrivateKeysFound() throws Exception {
+    void modifyJwt_noPublicAndPrivateKeysFound() throws Exception {
         final RbelElement message = readAndConvertCurlMessage("src/test/resources/sampleMessages/jwtMessage.curl");
         var rbelLoggerWithoutKeys = RbelLogger.build();
 
@@ -227,7 +227,7 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwt_falseSecret() throws IOException {
+    void modifyJwt_falseSecret() throws IOException {
         final RbelElement message = readAndConvertCurlMessage(
             "src/test/resources/sampleMessages/jwtMessageWithFalseSecret.curl");
 
@@ -242,10 +242,10 @@ public class JwtModifierTest extends AbstractModifierTest {
     }
 
     @Test
-    public void modifyJwt_correctSecret() throws IOException {
+    void modifyJwt_correctSecret() throws IOException {
         RbelKey secretKey = RbelKey.builder()
             .keyName("secretKey")
-            .key(new SecretKeySpec(("n2r5u8x/A?D(G-KaPdSgVkYp3s6v9y$B").getBytes("UTF-8"), AlgorithmIdentifiers.HMAC_SHA256))
+            .key(new SecretKeySpec(("n2r5u8x/A?D(G-KaPdSgVkYp3s6v9y$B").getBytes(StandardCharsets.UTF_8), AlgorithmIdentifiers.HMAC_SHA256))
             .build();
         rbelLogger.getRbelKeyManager().addKey(secretKey);
 

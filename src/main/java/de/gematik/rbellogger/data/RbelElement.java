@@ -48,6 +48,8 @@ public class RbelElement {
     @Getter(AccessLevel.PRIVATE)
     private Optional<Charset> charset;
 
+    private final long size;
+
     public RbelElement(byte[] rawContent, RbelElement parentNode) {
         this(null, rawContent, parentNode, Optional.empty());
     }
@@ -69,6 +71,11 @@ public class RbelElement {
             this.charset = Optional.empty();
         } else {
             this.charset = charset;
+        }
+        if (rawContent != null) {
+            this.size = rawContent.length;
+        } else {
+            this.size = 0L;
         }
     }
 

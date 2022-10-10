@@ -41,6 +41,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class RbelHttpResponseConverter implements RbelConverterPlugin {
 
     @Override
+    public boolean ignoreOversize() {
+        return true;
+    }
+
+    @Override
     public void consumeElement(final RbelElement targetElement, final RbelConverter converter) {
         final String content = targetElement.getRawStringContent();
         if (!content.startsWith("HTTP")) {

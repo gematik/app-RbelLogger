@@ -30,6 +30,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.bouncycastle.util.encoders.Hex;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,11 +41,15 @@ import static j2html.TagCreator.*;
 public class RbelHtmlRenderer {
 
     private static final List<RbelHtmlFacetRenderer> htmlRenderer = new ArrayList<>();
+    public static final String OVERSIZE_REPLACEMENT_TEXT_PRE = "<...redacted due to size of ";
+    public static final String OVERSIZE_REPLACEMENT_TEXT_POST = " Mb...>";
     private final RbelValueShader rbelValueShader;
     @Setter
     private boolean renderAsn1Objects = false;
     @Setter
     private boolean renderNestedObjectsWithoutFacetRenderer = false;
+    @Setter
+    private int maximumEntitySizeInBytes = 4 * 1024 * 1024;
     @Setter
     private String title = "RBelLogger";
     @Setter
@@ -92,7 +97,8 @@ public class RbelHtmlRenderer {
             );
     }
 
-    public static DomContent showContentButtonAndDialog(final RbelElement el) {
+    public static DomContent showContentButtonAndDialog(final RbelElement el,
+                                                        final RbelHtmlRenderingToolkit renderingToolkit) {
         final String id = "dialog" + RandomStringUtils.randomAlphanumeric(20);//NOSONAR
         return span().with(
             a().withClass("button modal-button modal-button-details is-pulled-right mx-3")
@@ -111,10 +117,7 @@ public class RbelHtmlRenderer {
                                 button().withClass("delete").attr("aria-label", "delete")
                             ),
                             div().withClass("message-body")
-                                .with(pre(
-                                    BinaryClassifier.isBinary(el.getRawContent()) ?
-                                        Hex.toHexString(el.getRawContent()) :
-                                        el.getRawStringContent())
+                                .with(pre(printRawContentOfElement(el, renderingToolkit))
                                     .withStyle("white-space: pre-wrap;word-wrap: break-word;"))
                         )
                     ),
@@ -122,6 +125,26 @@ public class RbelHtmlRenderer {
                         .attr("aria-label", "close")
                 )
         );
+    }
+
+    @Nullable
+    private static String printRawContentOfElement(final RbelElement el,
+                                                   final RbelHtmlRenderingToolkit renderingToolkit) {
+        if (renderingToolkit.shouldRenderEntitiesWithSize(el.getRawContent().length)) {
+            if (BinaryClassifier.isBinary(el.getRawContent())) {
+                return Hex.toHexString(el.getRawContent());
+            } else {
+                return el.getRawStringContent();
+            }
+        } else {
+            return buildOversizeReplacementString(el);
+        }
+    }
+
+    public static String buildOversizeReplacementString(RbelElement el) {
+        return OVERSIZE_REPLACEMENT_TEXT_PRE
+            + ((el.getRawContent().length / 10_000) / 100.)
+            + OVERSIZE_REPLACEMENT_TEXT_POST;
     }
 
     public static void registerFacetRenderer(RbelHtmlFacetRenderer rbelFacetRenderer) {

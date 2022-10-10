@@ -48,7 +48,7 @@ public class RbelSicctEnvelopeFacet implements RbelFacet {
                                                  RbelHtmlRenderingToolkit context) {
                 final var sicctEnv = element.getFacetOrFail(RbelSicctEnvelopeFacet.class);
                 return div(t1ms("SICCT Envelope")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, context)))
                     .withStyle("width:100%;")
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(

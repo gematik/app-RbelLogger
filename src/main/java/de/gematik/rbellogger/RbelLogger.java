@@ -59,6 +59,7 @@ public class RbelLogger {
             .rbelKeyManager(new RbelKeyManager())
             .manageBuffer(configuration.isManageBuffer())
             .rbelBufferSizeInMb(configuration.getRbelBufferSizeInMb())
+            .skipParsingWhenMessageLargerThanMb(configuration.getSkipParsingWhenMessageLargerThanMb())
             .build();
 
         rbelConverter.registerListener(new RbelX5cKeyReader());

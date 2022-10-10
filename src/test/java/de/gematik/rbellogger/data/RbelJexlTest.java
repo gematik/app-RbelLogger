@@ -117,4 +117,36 @@ public class RbelJexlTest {
             request, "$.receiver.port == '5432'", Optional.empty()))
             .isTrue();
     }
+
+    @Test
+    public void checkMatchTextExpression() {
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "localhost"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            response, "nbf"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "Keep-Alive"))
+            .isTrue();
+    }
+
+    @Test
+    public void checkMatchRegexExpression() {
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "\\w+host"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "[a-zA-Z0-9_]+hos"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            response, ".*nbf"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "Keep[-/_]Alive"))
+            .isTrue();
+        assertThat(jexlExecutor.matchAsTextExpression(
+            request, "Keep-[a-zA-Z0-9_]+Alive"))
+            .isFalse();
+    }
 }

@@ -17,6 +17,7 @@
 package de.gematik.rbellogger;
 
 import de.gematik.rbellogger.configuration.RbelConfiguration;
+import de.gematik.rbellogger.converter.RbelConverter;
 import de.gematik.rbellogger.data.RbelElement;
 import de.gematik.rbellogger.data.facet.RbelNoteFacet;
 import java.time.ZonedDateTime;
@@ -46,5 +47,26 @@ public class RbelConverterBufferTest {
             .hasSizeGreaterThan(30);
         assertThat(rbelLogger.getMessageHistory())
             .isEmpty();
+    }
+
+    @Test
+    public void fullBuffer_shouldNotExceedBufferSize() throws IOException {
+        final String curlMessage = readCurlFromFileWithCorrectedLineBreaks
+            ("src/test/resources/sampleMessages/jwtMessage.curl");
+
+        final RbelLogger rbelLogger = RbelLogger.build(RbelConfiguration.builder()
+            .manageBuffer(true)
+            .rbelBufferSizeInMb(1)
+            .build());
+        RbelConverter rbelConverter = rbelLogger.getRbelConverter();
+        int i = 0;
+        while (i < 1000) {
+            rbelConverter.parseMessage(curlMessage.getBytes(), null, null, Optional.of(ZonedDateTime.now()));
+            i++;
+        }
+
+        assertThat(1024 * 1024).isGreaterThan((int) rbelLogger.getMessageHistory().stream()
+            .mapToLong(RbelElement::getSize)
+            .sum());
     }
 }

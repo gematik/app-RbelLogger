@@ -56,6 +56,8 @@ public class RbelConfiguration {
     @Builder.Default
     private int rbelBufferSizeInMb = 1024;
     @Builder.Default
+    private int skipParsingWhenMessageLargerThanMb = 16;
+    @Builder.Default
     private boolean manageBuffer = false;
 
     public RbelConfiguration addPostConversionListener(RbelConverterPlugin listener) {

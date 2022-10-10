@@ -58,7 +58,7 @@ public class RbelVauEpaFacet implements RbelFacet {
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 return div(t1ms("VAU Encrypted Message (EPA)")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, renderingToolkit)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
                             vertParentTitle().with(
@@ -66,7 +66,7 @@ public class RbelVauEpaFacet implements RbelFacet {
                                     t2("Header"),
                                     Optional.ofNullable(element.getFacetOrFail(RbelVauEpaFacet.class))
                                         .map(RbelVauEpaFacet::getAdditionalHeaders)
-                                        .map(headers -> renderingToolkit.convert(headers))
+                                        .map(renderingToolkit::convert)
                                         .orElse(span()),
                                     Optional.ofNullable(element.getFacetOrFail(RbelVauEpaFacet.class).getPVersionNumber())
                                         .map(v -> p(b("Version Number: ")).withText(v.seekValue().get().toString()))

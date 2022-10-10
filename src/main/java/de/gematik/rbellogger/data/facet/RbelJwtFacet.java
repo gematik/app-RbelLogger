@@ -50,7 +50,7 @@ public class RbelJwtFacet implements RbelFacet {
             public ContainerTag performRendering(RbelElement element, Optional<String> key,
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 return div(t1ms("JWT")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, renderingToolkit)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
                             vertParentTitle().with(

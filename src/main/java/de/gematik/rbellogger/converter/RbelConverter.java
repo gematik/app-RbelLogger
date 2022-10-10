@@ -71,6 +71,8 @@ public class RbelConverter {
     ));
     @Builder.Default
     private long messageSequenceNumber = 0;
+    @Builder.Default
+    private int skipParsingWhenMessageLargerThanMb = -1;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -95,7 +97,12 @@ public class RbelConverter {
     public RbelElement convertElement(final RbelElement rawInput) {
         log.trace("Converting {}...", rawInput);
         final RbelElement convertedInput = filterInputThroughPreConversionMappers(rawInput);
+        boolean elementIsOversized = skipParsingWhenMessageLargerThanMb > -1
+            && (convertedInput.getRawContent().length > skipParsingWhenMessageLargerThanMb*1024*1024);
         for (RbelConverterPlugin plugin : converterPlugins) {
+            if (!plugin.ignoreOversize() && elementIsOversized) {
+             continue;
+            }
             try {
                 plugin.consumeElement(convertedInput, this);
             } catch (RuntimeException e) {
@@ -218,27 +225,33 @@ public class RbelConverter {
     public void manageRbelBufferSize() {
         if (manageBuffer) {
             synchronized (messageHistory) {
-                while (rbelBufferIsExceedingMaxSize() && !getMessageHistory().isEmpty()) {
-                    log.trace("Exceeded buffer size, dropping oldest message in history");
-                    getMessageHistory().remove(0);
+                if (getRbelBufferSizeInMb() <= 0 && !getMessageHistory().isEmpty()) {
+                    getMessageHistory().clear();
+                }
+                if (getRbelBufferSizeInMb() > 0 ) {
+                    long size = getMessageHistorySize();
+                    long exceedingLimit = getExceedingLimit(size);
+                    if (exceedingLimit > 0) {
+                        log.trace("Buffer is currently at {} Mb which exceeds the limit of {} Mb",
+                            size / (1024 ^ 2), getRbelBufferSizeInMb());
+                    }
+                    while (exceedingLimit > 0 && !getMessageHistory().isEmpty()) {
+                        log.trace("Exceeded buffer size, dropping oldest message in history");
+                        exceedingLimit -= getMessageHistory().get(0).getSize();
+                        getMessageHistory().remove(0);
+                    }
                 }
             }
         }
     }
 
-    private boolean rbelBufferIsExceedingMaxSize() {
-        if (getRbelBufferSizeInMb() <= 0) {
-            return true;
-        }
-        final long bufferSize = getMessageHistory().stream()
-            .map(RbelElement::getRawContent)
-            .mapToLong(ar -> ar.length)
+    private long getMessageHistorySize() {
+        return getMessageHistory().stream()
+            .mapToLong(RbelElement::getSize)
             .sum();
-        final boolean exceedingLimit = bufferSize > ((long) getRbelBufferSizeInMb() * 1024 * 1024);
-        if (exceedingLimit) {
-            log.trace("Buffer is currently at {} Mb which exceeds the limit of {} Mb",
-                bufferSize / (1024 ^ 2), getRbelBufferSizeInMb());
-        }
-        return exceedingLimit;
+    }
+
+    private long getExceedingLimit(long messageHistorySize) {
+        return messageHistorySize-((long) getRbelBufferSizeInMb() * 1024 * 1024);
     }
 }

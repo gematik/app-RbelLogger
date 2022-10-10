@@ -142,10 +142,14 @@ public class RbelHtmlRenderingToolkit {
     public ContainerTag convert(final RbelElement element, final Optional<String> key) {
         return convertUnforced(element, key)
             .orElseGet(() -> {
-                if (element.hasFacet(RbelBinaryFacet.class)) {
-                    return printAsBinary(element);
+                if (shouldRenderEntitiesWithSize(element.getRawContent().length)) {
+                    if (element.hasFacet(RbelBinaryFacet.class)) {
+                        return printAsBinary(element);
+                    } else {
+                        return span(performElementToTextConversion(element));
+                    }
                 } else {
-                    return span(performElementToTextConversion(element));
+                    return span(RbelHtmlRenderer.buildOversizeReplacementString(element));
                 }
             });
     }
@@ -315,7 +319,7 @@ public class RbelHtmlRenderingToolkit {
     }
 
     public JsonElement shadeJson(final JsonElement input, final Optional<String> key,
-        final RbelElement originalElement) {
+                                 final RbelElement originalElement) {
         if (input.isJsonPrimitive()) {
             final JsonElement jsonElement = rbelHtmlRenderer.getRbelValueShader().shadeValue(input, key)
                 .map(shadedValue -> (JsonElement) new JsonPrimitive(StringEscapeUtils.escapeHtml4(shadedValue)))
@@ -403,7 +407,7 @@ public class RbelHtmlRenderingToolkit {
                             .withClass("title").withStyle("word-break: keep-all;"))
                             .withClass("message-header")
                             .with(addNotes(pair.getKey()))
-                            .with(showContentButtonAndDialog(pair.getKey())),
+                            .with(showContentButtonAndDialog(pair.getKey(), this)),
                         div(div(pair.getValue().get()
                             .withClass("notification tile is-child box pr-3")
                         ).withClass("notification tile is-parent pr-3"))
@@ -430,6 +434,10 @@ public class RbelHtmlRenderingToolkit {
     public DomContent formatHexAlike(String value) {
         return span().withText(value)
             .withStyle("font-family: monospace; padding-right: 0.3rem;");
+    }
+
+    public boolean shouldRenderEntitiesWithSize(int length) {
+        return rbelHtmlRenderer.getMaximumEntitySizeInBytes() > length;
     }
 
     @Builder

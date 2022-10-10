@@ -35,6 +35,11 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 public class RbelHttpRequestConverter extends RbelHttpResponseConverter {
 
     @Override
+    public boolean ignoreOversize() {
+        return true;
+    }
+
+    @Override
     public void consumeElement(final RbelElement targetElement, final RbelConverter converter) {
         final String content = targetElement.getRawStringContent();
         if (StringUtils.isEmpty(content)

@@ -48,7 +48,7 @@ public class RbelSicctCommandFacet implements RbelFacet {
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 final var sicctCommand = element.getFacetOrFail(RbelSicctCommandFacet.class);
                 return div(t1ms("SICCT Command")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, renderingToolkit)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
                             vertParentTitle().with(

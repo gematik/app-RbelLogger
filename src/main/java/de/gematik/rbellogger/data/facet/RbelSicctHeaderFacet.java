@@ -51,7 +51,7 @@ public class RbelSicctHeaderFacet implements RbelFacet {
                                                  RbelHtmlRenderingToolkit renderingToolkit) {
                 final var sicctHeader = element.getFacetOrFail(RbelSicctHeaderFacet.class);
                 return div(t1ms("SICCT Command Header")
-                    .with(showContentButtonAndDialog(element)))
+                    .with(showContentButtonAndDialog(element, renderingToolkit)))
                     .with(addNotes(element, "mb-5"))
                     .with(ancestorTitle().with(
                             vertParentTitle().with(
